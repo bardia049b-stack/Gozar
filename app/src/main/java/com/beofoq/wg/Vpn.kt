@@ -25,10 +25,15 @@ object Vpn {
     @Volatile var errorAt = 0L
     @Volatile var handshakeOk = false
     @Volatile var attempt = 0
+    @Volatile var handshakeAge = -1L
+    @Volatile var ipInfo: IpInfo? = null
+    @Volatile var ipSession = 0L
+    @Volatile var stopping = false
 
     @Volatile private var session = 0
     @Volatile private var restarting = false
     private var lastCfg: Config? = null
+    @Volatile private var peerKey: org.amnezia.awg.crypto.Key? = null
 
     @Volatile private var monitoring = false
     private var mLastRx = -1L
@@ -71,6 +76,10 @@ object Vpn {
         profile = prof
         errorAt = 0L
         handshakeOk = false
+        handshakeAge = -1L
+        ipInfo = null
+        ipSession = 0L
+        stopping = false
         attempt = 0
         restarting = false
         session++
@@ -82,6 +91,7 @@ object Vpn {
             try {
                 val cfg = buildConfig(c, prof)
                 lastCfg = cfg
+                peerKey = cfg.peers.firstOrNull()?.publicKey
                 val t = Tun(prof.id) { s -> onState(s) }
                 tun = t
                 backendFor(c).setState(t, Tunnel.State.UP, cfg)
@@ -104,10 +114,27 @@ object Vpn {
     fun disconnect() {
         session++
         handshakeOk = false
+        handshakeAge = -1L
+        ipInfo = null
+        ipSession = 0L
+        downSpeed = 0.0
+        upSpeed = 0.0
+        totalRx = 0L
+        totalTx = 0L
         restarting = false
+        stopping = true
         userStop = true
-        val t = tun ?: return
-        val b = backend ?: return
+        appCtx?.let { Notify.cancel(it) }
+        val t = tun
+        val b = backend
+        if (t == null || b == null) {
+            stopping = false
+            connecting = false
+            up = false
+            profile = null
+            notifyChange()
+            return
+        }
         connecting = true
         notifyChange()
         thread {
@@ -118,6 +145,7 @@ object Vpn {
             connecting = false
             up = false
             profile = null
+            stopping = false
             notifyChange()
         }
     }
@@ -134,8 +162,13 @@ object Vpn {
         }
         if (!up) {
             handshakeOk = false
+            handshakeAge = -1L
+            ipInfo = null
+            ipSession = 0L
             downSpeed = 0.0
             upSpeed = 0.0
+            totalRx = 0L
+            totalTx = 0L
             appCtx?.let { Notify.cancel(it) }
         }
         if (!up && !userStop && !restarting && profile != null) {
@@ -212,6 +245,14 @@ object Vpn {
                     val st = stats() ?: continue
                     val rx = st.totalRx()
                     val tx = st.totalTx()
+                    val key = peerKey
+                    if (key != null) {
+                        try {
+                            val ms = st.peer(key)?.latestHandshakeEpochMillis() ?: 0L
+                            handshakeAge = if (ms > 0) (System.currentTimeMillis() - ms) / 1000 else -1L
+                        } catch (e: Exception) {
+                        }
+                    }
                     totalRx = rx
                     totalTx = tx
                     val now = android.os.SystemClock.elapsedRealtime()
@@ -296,19 +337,18 @@ object Vpn {
     }
 
     fun handshakeAgeSec(): Long {
-        val t = tun ?: return -1
-        val prof = profile ?: return -1
-        val cfg = try {
-            Config.parse(prof.text.byteInputStream(Charsets.UTF_8))
-        } catch (e: Exception) {
-            return -1
-        }
+        val key = peerKey ?: return -1
         val st = stats() ?: return -1
-        val key = cfg.peers.firstOrNull()?.publicKey ?: return -1
-        val peer = st.peer(key) ?: return -1
+        val peer = try {
+            st.peer(key)
+        } catch (e: Exception) {
+            null
+        } ?: return -1
         val ms = peer.latestHandshakeEpochMillis()
         if (ms <= 0) return -1
-        return (System.currentTimeMillis() - ms) / 1000
+        val age = (System.currentTimeMillis() - ms) / 1000
+        handshakeAge = age
+        return age
     }
 
     fun coreVersion(c: Context): String {

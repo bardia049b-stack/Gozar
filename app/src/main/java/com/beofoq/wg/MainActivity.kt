@@ -59,7 +59,7 @@ class MainActivity : BaseActivity() {
     private val handler = Handler(Looper.getMainLooper())
     private var pendingProfile: Profile? = null
     private var pendingExport: Profile? = null
-    private var ipFor = 0L
+    @Volatile private var fetchingIp = false
     
     private var lastState = -1
     private var peakDown = 1.0
@@ -99,10 +99,10 @@ class MainActivity : BaseActivity() {
         tvPerAppValue = findViewById(R.id.tvPerAppValue)
 
         powerBtn.setOnClickListener {
-            powerBtn.animate().scaleX(0.94f).scaleY(0.94f).setDuration(90).withEndAction {
-                powerBtn.animate().scaleX(1f).scaleY(1f).setDuration(140).start()
-            }.start()
             onPower()
+            powerBtn.animate().scaleX(0.95f).scaleY(0.95f).setDuration(70).withEndAction {
+                powerBtn.animate().scaleX(1f).scaleY(1f).setDuration(150).start()
+            }.start()
         }
         findViewById<View>(R.id.btnAdd).setOnClickListener { showAddSheet() }
         findViewById<View>(R.id.btnHome).setOnClickListener { }
@@ -202,6 +202,7 @@ class MainActivity : BaseActivity() {
     }
 
     private fun stateCode(): Int {
+        if (Vpn.stopping) return 4
         if (Vpn.up) return if (Vpn.handshakeOk) 2 else 1
         if (Vpn.connecting) return 1
         if (Vpn.errorAt > 0 && System.currentTimeMillis() - Vpn.errorAt < 6000) return 3
@@ -211,15 +212,15 @@ class MainActivity : BaseActivity() {
     private fun updateStatus() {
         val state = stateCode()
         lastState = state
-        if (state == 0) {
-            ipFor = 0
+        if (state == 0 || state == 4) {
             peakDown = 1.0
             peakUp = 1.0
         }
-        ring.setState(state)
+        ring.setState(if (state == 4) 1 else state)
         tvStatus.text = when (state) {
             2 -> getString(R.string.status_on)
             1 -> getString(R.string.status_connecting)
+            4 -> getString(R.string.status_disconnecting)
             3 -> getString(R.string.connection_failed)
             else -> if (BlockService.running) getString(R.string.kill_switch) else getString(R.string.status_off)
         }
@@ -260,9 +261,14 @@ class MainActivity : BaseActivity() {
                 }
             ), android.graphics.PorterDuff.Mode.SRC_IN
         )
-        tvConnectLabel.text = getString(if (state == 2 || state == 1) R.string.disconnect else R.string.connect)
+        tvConnectLabel.text = getString(if (state == 2 || state == 1 || state == 4) R.string.disconnect else R.string.connect)
         tvConnectLabel.setTextColor(getColor(if (state == 2) R.color.green else R.color.text))
-        statsBox.visibility = if (state == 2 || state == 1) View.VISIBLE else View.GONE
+        statsBox.visibility = if (state == 2) View.VISIBLE else View.GONE
+        if (state == 2) {
+            tvDuration.text = fmtTime((System.currentTimeMillis() - Vpn.since) / 1000)
+            updateStatsUi()
+            maybeFetchIp()
+        }
         if (!Vpn.up) tvDuration.text = "00:00:00"
         updatePerApp()
         renderProfiles()
@@ -289,12 +295,25 @@ class MainActivity : BaseActivity() {
         barUp.progress = (upS / peakUp * 100).toInt().coerceIn(0, 100)
         tvTotal.text = getString(R.string.total) + ": " + fmtBytes(Vpn.totalRx + Vpn.totalTx) +
             "  ↓ " + fmtBytes(Vpn.totalRx) + "  ↑ " + fmtBytes(Vpn.totalTx)
-        val age = Vpn.handshakeAgeSec()
+        val age = Vpn.handshakeAge
         tvHandshake.text = getString(R.string.handshake) + ": " + when {
             age < 0 -> "--"
             age < 5 -> getString(R.string.now)
             age < 60 -> String.format(getString(R.string.sec_ago), age.toInt())
             else -> String.format(getString(R.string.min_ago), (age / 60).toInt())
+        }
+    }
+
+    private fun renderIp(info: IpInfo) {
+        tvIp.text = getString(R.string.ip) + ": " + info.ip
+        tvLocation.text = listOf(info.city, info.country).filter { it.isNotBlank() }.joinToString(", ")
+        if (info.code == "IR") {
+            flagImg.setImageResource(R.drawable.flag_ir)
+            flagImg.visibility = View.VISIBLE
+            tvFlag.text = ""
+        } else {
+            flagImg.visibility = View.GONE
+            tvFlag.text = Ip.flag(info.code)
         }
     }
 
@@ -306,23 +325,23 @@ class MainActivity : BaseActivity() {
             flagImg.visibility = View.GONE
             return
         }
-        if (ipFor == Vpn.since || Vpn.since == 0L) return
-        ipFor = Vpn.since
+        val cached = Vpn.ipInfo
+        if (cached != null && Vpn.ipSession == Vpn.since) {
+            renderIp(cached)
+            return
+        }
+        if (fetchingIp || Vpn.since == 0L) return
+        fetchingIp = true
+        val sess = Vpn.since
         thread {
-            Thread.sleep(1200)
-            val info = Ip.fetch() ?: return@thread
+            val info = Ip.fetch()
+            if (info != null && Vpn.up && Vpn.since == sess) {
+                Vpn.ipInfo = info
+                Vpn.ipSession = sess
+            }
             runOnUiThread {
-                if (!Vpn.up) return@runOnUiThread
-                tvIp.text = getString(R.string.ip) + ": " + info.ip
-                tvLocation.text = listOf(info.city, info.country).filter { it.isNotBlank() }.joinToString(", ")
-                if (info.code == "IR") {
-                    flagImg.setImageResource(R.drawable.flag_ir)
-                    flagImg.visibility = View.VISIBLE
-                    tvFlag.text = ""
-                } else {
-                    flagImg.visibility = View.GONE
-                    tvFlag.text = Ip.flag(info.code)
-                }
+                fetchingIp = false
+                if (info != null && Vpn.up && Vpn.handshakeOk && Vpn.since == sess) renderIp(info)
             }
         }
     }

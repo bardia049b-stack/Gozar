@@ -345,7 +345,7 @@
                 <ImageView
                     android:layout_width="32dp"
                     android:layout_height="32dp"
-                    android:background="@drawable/icon_blue"
+                    android:background="@drawable/icon_neutral"
                     android:padding="7dp"
                     android:src="@drawable/ic_apps" />
 
@@ -459,7 +459,7 @@
                 android:layout_height="26dp"
                 android:layout_gravity="center"
                 android:src="@drawable/ic_plus"
-                android:tint="@android:color/white" />
+                android:tint="@color/on_accent" />
         </FrameLayout>
     </FrameLayout>
 </FrameLayout>

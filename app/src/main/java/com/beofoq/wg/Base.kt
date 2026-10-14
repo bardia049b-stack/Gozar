@@ -2,11 +2,24 @@ package com.beofoq.wg
 
 import android.app.Activity
 import android.content.Context
+import android.content.res.Configuration
+import android.content.res.Resources
 import android.widget.Toast
 
 abstract class BaseActivity : Activity() {
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(Store.wrap(newBase))
+    }
+
+    override fun onResume() {
+        super.onResume()
+        val want = when (Store.theme(this)) {
+            "light" -> Configuration.UI_MODE_NIGHT_NO
+            "dark" -> Configuration.UI_MODE_NIGHT_YES
+            else -> Resources.getSystem().configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+        }
+        val now = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+        if (want != now) recreate()
     }
 
     fun toast(msg: String) {

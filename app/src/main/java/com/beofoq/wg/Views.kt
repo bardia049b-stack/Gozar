@@ -5,11 +5,8 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
-import android.os.Handler
-import android.os.Looper
 import android.util.AttributeSet
 import android.view.View
-import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.sin
 
@@ -53,11 +50,11 @@ class GlassSwitch @JvmOverloads constructor(context: Context, attrs: AttributeSe
         val w = width.toFloat()
         val h = height.toFloat()
         val r = h / 2
-        track.color = if (checked) resources.getColor(R.color.green, context.theme) else Color.parseColor("#3D767E8C")
+        track.color = if (checked) resources.getColor(R.color.accent, context.theme) else resources.getColor(R.color.glass_inner, context.theme)
         canvas.drawRoundRect(0f, 0f, w, h, r, r, track)
-        val thumbR = h / 2 - 2 * d
+        val thumbR = if (checked) h / 2 - 2 * d else h / 2 - 6 * d
         val cx = r + pos * (w - 2 * r)
-        thumb.color = Color.WHITE
+        thumb.color = if (checked) Color.WHITE else resources.getColor(R.color.text2, context.theme)
         thumb.setShadowLayer(4 * d, 0f, 1 * d, Color.parseColor("#40000000"))
         canvas.drawCircle(cx, h / 2, thumbR, thumb)
     }
@@ -66,35 +63,12 @@ class GlassSwitch @JvmOverloads constructor(context: Context, attrs: AttributeSe
 class RingView @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) : View(context, attrs) {
     var state = 0
         private set
-    private var angle = 0f
-    private var phase = 0f
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val handler = Handler(Looper.getMainLooper())
-    private var running = false
-
-    private val loop = object : Runnable {
-        override fun run() {
-            if (state == 1) angle = (angle + 8f) % 360f
-            if (state == 2) phase += 0.05f
-            invalidate()
-            if (state == 1 || state == 2) handler.postDelayed(this, 40)
-            else running = false
-        }
-    }
 
     fun setState(v: Int) {
+        if (state == v) return
         state = v
         invalidate()
-        if ((v == 1 || v == 2) && !running) {
-            running = true
-            handler.post(loop)
-        }
-    }
-
-    override fun onDetachedFromWindow() {
-        super.onDetachedFromWindow()
-        handler.removeCallbacks(loop)
-        running = false
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -106,19 +80,22 @@ class RingView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         val green = resources.getColor(R.color.green, context.theme)
         val red = resources.getColor(R.color.red, context.theme)
         val track = resources.getColor(R.color.separator, context.theme)
+        val t = android.os.SystemClock.elapsedRealtime()
 
         paint.style = Paint.Style.STROKE
         paint.strokeCap = Paint.Cap.ROUND
+        paint.strokeWidth = 4 * d
 
         if (state == 2) {
+            val glow = 0.05f + 0.03f * sin(t / 500.0)
             paint.style = Paint.Style.FILL
             paint.color = green
-            paint.alpha = (18 + 10 * sin(phase)).toInt().coerceIn(0, 40)
+            paint.alpha = (glow * 255).toInt().coerceIn(0, 40)
             canvas.drawCircle(cx, cy, r - 6 * d, paint)
             paint.style = Paint.Style.STROKE
+            paint.strokeWidth = 4 * d
         }
 
-        paint.strokeWidth = 4 * d
         paint.color = track
         paint.alpha = 255
         canvas.drawCircle(cx, cy, r, paint)
@@ -126,8 +103,9 @@ class RingView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         val rect = android.graphics.RectF(cx - r, cy - r, cx + r, cy + r)
         when (state) {
             1 -> {
+                val angle = (t % 1100L) / 1100f * 360f
                 paint.color = accent
-                canvas.drawArc(rect, angle, 260f, false, paint)
+                canvas.drawArc(rect, angle, 270f, false, paint)
             }
             2 -> {
                 paint.color = green
@@ -139,5 +117,6 @@ class RingView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
             }
         }
         paint.alpha = 255
+        if (state == 1 || state == 2) postInvalidateOnAnimation()
     }
 }
