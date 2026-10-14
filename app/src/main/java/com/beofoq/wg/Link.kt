@@ -4,7 +4,7 @@ import android.net.Uri
 import android.util.Base64
 
 object Link {
-    private val schemes = setOf("beofoqwg", "beofoq", "wireguard", "amneziawg", "awg")
+    private val schemes = setOf("gozarwg", "beofoqwg", "beofoq", "wireguard", "amneziawg", "awg")
 
     fun parse(raw: String): String? {
         val s = raw.trim()
@@ -63,6 +63,6 @@ object Link {
     }
 
     fun make(p: Profile): String {
-        return "beofoqwg://import?name=" + Uri.encode(p.name) + "&config=" + Uri.encode(p.text)
+        return "gozarwg://import?name=" + Uri.encode(p.name) + "&config=" + Uri.encode(p.text)
     }
 }

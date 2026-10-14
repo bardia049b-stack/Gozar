@@ -44,7 +44,7 @@
     <string name="imp_link">Import from link</string>
     <string name="imp_create">Create new</string>
     <string name="link_title">Import from link</string>
-    <string name="link_hint">beofoqwg://import?config=…</string>
+    <string name="link_hint">gozarwg://import?config=…</string>
     <string name="st_connection">Connection</string>
     <string name="kill_switch">Kill switch</string>
     <string name="kill_switch_desc">Block traffic if the tunnel drops and auto-reconnect. For full lockdown also enable “Block connections without VPN” in system VPN settings.</string>

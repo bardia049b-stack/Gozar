@@ -371,7 +371,7 @@ class EditActivity : BaseActivity() {
             val values = android.content.ContentValues()
             values.put(android.provider.MediaStore.Images.Media.DISPLAY_NAME, name.replace(Regex("[^A-Za-z0-9._-]"), "_") + ".png")
             values.put(android.provider.MediaStore.Images.Media.MIME_TYPE, "image/png")
-            values.put(android.provider.MediaStore.Images.Media.RELATIVE_PATH, "Pictures/BeOfoq")
+            values.put(android.provider.MediaStore.Images.Media.RELATIVE_PATH, "Pictures/GozarWG")
             val uri = contentResolver.insert(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values) ?: return false
             contentResolver.openOutputStream(uri)?.use { out -> bmp.compress(Bitmap.CompressFormat.PNG, 100, out) }
             true

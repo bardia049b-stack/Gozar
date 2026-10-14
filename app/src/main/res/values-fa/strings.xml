@@ -44,7 +44,7 @@
     <string name="imp_link">وارد کردن با لینک</string>
     <string name="imp_create">ساخت کانفیگ جدید</string>
     <string name="link_title">وارد کردن با لینک</string>
-    <string name="link_hint">beofoqwg://import?config=…</string>
+    <string name="link_hint">gozarwg://import?config=…</string>
     <string name="st_connection">اتصال</string>
     <string name="kill_switch">کیل سوییچ</string>
     <string name="kill_switch_desc">اگر تونل قطع شد ترافیک را متوقف و خودکار دوباره وصل شو. برای قفل کامل، گزینه «مسدود کردن اتصال بدون VPN» را هم در تنظیمات VPN سیستم فعال کن.</string>

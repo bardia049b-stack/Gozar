@@ -62,10 +62,6 @@
             android:exported="false" />
 
         <activity
-            android:name=".SettingsActivity"
-            android:exported="false" />
-
-        <activity
             android:name=".AppsActivity"
             android:exported="false" />
 

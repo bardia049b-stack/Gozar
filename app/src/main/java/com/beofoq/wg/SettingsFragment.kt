@@ -1,6 +1,11 @@
 package com.beofoq.wg
 
+import android.app.Activity
 import android.app.AlertDialog
+import android.app.Fragment
+import android.view.LayoutInflater
+import android.view.ViewGroup
+import android.widget.Toast
 import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
@@ -9,19 +14,37 @@ import android.widget.EditText
 import android.widget.TextView
 import kotlin.concurrent.thread
 
-class SettingsActivity : BaseActivity() {
+class SettingsFragment : Fragment() {
+    private lateinit var root: View
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_settings)
-        findViewById<View>(R.id.btnBack).setOnClickListener { finish() }
+    private val act: Activity get() = requireActivity()
 
-        bindSwitch(R.id.swKill, Store.kill(this)) { Store.setKill(this, it) }
-        bindSwitch(R.id.swAuto, Store.auto(this)) { Store.setAuto(this, it) }
-        bindSwitch(R.id.swLan, Store.lan(this)) { Store.setLan(this, it) }
-        bindSwitch(R.id.swProxy, Store.proxy(this)) { v ->
-            Store.setProxy(this, v)
-            toast(getString(R.string.proxy_note, "127.0.0.1:" + Store.proxyPort(this)))
+    private fun <T : View> find(id: Int): T = root.findViewById(id)
+
+    fun toast(msg: String) {
+        act.runOnUiThread { Toast.makeText(act, msg, Toast.LENGTH_SHORT).show() }
+    }
+
+    fun toast(res: Int) {
+        act.runOnUiThread { Toast.makeText(act, res, Toast.LENGTH_SHORT).show() }
+    }
+
+
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        root = inflater.inflate(R.layout.activity_settings, container, false)
+        return root
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        find<View>(R.id.btnBack).setOnClickListener { (activity as? MainActivity)?.showHome() }
+
+        bindSwitch(R.id.swKill, Store.kill(act)) { Store.setKill(act, it) }
+        bindSwitch(R.id.swAuto, Store.auto(act)) { Store.setAuto(act, it) }
+        bindSwitch(R.id.swLan, Store.lan(act)) { Store.setLan(act, it) }
+        bindSwitch(R.id.swProxy, Store.proxy(act)) { v ->
+            Store.setProxy(act, v)
+            toast(getString(R.string.proxy_note, "127.0.0.1:" + Store.proxyPort(act)))
         }
 
         updateProxyText()
@@ -30,7 +53,7 @@ class SettingsActivity : BaseActivity() {
         updateSplitTexts()
         rowClick(R.id.tvSplitMode) { pickSplitMode() }
         rowClick(R.id.tvSplitApps) {
-            startActivity(Intent(this, AppsActivity::class.java))
+            startActivity(Intent(act, AppsActivity::class.java))
         }
 
         updateLangThemeTexts()
@@ -47,9 +70,9 @@ class SettingsActivity : BaseActivity() {
             }
         }
 
-        val tvAbout = findViewById<TextView>(R.id.tvAbout)
+        val tvAbout = find<TextView>(R.id.tvAbout)
         val version = try {
-            packageManager.getPackageInfo(packageName, 0).versionName
+            act.packageManager.getPackageInfo(act.packageName, 0).versionName
         } catch (e: Exception) {
             ""
         }
@@ -61,11 +84,13 @@ class SettingsActivity : BaseActivity() {
                 ""
             }
             if (core.isNotBlank()) {
-                runOnUiThread {
+                act.runOnUiThread {
                     tvAbout.text = tvAbout.text.toString() + "\n" + String.format(getString(R.string.core_version), core)
                 }
             }
         }
+    }
+
     }
 
     override fun onResume() {
@@ -75,7 +100,7 @@ class SettingsActivity : BaseActivity() {
     }
 
     private fun rowClick(id: Int, action: () -> Unit) {
-        var v: View? = findViewById(id)
+        var v: View? = find(id)
         repeat(3) {
             v?.setOnClickListener { action() }
             v = v?.parent as? View
@@ -83,26 +108,26 @@ class SettingsActivity : BaseActivity() {
     }
 
     private fun bindSwitch(id: Int, initial: Boolean, save: (Boolean) -> Unit) {
-        val sw = findViewById<GlassSwitch>(id)
+        val sw = find<GlassSwitch>(id)
         sw.setChecked(initial, false)
         sw.onChange = { save(it) }
     }
 
     private fun updateProxyText() {
-        findViewById<TextView>(R.id.tvProxyPort).text = "SOCKS5 · 127.0.0.1:" + Store.proxyPort(this)
+        find<TextView>(R.id.tvProxyPort).text = "SOCKS5 · 127.0.0.1:" + Store.proxyPort(act)
     }
 
     private fun editPort() {
-        val input = EditText(this)
+        val input = EditText(act)
         input.inputType = android.text.InputType.TYPE_CLASS_NUMBER
-        input.setText(Store.proxyPort(this).toString())
-        AlertDialog.Builder(this)
+        input.setText(Store.proxyPort(act).toString())
+        AlertDialog.Builder(act)
             .setTitle(R.string.proxy_port)
             .setView(input)
             .setPositiveButton(R.string.ok) { _, _ ->
                 val port = input.text.toString().toIntOrNull()
                 if (port != null && port in 1024..65535) {
-                    Store.setProxyPort(this, port)
+                    Store.setProxyPort(act, port)
                     updateProxyText()
                 }
             }
@@ -119,9 +144,9 @@ class SettingsActivity : BaseActivity() {
     }
 
     private fun updateSplitTexts() {
-        findViewById<TextView>(R.id.tvSplitMode).text = splitModeName(Store.splitMode(this))
-        findViewById<TextView>(R.id.tvSplitApps).text =
-            String.format(getString(R.string.selected_count), Store.splitApps(this).size)
+        find<TextView>(R.id.tvSplitMode).text = splitModeName(Store.splitMode(act))
+        find<TextView>(R.id.tvSplitApps).text =
+            String.format(getString(R.string.selected_count), Store.splitApps(act).size)
     }
 
     private fun pickSplitMode() {
@@ -130,10 +155,10 @@ class SettingsActivity : BaseActivity() {
             getString(R.string.split_exclude),
             getString(R.string.split_include)
         )
-        AlertDialog.Builder(this)
+        AlertDialog.Builder(act)
             .setTitle(R.string.split_mode)
-            .setSingleChoiceItems(items, Store.splitMode(this)) { dialog, which ->
-                Store.setSplitMode(this, which)
+            .setSingleChoiceItems(items, Store.splitMode(act)) { dialog, which ->
+                Store.setSplitMode(act, which)
                 updateSplitTexts()
                 dialog.dismiss()
             }
@@ -141,12 +166,12 @@ class SettingsActivity : BaseActivity() {
     }
 
     private fun updateLangThemeTexts() {
-        findViewById<TextView>(R.id.tvLang).text = when (Store.lang(this)) {
+        find<TextView>(R.id.tvLang).text = when (Store.lang(act)) {
             "fa" -> getString(R.string.lang_fa)
             "en" -> getString(R.string.lang_en)
             else -> getString(R.string.lang_system)
         }
-        findViewById<TextView>(R.id.tvTheme).text = when (Store.theme(this)) {
+        find<TextView>(R.id.tvTheme).text = when (Store.theme(act)) {
             "light" -> getString(R.string.theme_light)
             "dark" -> getString(R.string.theme_dark)
             else -> getString(R.string.theme_auto)
@@ -156,16 +181,13 @@ class SettingsActivity : BaseActivity() {
     private fun pickLang() {
         val items = arrayOf(getString(R.string.lang_fa), getString(R.string.lang_en), getString(R.string.lang_system))
         val values = arrayOf("fa", "en", "")
-        val current = values.indexOf(Store.lang(this)).coerceAtLeast(2)
-        AlertDialog.Builder(this)
+        val current = values.indexOf(Store.lang(act)).coerceAtLeast(2)
+        AlertDialog.Builder(act)
             .setTitle(R.string.language)
             .setSingleChoiceItems(items, current) { dialog, which ->
-                Store.setLang(this, values[which])
+                Store.setLang(act, values[which])
                 dialog.dismiss()
-                val intent = Intent(this, MainActivity::class.java)
-                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                startActivity(intent)
-                finish()
+                act.recreate()
             }
             .show()
     }
@@ -173,13 +195,13 @@ class SettingsActivity : BaseActivity() {
     private fun pickTheme() {
         val items = arrayOf(getString(R.string.theme_auto), getString(R.string.theme_light), getString(R.string.theme_dark))
         val values = arrayOf("auto", "light", "dark")
-        val current = values.indexOf(Store.theme(this)).coerceAtLeast(0)
-        AlertDialog.Builder(this)
+        val current = values.indexOf(Store.theme(act)).coerceAtLeast(0)
+        AlertDialog.Builder(act)
             .setTitle(R.string.theme)
             .setSingleChoiceItems(items, current) { dialog, which ->
-                Store.setTheme(this, values[which])
+                Store.setTheme(act, values[which])
                 dialog.dismiss()
-                recreate()
+                act.recreate()
             }
             .show()
     }

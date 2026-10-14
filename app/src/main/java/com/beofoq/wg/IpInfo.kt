@@ -18,7 +18,7 @@ object Ip {
             conn = URL(url).openConnection() as HttpURLConnection
             conn.connectTimeout = 5000
             conn.readTimeout = 5000
-            conn.setRequestProperty("User-Agent", "BeOfoqWG")
+            conn.setRequestProperty("User-Agent", "GozarWG")
             val body = conn.inputStream.bufferedReader(Charsets.UTF_8).readText()
             val j = JSONObject(body)
             val ip = j.optString(ipKey)
