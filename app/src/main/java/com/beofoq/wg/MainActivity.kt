@@ -50,15 +50,17 @@ class MainActivity : BaseActivity() {
     private lateinit var barUp: ProgressBar
     private lateinit var tvTotal: TextView
     private lateinit var tvHandshake: TextView
-    private lateinit var llProfiles: LinearLayout
-    private lateinit var tvEmpty: TextView
+    private lateinit var tvCurrentName: TextView
+    private lateinit var tvCurrentMeta: TextView
     private lateinit var tvPerAppValue: TextView
+    private var sheetProfiles: LinearLayout? = null
+    private var sheetDialog: Dialog? = null
 
     private val handler = Handler(Looper.getMainLooper())
     private var pendingProfile: Profile? = null
     private var pendingExport: Profile? = null
     private var ipFor = 0L
-    private var handshaked = false
+    
     private var lastState = -1
     private var peakDown = 1.0
     private var peakUp = 1.0
@@ -92,8 +94,8 @@ class MainActivity : BaseActivity() {
         barUp = findViewById(R.id.barUp)
         tvTotal = findViewById(R.id.tvTotal)
         tvHandshake = findViewById(R.id.tvHandshake)
-        llProfiles = findViewById(R.id.llProfiles)
-        tvEmpty = findViewById(R.id.tvEmpty)
+        tvCurrentName = findViewById(R.id.tvCurrentName)
+        tvCurrentMeta = findViewById(R.id.tvCurrentMeta)
         tvPerAppValue = findViewById(R.id.tvPerAppValue)
 
         powerBtn.setOnClickListener {
@@ -110,6 +112,7 @@ class MainActivity : BaseActivity() {
         findViewById<View>(R.id.btnSettingsTop).setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
+        findViewById<View>(R.id.profileCard).setOnClickListener { showProfilesSheet() }
         findViewById<View>(R.id.rowPerApp).setOnClickListener {
             startActivity(Intent(this, AppsActivity::class.java))
         }
@@ -142,15 +145,9 @@ class MainActivity : BaseActivity() {
 
     private fun tick() {
         handler.postDelayed({
-            if (Vpn.up && !handshaked) {
-                if (Vpn.handshakeAgeSec() >= 0) {
-                    handshaked = true
-                    updateStatus()
-                }
-            }
             if (Vpn.up) {
                 tvDuration.text = fmtTime((System.currentTimeMillis() - Vpn.since) / 1000)
-                if (handshaked) {
+                if (Vpn.handshakeOk) {
                     updateStatsUi()
                     maybeFetchIp()
                 }
@@ -205,7 +202,7 @@ class MainActivity : BaseActivity() {
     }
 
     private fun stateCode(): Int {
-        if (Vpn.up) return if (handshaked) 2 else 1
+        if (Vpn.up) return if (Vpn.handshakeOk) 2 else 1
         if (Vpn.connecting) return 1
         if (Vpn.errorAt > 0 && System.currentTimeMillis() - Vpn.errorAt < 6000) return 3
         return 0
@@ -215,7 +212,6 @@ class MainActivity : BaseActivity() {
         val state = stateCode()
         lastState = state
         if (state == 0) {
-            handshaked = false
             ipFor = 0
             peakDown = 1.0
             peakUp = 1.0
@@ -239,17 +235,17 @@ class MainActivity : BaseActivity() {
         )
         powerBtn.setBackgroundResource(
             when (state) {
-                2 -> R.drawable.circle_btn_on
-                3 -> R.drawable.circle_btn_error
+                2 -> R.drawable.filled_green
+                3 -> R.drawable.filled_red
                 else -> R.drawable.circle_btn
             }
         )
         powerIcon.setColorFilter(
             getColor(
                 when (state) {
-                    2 -> R.color.green
+                    2 -> android.R.color.white
                     1 -> R.color.accent
-                    3 -> R.color.red
+                    3 -> android.R.color.white
                     else -> R.color.text2
                 }
             )
@@ -332,44 +328,55 @@ class MainActivity : BaseActivity() {
     }
 
     private fun renderProfiles() {
-        if (!::llProfiles.isInitialized) return
-        llProfiles.removeAllViews()
+        if (!::tvCurrentName.isInitialized) return
         val list = Profiles.all(this)
-        tvEmpty.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
-        llProfiles.visibility = if (list.isEmpty()) View.GONE else View.VISIBLE
         var sel = Store.selected(this)
         if (list.none { it.id == sel } && list.isNotEmpty()) {
             sel = list.first().id
             Store.setSelected(this, sel)
         }
+        val cur = list.firstOrNull { it.id == sel }
+        if (cur == null) {
+            tvCurrentName.text = getString(R.string.profiles)
+            tvCurrentMeta.text = getString(R.string.no_profiles).lines().joinToString(" ")
+        } else {
+            tvCurrentName.text = cur.name
+            tvCurrentMeta.text = if (cur.endpoint.isBlank()) getString(R.string.endpoint_unknown) else cur.endpoint
+        }
+        sheetProfiles?.let { buildSheetRows(it, list, sel) }
+    }
+
+    private fun buildSheetRows(container: LinearLayout, list: List<Profile>, sel: String) {
+        container.removeAllViews()
         list.forEachIndexed { index, p ->
-            val active = Vpn.profile?.id == p.id && (Vpn.up || Vpn.connecting)
+            val selected = p.id == sel
             val row = LinearLayout(this)
             row.orientation = LinearLayout.HORIZONTAL
             row.gravity = Gravity.CENTER_VERTICAL
-            row.setPadding(dp(16), dp(14), dp(10), dp(14))
+            row.setPadding(dp(2), dp(13), dp(2), dp(13))
             row.isClickable = true
             row.setOnClickListener {
                 Store.setSelected(this, p.id)
                 renderProfiles()
+                sheetDialog?.dismiss()
             }
 
-            val dot = View(this)
-            dot.layoutParams = LinearLayout.LayoutParams(dp(9), dp(9))
-            dot.setBackgroundResource(if (active && Vpn.up) R.drawable.dot_green else R.drawable.dot_grey)
-            row.addView(dot)
+            val radio = View(this)
+            radio.layoutParams = LinearLayout.LayoutParams(dp(22), dp(22))
+            radio.setBackgroundResource(if (selected) R.drawable.radio_on else R.drawable.radio_off)
+            row.addView(radio)
 
             val col = LinearLayout(this)
             col.orientation = LinearLayout.VERTICAL
             val colParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            colParams.marginStart = dp(12)
+            colParams.marginStart = dp(14)
             col.layoutParams = colParams
 
             val name = TextView(this)
             name.text = p.name
             name.textSize = 16f
-            name.setTypeface(name.typeface, Typeface.BOLD)
-            name.setTextColor(getColor(R.color.text))
+            if (selected) name.setTypeface(name.typeface, Typeface.BOLD)
+            name.setTextColor(getColor(if (selected) R.color.accent else R.color.text))
             col.addView(name)
 
             val sub = TextView(this)
@@ -379,44 +386,46 @@ class MainActivity : BaseActivity() {
             col.addView(sub)
             row.addView(col)
 
-            val badge = TextView(this)
-            badge.text = if (p.awg) "AmneziaWG" else "WireGuard"
-            badge.textSize = 10f
-            badge.setTypeface(badge.typeface, Typeface.BOLD)
-            badge.setTextColor(getColor(R.color.accent))
-            badge.setBackgroundResource(R.drawable.chip)
-            badge.setPadding(dp(9), dp(4), dp(9), dp(4))
-            row.addView(badge)
+            val gear = ImageView(this)
+            gear.setImageResource(R.drawable.ic_settings)
+            gear.setColorFilter(getColor(R.color.text2))
+            gear.setPadding(dp(4), dp(4), dp(4), dp(4))
+            gear.layoutParams = LinearLayout.LayoutParams(dp(34), dp(34))
+            gear.setOnClickListener { showProfileMenu(it, p) }
+            row.addView(gear)
 
-            if (p.id == sel) {
-                val check = ImageView(this)
-                check.setImageResource(R.drawable.ic_check)
-                check.setColorFilter(getColor(R.color.accent))
-                val cp = LinearLayout.LayoutParams(dp(20), dp(20))
-                cp.marginStart = dp(10)
-                check.layoutParams = cp
-                row.addView(check)
-            }
-
-            val menu = TextView(this)
-            menu.text = "⋯"
-            menu.textSize = 20f
-            menu.gravity = Gravity.CENTER
-            menu.setTextColor(getColor(R.color.text2))
-            menu.layoutParams = LinearLayout.LayoutParams(dp(38), dp(40))
-            menu.setOnClickListener { showProfileMenu(it, p) }
-            row.addView(menu)
-
-            llProfiles.addView(row)
+            container.addView(row)
             if (index < list.size - 1) {
                 val divider = View(this)
                 val dpParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 1)
-                dpParams.marginStart = dp(52)
+                dpParams.marginStart = dp(38)
                 divider.layoutParams = dpParams
                 divider.setBackgroundColor(getColor(R.color.separator))
-                llProfiles.addView(divider)
+                container.addView(divider)
             }
         }
+    }
+
+    private fun showProfilesSheet() {
+        if (Profiles.all(this).isEmpty()) {
+            showAddSheet()
+            return
+        }
+        val dialog = Dialog(this)
+        sheetDialog = dialog
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.setContentView(R.layout.sheet_profiles)
+        val window = dialog.window
+        window?.setBackgroundDrawableResource(android.R.color.transparent)
+        window?.setGravity(Gravity.BOTTOM)
+        window?.setLayout(android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT)
+        sheetProfiles = dialog.findViewById(R.id.llSheetProfiles)
+        renderProfiles()
+        dialog.setOnDismissListener {
+            sheetProfiles = null
+            sheetDialog = null
+        }
+        dialog.show()
     }
 
     private fun showProfileMenu(anchor: View, p: Profile) {
@@ -502,7 +511,7 @@ class MainActivity : BaseActivity() {
             val values = ContentValues()
             values.put(MediaStore.Images.Media.DISPLAY_NAME, name.replace(Regex("[^A-Za-z0-9._-]"), "_") + ".png")
             values.put(MediaStore.Images.Media.MIME_TYPE, "image/png")
-            values.put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/BeOfoq")
+            values.put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/GozarWG")
             val uri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values) ?: return false
             contentResolver.openOutputStream(uri)?.use { out -> bmp.compress(Bitmap.CompressFormat.PNG, 100, out) }
             true

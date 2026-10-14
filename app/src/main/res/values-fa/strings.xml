@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">به افق</string>
+    <string name="app_name">GozarWG</string>
     <string name="status_off">قطع است</string>
     <string name="status_on">متصل است</string>
     <string name="status_connecting">در حال اتصال…</string>

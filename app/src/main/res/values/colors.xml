@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="bg_solid">#04101E</color>
-    <color name="text">#F2F7FC</color>
-    <color name="text2">#8DA5BF</color>
-    <color name="glass">#0A1E33</color>
-    <color name="glass_edge">#1E3A56</color>
-    <color name="glass_inner">#0E2742</color>
-    <color name="separator">#1C344E</color>
-    <color name="field">#081827</color>
-    <color name="accent">#2E9BFF</color>
-    <color name="green">#20D67B</color>
-    <color name="red">#FF5C5C</color>
-    <color name="orange">#FFB020</color>
-    <color name="amber">#FFC24D</color>
-    <color name="chip">#262E9BFF</color>
-    <color name="icon">#C9D9E8</color>
-    <color name="tab_icon_off">#607C99</color>
+    <color name="bg_solid">#F7F9FC</color>
+    <color name="text">#0B1C2C</color>
+    <color name="text2">#51657A</color>
+    <color name="glass">#FFFFFF</color>
+    <color name="glass_edge">#D3DEE9</color>
+    <color name="glass_inner">#E9F1F8</color>
+    <color name="separator">#D9E3ED</color>
+    <color name="field">#EEF4FA</color>
+    <color name="accent">#0066CC</color>
+    <color name="green">#0E9F5A</color>
+    <color name="red">#D93025</color>
+    <color name="orange">#E8710A</color>
+    <color name="amber">#B06000</color>
+    <color name="chip">#1A0066CC</color>
+    <color name="icon">#33475E</color>
+    <color name="tab_icon_off">#8296AB</color>
 </resources>

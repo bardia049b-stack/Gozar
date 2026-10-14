@@ -23,6 +23,12 @@ object Vpn {
     @Volatile var totalRx = 0L
     @Volatile var totalTx = 0L
     @Volatile var errorAt = 0L
+    @Volatile var handshakeOk = false
+    @Volatile var attempt = 0
+
+    @Volatile private var session = 0
+    @Volatile private var restarting = false
+    private var lastCfg: Config? = null
 
     @Volatile private var monitoring = false
     private var mLastRx = -1L
@@ -64,18 +70,27 @@ object Vpn {
         BlockService.stop(c.applicationContext)
         profile = prof
         errorAt = 0L
+        handshakeOk = false
+        attempt = 0
+        restarting = false
+        session++
         userStop = false
         connecting = true
         notifyChange()
+        val sess = session
         thread {
             try {
                 val cfg = buildConfig(c, prof)
+                lastCfg = cfg
                 val t = Tun(prof.id) { s -> onState(s) }
                 tun = t
                 backendFor(c).setState(t, Tunnel.State.UP, cfg)
-                connecting = false
-                notifyChange()
+                if (session == sess) {
+                    connecting = false
+                    notifyChange()
+                }
             } catch (e: Exception) {
+                if (session != sess) return@thread
                 connecting = false
                 up = false
                 errorAt = System.currentTimeMillis()
@@ -87,6 +102,9 @@ object Vpn {
     }
 
     fun disconnect() {
+        session++
+        handshakeOk = false
+        restarting = false
         userStop = true
         val t = tun ?: return
         val b = backend ?: return
@@ -108,16 +126,19 @@ object Vpn {
         val wasUp = up
         up = s == Tunnel.State.UP
         if (up && !wasUp) {
-            since = System.currentTimeMillis()
+            if (!restarting) since = System.currentTimeMillis()
+            restarting = false
             errorAt = 0L
             startMonitor()
+            startWatchdog(session)
         }
         if (!up) {
+            handshakeOk = false
             downSpeed = 0.0
             upSpeed = 0.0
             appCtx?.let { Notify.cancel(it) }
         }
-        if (!up && !userStop && profile != null) {
+        if (!up && !userStop && !restarting && profile != null) {
             val c = appCtx
             val prof = profile
             if (c != null && prof != null && Store.kill(c)) {
@@ -128,6 +149,53 @@ object Vpn {
             }
         }
         notifyChange()
+    }
+
+    private fun startWatchdog(sess: Int) {
+        thread {
+            val deadline = System.currentTimeMillis() + 7000
+            while (up && session == sess && !handshakeOk && System.currentTimeMillis() < deadline) {
+                val age = handshakeAgeSec()
+                if (age in 0..15) {
+                    handshakeOk = true
+                    attempt = 0
+                    connecting = false
+                    notifyChange()
+                    return@thread
+                }
+                Thread.sleep(400)
+            }
+            if (!up || session != sess || handshakeOk || userStop) return@thread
+            if (attempt >= 5) {
+                errorAt = System.currentTimeMillis()
+                main.post { onError?.invoke("handshake timeout") }
+                disconnect()
+                return@thread
+            }
+            attempt++
+            restarting = true
+            connecting = true
+            notifyChange()
+            try {
+                val t = tun ?: return@thread
+                val b = backend ?: return@thread
+                val cfg = lastCfg ?: return@thread
+                b.setState(t, Tunnel.State.DOWN, null)
+                Thread.sleep(600)
+                if (session == sess && !userStop) {
+                    b.setState(t, Tunnel.State.UP, cfg)
+                    connecting = false
+                    notifyChange()
+                }
+            } catch (e: Exception) {
+                restarting = false
+                connecting = false
+                errorAt = System.currentTimeMillis()
+                notifyChange()
+                val msg = e.message ?: "error"
+                main.post { onError?.invoke(msg) }
+            }
+        }
     }
 
     private fun startMonitor() {
