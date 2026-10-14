@@ -39,7 +39,7 @@ import kotlin.concurrent.thread
 class HomeFragment : Fragment() {
     private lateinit var root: View
 
-    private val act: Activity get() = requireActivity()
+    private val act: Activity get() = activity
 
     private fun color(res: Int) = act.getColor(res)
 
@@ -187,7 +187,7 @@ class HomeFragment : Fragment() {
         }
         askNotifications()
         if (Store.proxy(act)) {
-            Vpn.connect(applicationContext, p)
+            Vpn.connect(act.applicationContext, p)
             return
         }
         val intent = VpnService.prepare(act)
@@ -195,7 +195,7 @@ class HomeFragment : Fragment() {
             pendingProfile = p
             startActivityForResult(intent, REQ_VPN)
         } else {
-            Vpn.connect(applicationContext, p)
+            Vpn.connect(act.applicationContext, p)
         }
     }
 
@@ -701,7 +701,7 @@ class HomeFragment : Fragment() {
             val p = pendingProfile
             pendingProfile = null
             if (resultCode == Activity.RESULT_OK && p != null) {
-                Vpn.connect(applicationContext, p)
+                Vpn.connect(act.applicationContext, p)
             } else {
                 toast(R.string.vpn_perm)
             }

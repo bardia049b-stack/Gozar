@@ -17,7 +17,7 @@ import kotlin.concurrent.thread
 class SettingsFragment : Fragment() {
     private lateinit var root: View
 
-    private val act: Activity get() = requireActivity()
+    private val act: Activity get() = activity
 
     private fun <T : View> find(id: Int): T = root.findViewById(id)
 
@@ -79,7 +79,7 @@ class SettingsFragment : Fragment() {
         tvAbout.text = getString(R.string.app_name) + " · " + String.format(getString(R.string.version), version)
         thread {
             val core = try {
-                Vpn.coreVersion(applicationContext)
+                Vpn.coreVersion(act.applicationContext)
             } catch (e: Throwable) {
                 ""
             }
@@ -89,8 +89,6 @@ class SettingsFragment : Fragment() {
                 }
             }
         }
-    }
-
     }
 
     override fun onResume() {
