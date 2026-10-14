@@ -4,7 +4,7 @@ plugins {
 }
 
 def keystoreFile = System.getenv('KEYSTORE_FILE')
-def hasSigning = keystoreFile != null && file(keystoreFile).exists()
+def hasSigning = keystoreFile != null && !keystoreFile.isEmpty() && file(keystoreFile).exists()
 
 android {
     namespace 'com.beofoq.wg'
