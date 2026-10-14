@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg"
+    android:fitsSystemWindows="true">
+
+    <ScrollView android:layout_width="match_parent" android:layout_height="match_parent" android:clipToPadding="false" android:paddingBottom="36dp" android:scrollbars="none">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingStart="20dp" android:paddingTop="16dp" android:paddingEnd="20dp">
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="52dp" android:gravity="center_vertical" android:orientation="horizontal">
+                <ImageView android:id="@+id/btnBack" android:layout_width="38dp" android:layout_height="38dp" android:background="@drawable/circle_glass" android:padding="9dp" android:src="@drawable/ic_close" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="14dp" android:text="@string/settings" android:textColor="@color/text" android:textSize="26sp" android:textStyle="bold" />
+            </LinearLayout>
+
+            <TextView style="@style/SectionLabel" android:text="@string/st_connection" />
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="@drawable/glass_small" android:orientation="vertical">
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal" android:padding="14dp">
+                <ImageView android:layout_width="32dp" android:layout_height="32dp" android:background="@drawable/icon_red" android:padding="7dp" android:src="@drawable/ic_shield" />
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="12dp" android:layout_weight="1" android:orientation="vertical">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/kill_switch" android:textColor="@color/text" android:textSize="15sp" />
+                    
+                </LinearLayout>
+                <com.beofoq.wg.GlassSwitch android:id="@+id/swKill" android:layout_width="52dp" android:layout_height="32dp" />
+            </LinearLayout>
+            <View style="@style/Divider" />
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal" android:padding="14dp">
+                <ImageView android:layout_width="32dp" android:layout_height="32dp" android:background="@drawable/icon_green" android:padding="7dp" android:src="@drawable/ic_power" />
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="12dp" android:layout_weight="1" android:orientation="vertical">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/auto_connect" android:textColor="@color/text" android:textSize="15sp" />
+                    
+                </LinearLayout>
+                <com.beofoq.wg.GlassSwitch android:id="@+id/swAuto" android:layout_width="52dp" android:layout_height="32dp" />
+            </LinearLayout>
+            <View style="@style/Divider" />
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal" android:padding="14dp">
+                <ImageView android:layout_width="32dp" android:layout_height="32dp" android:background="@drawable/icon_teal" android:padding="7dp" android:src="@drawable/ic_globe" />
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="12dp" android:layout_weight="1" android:orientation="vertical">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/lan" android:textColor="@color/text" android:textSize="15sp" />
+                    
+                </LinearLayout>
+                <com.beofoq.wg.GlassSwitch android:id="@+id/swLan" android:layout_width="52dp" android:layout_height="32dp" />
+            </LinearLayout>
+            </LinearLayout>
+
+            <TextView style="@style/SectionLabel" android:text="@string/st_proxy" />
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="@drawable/glass_small" android:orientation="vertical">
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal" android:padding="14dp">
+                <ImageView android:layout_width="32dp" android:layout_height="32dp" android:background="@drawable/icon_purple" android:padding="7dp" android:src="@drawable/ic_share" />
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="12dp" android:layout_weight="1" android:orientation="vertical">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/proxy_mode" android:textColor="@color/text" android:textSize="15sp" />
+                    
+                </LinearLayout>
+                <com.beofoq.wg.GlassSwitch android:id="@+id/swProxy" android:layout_width="52dp" android:layout_height="32dp" />
+            </LinearLayout>
+            <View style="@style/Divider" />
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal" android:padding="14dp">
+                <ImageView android:layout_width="32dp" android:layout_height="32dp" android:background="@drawable/icon_grey" android:padding="7dp" android:src="@drawable/ic_settings" />
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="12dp" android:layout_weight="1" android:orientation="vertical">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/proxy_port" android:textColor="@color/text" android:textSize="15sp" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="value" android:textColor="@color/text2" android:textSize="12sp" />
+                </LinearLayout>
+                <com.beofoq.wg.GlassSwitch android:id="@+id/tvProxyPort" android:layout_width="52dp" android:layout_height="32dp" />
+            </LinearLayout>
+            </LinearLayout>
+
+            <TextView style="@style/SectionLabel" android:text="@string/split" />
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="@drawable/glass_small" android:orientation="vertical">
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal" android:padding="14dp">
+                <ImageView android:layout_width="32dp" android:layout_height="32dp" android:background="@drawable/icon_orange" android:padding="7dp" android:src="@drawable/ic_apps" />
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="12dp" android:layout_weight="1" android:orientation="vertical">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/split_mode" android:textColor="@color/text" android:textSize="15sp" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="value" android:textColor="@color/text2" android:textSize="12sp" />
+                </LinearLayout>
+                <com.beofoq.wg.GlassSwitch android:id="@+id/tvSplitMode" android:layout_width="52dp" android:layout_height="32dp" />
+            </LinearLayout>
+            <View style="@style/Divider" />
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal" android:padding="14dp">
+                <ImageView android:layout_width="32dp" android:layout_height="32dp" android:background="@drawable/icon_blue" android:padding="7dp" android:src="@drawable/ic_apps" />
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="12dp" android:layout_weight="1" android:orientation="vertical">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/split_apps" android:textColor="@color/text" android:textSize="15sp" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="value" android:textColor="@color/text2" android:textSize="12sp" />
+                </LinearLayout>
+                <com.beofoq.wg.GlassSwitch android:id="@+id/tvSplitApps" android:layout_width="52dp" android:layout_height="32dp" />
+            </LinearLayout>
+            </LinearLayout>
+
+            <TextView style="@style/SectionLabel" android:text="@string/st_app" />
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:background="@drawable/glass_small" android:orientation="vertical">
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal" android:padding="14dp">
+                <ImageView android:layout_width="32dp" android:layout_height="32dp" android:background="@drawable/icon_blue" android:padding="7dp" android:src="@drawable/ic_globe" />
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="12dp" android:layout_weight="1" android:orientation="vertical">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/language" android:textColor="@color/text" android:textSize="15sp" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="value" android:textColor="@color/text2" android:textSize="12sp" />
+                </LinearLayout>
+                <com.beofoq.wg.GlassSwitch android:id="@+id/tvLang" android:layout_width="52dp" android:layout_height="32dp" />
+            </LinearLayout>
+            <View style="@style/Divider" />
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal" android:padding="14dp">
+                <ImageView android:layout_width="32dp" android:layout_height="32dp" android:background="@drawable/icon_grey" android:padding="7dp" android:src="@drawable/ic_eye" />
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="12dp" android:layout_weight="1" android:orientation="vertical">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/theme" android:textColor="@color/text" android:textSize="15sp" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="value" android:textColor="@color/text2" android:textSize="12sp" />
+                </LinearLayout>
+                <com.beofoq.wg.GlassSwitch android:id="@+id/tvTheme" android:layout_width="52dp" android:layout_height="32dp" />
+            </LinearLayout>
+            <View style="@style/Divider" />
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:orientation="horizontal" android:padding="14dp">
+                <ImageView android:layout_width="32dp" android:layout_height="32dp" android:background="@drawable/icon_grey" android:padding="7dp" android:src="@drawable/ic_settings" />
+                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="12dp" android:layout_weight="1" android:orientation="vertical">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/vpn_settings" android:textColor="@color/text" android:textSize="15sp" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="value" android:textColor="@color/text2" android:textSize="12sp" />
+                </LinearLayout>
+                <com.beofoq.wg.GlassSwitch android:id="@+id/tvVpnSettings" android:layout_width="52dp" android:layout_height="32dp" />
+            </LinearLayout>
+            </LinearLayout>
+
+            <TextView android:id="@+id/tvKillDesc" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:lineSpacingMultiplier="1.35" android:paddingStart="6dp" android:paddingEnd="6dp" android:text="@string/kill_switch_desc" android:textColor="@color/text2" android:textSize="12sp" />
+
+            <TextView android:id="@+id/tvAbout" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:layout_marginTop="26dp" android:textColor="@color/text2" android:textSize="12sp" />
+        </LinearLayout>
+    </ScrollView>
+</FrameLayout>

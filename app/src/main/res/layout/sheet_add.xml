@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="14dp"
+    android:background="@drawable/glass"
+    android:orientation="vertical"
+    android:padding="10dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:padding="10dp"
+        android:text="@string/add_title"
+        android:textColor="@color/text"
+        android:textSize="16sp"
+        android:textStyle="bold" />
+
+    <View style="@style/Divider" />
+
+    <LinearLayout android:id="@+id/optFile" style="@style/SheetRow">
+        <ImageView style="@style/SheetIcon" android:src="@drawable/ic_file" />
+        <TextView style="@style/SheetText" android:text="@string/imp_file" />
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/optQr" style="@style/SheetRow">
+        <ImageView style="@style/SheetIcon" android:src="@drawable/ic_qr" />
+        <TextView style="@style/SheetText" android:text="@string/imp_qr" />
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/optGallery" style="@style/SheetRow">
+        <ImageView style="@style/SheetIcon" android:src="@drawable/ic_eye" />
+        <TextView style="@style/SheetText" android:text="@string/imp_gallery" />
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/optPaste" style="@style/SheetRow">
+        <ImageView style="@style/SheetIcon" android:src="@drawable/ic_paste" />
+        <TextView style="@style/SheetText" android:text="@string/imp_paste" />
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/optLink" style="@style/SheetRow">
+        <ImageView style="@style/SheetIcon" android:src="@drawable/ic_link" />
+        <TextView style="@style/SheetText" android:text="@string/imp_link" />
+    </LinearLayout>
+
+    <LinearLayout android:id="@+id/optCreate" style="@style/SheetRow">
+        <ImageView style="@style/SheetIcon" android:src="@drawable/ic_edit" />
+        <TextView style="@style/SheetText" android:text="@string/imp_create" />
+    </LinearLayout>
+</LinearLayout>

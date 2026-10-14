@@ -1,0 +1,3 @@
+-keep class org.amnezia.awg.** { *; }
+-keep class com.google.zxing.** { *; }
+-dontwarn org.amnezia.awg.**
