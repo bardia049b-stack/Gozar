@@ -6,7 +6,7 @@ import java.io.File
 
 data class Profile(val id: String, val name: String, val text: String) {
     val awg: Boolean
-        get() = Regex("(?m)^\\s*(Jc|Jmin|Jmax|S1|S2|S3|S4|H1|H2|H3|H4)\\s*=\\s*\\S+").containsMatchIn(text)
+        get() = Regex("(?m)^\\s*(Jc|Jmin|Jmax|S1|S2|S3|S4|H1|H2|H3|H4|I1|I2|I3|I4|I5)\\s*=\\s*\\S+").containsMatchIn(text)
 
     val endpoint: String
         get() = Regex("(?m)^\\s*Endpoint\\s*=\\s*(.+)$").find(text)?.groupValues?.get(1)?.trim() ?: ""

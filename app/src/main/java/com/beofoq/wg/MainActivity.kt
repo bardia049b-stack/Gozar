@@ -172,6 +172,7 @@ class MainActivity : BaseActivity() {
             connecting && !up -> getString(R.string.status_connecting)
             connecting && up -> getString(R.string.status_disconnecting)
             up -> getString(R.string.status_on)
+            BlockService.running -> getString(R.string.kill_switch)
             else -> getString(R.string.status_off)
         }
         tvStatus.setTextColor(getColor(if (up) R.color.green else R.color.text))
@@ -240,6 +241,13 @@ class MainActivity : BaseActivity() {
     }
 
     private fun maybeFetchIp() {
+        if (Store.proxy(this)) {
+            tvLocation.text = "SOCKS5"
+            tvIp.text = "127.0.0.1:" + Store.proxyPort(this)
+            tvFlag.text = ""
+            flagImg.visibility = View.GONE
+            return
+        }
         if (ipFor == Vpn.since || Vpn.since == 0L) return
         ipFor = Vpn.since
         thread {

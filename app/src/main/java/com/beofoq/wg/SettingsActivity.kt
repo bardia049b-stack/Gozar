@@ -74,6 +74,12 @@ class SettingsActivity : BaseActivity() {
         updateProxyText()
     }
 
+    private fun rowClick(id: Int, action: () -> Unit) {
+        val v = findViewById<View>(id)
+        v.setOnClickListener { action() }
+        (v.parent as? View)?.setOnClickListener { action() }
+    }
+
     private fun bindSwitch(id: Int, initial: Boolean, save: (Boolean) -> Unit) {
         val sw = findViewById<GlassSwitch>(id)
         sw.setChecked(initial, false)

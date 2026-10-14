@@ -236,6 +236,22 @@
                         </LinearLayout>
                     </LinearLayout>
 
+
+                    <TextView style="@style/FieldLabel" android:text="I1" />
+                    <EditText android:id="@+id/etI1" style="@style/Field" android:inputType="textNoSuggestions" />
+
+                    <TextView style="@style/FieldLabel" android:text="I2" />
+                    <EditText android:id="@+id/etI2" style="@style/Field" android:inputType="textNoSuggestions" />
+
+                    <TextView style="@style/FieldLabel" android:text="I3" />
+                    <EditText android:id="@+id/etI3" style="@style/Field" android:inputType="textNoSuggestions" />
+
+                    <TextView style="@style/FieldLabel" android:text="I4" />
+                    <EditText android:id="@+id/etI4" style="@style/Field" android:inputType="textNoSuggestions" />
+
+                    <TextView style="@style/FieldLabel" android:text="I5" />
+                    <EditText android:id="@+id/etI5" style="@style/Field" android:inputType="textNoSuggestions" />
+
                     <TextView
                         android:id="@+id/btnRandomAwg"
                         style="@style/SmallBtn"

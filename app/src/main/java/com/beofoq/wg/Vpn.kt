@@ -51,6 +51,7 @@ object Vpn {
 
     fun connect(c: Context, prof: Profile) {
         appCtx = c.applicationContext
+        BlockService.stop(c.applicationContext)
         profile = prof
         userStop = false
         connecting = true
