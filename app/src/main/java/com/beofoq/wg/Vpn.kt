@@ -18,6 +18,16 @@ object Vpn {
     @Volatile var connecting = false
     @Volatile var profile: Profile? = null
     @Volatile var since = 0L
+    @Volatile var downSpeed = 0.0
+    @Volatile var upSpeed = 0.0
+    @Volatile var totalRx = 0L
+    @Volatile var totalTx = 0L
+    @Volatile var errorAt = 0L
+
+    @Volatile private var monitoring = false
+    private var mLastRx = -1L
+    private var mLastTx = -1L
+    private var mLastTime = 0L
     var listener: ((Boolean) -> Unit)? = null
     var onError: ((String) -> Unit)? = null
 
@@ -53,6 +63,7 @@ object Vpn {
         appCtx = c.applicationContext
         BlockService.stop(c.applicationContext)
         profile = prof
+        errorAt = 0L
         userStop = false
         connecting = true
         notifyChange()
@@ -67,8 +78,10 @@ object Vpn {
             } catch (e: Exception) {
                 connecting = false
                 up = false
+                errorAt = System.currentTimeMillis()
                 notifyChange()
-                onError?.invoke(e.message ?: "error")
+                val msg = e.message ?: "error"
+                main.post { onError?.invoke(msg) }
             }
         }
     }
@@ -94,17 +107,72 @@ object Vpn {
     private fun onState(s: Tunnel.State) {
         val wasUp = up
         up = s == Tunnel.State.UP
-        if (up && !wasUp) since = System.currentTimeMillis()
+        if (up && !wasUp) {
+            since = System.currentTimeMillis()
+            errorAt = 0L
+            startMonitor()
+        }
+        if (!up) {
+            downSpeed = 0.0
+            upSpeed = 0.0
+            appCtx?.let { Notify.cancel(it) }
+        }
         if (!up && !userStop && profile != null) {
             val c = appCtx
             val prof = profile
             if (c != null && prof != null && Store.kill(c)) {
+                BlockService.start(c.applicationContext)
                 main.postDelayed({
                     if (!up && !userStop && profile != null) connect(c, prof)
                 }, 3000)
             }
         }
         notifyChange()
+    }
+
+    private fun startMonitor() {
+        if (monitoring) return
+        monitoring = true
+        mLastRx = -1L
+        mLastTx = -1L
+        mLastTime = 0L
+        thread {
+            try {
+                while (up) {
+                    Thread.sleep(1000)
+                    if (!up) break
+                    val st = stats() ?: continue
+                    val rx = st.totalRx()
+                    val tx = st.totalTx()
+                    totalRx = rx
+                    totalTx = tx
+                    val now = android.os.SystemClock.elapsedRealtime()
+                    if (mLastRx >= 0 && now - mLastTime >= 900) {
+                        val dt = (now - mLastTime) / 1000.0
+                        val draw = if (rx >= mLastRx) (rx - mLastRx) / dt else 0.0
+                        val uraw = if (tx >= mLastTx) (tx - mLastTx) / dt else 0.0
+                        downSpeed = if (downSpeed <= 0.0) draw else draw * 0.55 + downSpeed * 0.45
+                        upSpeed = if (upSpeed <= 0.0) uraw else uraw * 0.55 + upSpeed * 0.45
+                        if (draw <= 0.0) downSpeed *= 0.7
+                        if (uraw <= 0.0) upSpeed *= 0.7
+                        mLastRx = rx
+                        mLastTx = tx
+                        mLastTime = now
+                    } else if (mLastRx < 0) {
+                        mLastRx = rx
+                        mLastTx = tx
+                        mLastTime = now
+                    }
+                    val c = appCtx
+                    val p = profile
+                    if (c != null && p != null) Notify.update(c, p.name, downSpeed, upSpeed)
+                }
+            } catch (e: Exception) {
+            }
+            monitoring = false
+            downSpeed = 0.0
+            upSpeed = 0.0
+        }
     }
 
     private fun notifyChange() {

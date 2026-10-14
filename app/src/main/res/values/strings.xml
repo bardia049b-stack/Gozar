@@ -123,4 +123,5 @@
     <string name="import_msg">Add “%s” to your profiles?</string>
     <string name="gallery_failed">No QR code found in this image</string>
     <string name="active">Active</string>
+    <string name="notif_channel">Connection status</string>
 </resources>

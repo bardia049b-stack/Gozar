@@ -25,18 +25,18 @@ class SettingsActivity : BaseActivity() {
         }
 
         updateProxyText()
-        findViewById<View>(R.id.tvProxyPort).setOnClickListener { editPort() }
+        rowClick(R.id.tvProxyPort) { editPort() }
 
         updateSplitTexts()
-        findViewById<View>(R.id.tvSplitMode).setOnClickListener { pickSplitMode() }
-        findViewById<View>(R.id.tvSplitApps).setOnClickListener {
+        rowClick(R.id.tvSplitMode) { pickSplitMode() }
+        rowClick(R.id.tvSplitApps) {
             startActivity(Intent(this, AppsActivity::class.java))
         }
 
         updateLangThemeTexts()
-        findViewById<View>(R.id.tvLang).setOnClickListener { pickLang() }
-        findViewById<View>(R.id.tvTheme).setOnClickListener { pickTheme() }
-        findViewById<View>(R.id.tvVpnSettings).setOnClickListener {
+        rowClick(R.id.tvLang) { pickLang() }
+        rowClick(R.id.tvTheme) { pickTheme() }
+        rowClick(R.id.tvVpnSettings) {
             try {
                 startActivity(Intent(Settings.ACTION_VPN_SETTINGS))
             } catch (e: Exception) {
@@ -75,9 +75,11 @@ class SettingsActivity : BaseActivity() {
     }
 
     private fun rowClick(id: Int, action: () -> Unit) {
-        val v = findViewById<View>(id)
-        v.setOnClickListener { action() }
-        (v.parent as? View)?.setOnClickListener { action() }
+        var v: View? = findViewById(id)
+        repeat(3) {
+            v?.setOnClickListener { action() }
+            v = v?.parent as? View
+        }
     }
 
     private fun bindSwitch(id: Int, initial: Boolean, save: (Boolean) -> Unit) {

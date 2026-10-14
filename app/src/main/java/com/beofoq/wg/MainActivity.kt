@@ -1,7 +1,6 @@
 package com.beofoq.wg
 
 import android.Manifest
-import android.animation.ObjectAnimator
 import android.app.AlertDialog
 import android.app.Dialog
 import android.content.ClipData
@@ -19,13 +18,11 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.os.SystemClock
 import android.provider.MediaStore
 import android.provider.OpenableColumns
 import android.view.Gravity
 import android.view.View
 import android.view.Window
-import android.view.animation.LinearInterpolator
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -35,13 +32,13 @@ import android.widget.TextView
 import kotlin.concurrent.thread
 
 class MainActivity : BaseActivity() {
-    private lateinit var powerRing: View
-    private lateinit var pulse: View
+    private lateinit var ring: RingView
+    private lateinit var mapDots: ImageView
     private lateinit var powerBtn: View
     private lateinit var powerIcon: ImageView
-    private lateinit var busy: ProgressBar
     private lateinit var tvStatus: TextView
     private lateinit var tvDuration: TextView
+    private lateinit var tvConnectLabel: TextView
     private lateinit var statsBox: View
     private lateinit var flagImg: ImageView
     private lateinit var tvFlag: TextView
@@ -49,19 +46,22 @@ class MainActivity : BaseActivity() {
     private lateinit var tvIp: TextView
     private lateinit var tvDown: TextView
     private lateinit var tvUp: TextView
+    private lateinit var barDown: ProgressBar
+    private lateinit var barUp: ProgressBar
     private lateinit var tvTotal: TextView
     private lateinit var tvHandshake: TextView
     private lateinit var llProfiles: LinearLayout
     private lateinit var tvEmpty: TextView
+    private lateinit var tvPerAppValue: TextView
 
     private val handler = Handler(Looper.getMainLooper())
     private var pendingProfile: Profile? = null
     private var pendingExport: Profile? = null
-    private var lastRx = -1L
-    private var lastTx = -1L
-    private var lastTime = 0L
     private var ipFor = 0L
-    private var pulseAnim: ObjectAnimator? = null
+    private var handshaked = false
+    private var lastState = -1
+    private var peakDown = 1.0
+    private var peakUp = 1.0
 
     companion object {
         const val REQ_VPN = 7
@@ -74,13 +74,13 @@ class MainActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        powerRing = findViewById(R.id.powerRing)
-        pulse = findViewById(R.id.pulse)
+        ring = findViewById(R.id.ring)
+        mapDots = findViewById(R.id.mapDots)
         powerBtn = findViewById(R.id.powerBtn)
         powerIcon = findViewById(R.id.powerIcon)
-        busy = findViewById(R.id.busy)
         tvStatus = findViewById(R.id.tvStatus)
         tvDuration = findViewById(R.id.tvDuration)
+        tvConnectLabel = findViewById(R.id.tvConnectLabel)
         statsBox = findViewById(R.id.statsBox)
         flagImg = findViewById(R.id.flagImg)
         tvFlag = findViewById(R.id.tvFlag)
@@ -88,19 +88,37 @@ class MainActivity : BaseActivity() {
         tvIp = findViewById(R.id.tvIp)
         tvDown = findViewById(R.id.tvDown)
         tvUp = findViewById(R.id.tvUp)
+        barDown = findViewById(R.id.barDown)
+        barUp = findViewById(R.id.barUp)
         tvTotal = findViewById(R.id.tvTotal)
         tvHandshake = findViewById(R.id.tvHandshake)
         llProfiles = findViewById(R.id.llProfiles)
         tvEmpty = findViewById(R.id.tvEmpty)
+        tvPerAppValue = findViewById(R.id.tvPerAppValue)
 
-        powerBtn.setOnClickListener { onPower() }
+        powerBtn.setOnClickListener {
+            powerBtn.animate().scaleX(0.94f).scaleY(0.94f).setDuration(90).withEndAction {
+                powerBtn.animate().scaleX(1f).scaleY(1f).setDuration(140).start()
+            }.start()
+            onPower()
+        }
         findViewById<View>(R.id.btnAdd).setOnClickListener { showAddSheet() }
         findViewById<View>(R.id.btnHome).setOnClickListener { }
         findViewById<View>(R.id.btnSettings).setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
+        findViewById<View>(R.id.btnSettingsTop).setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
+        }
+        findViewById<View>(R.id.rowPerApp).setOnClickListener {
+            startActivity(Intent(this, AppsActivity::class.java))
+        }
         findViewById<ImageView>(R.id.tabHomeIcon).setColorFilter(getColor(R.color.accent))
-        Vpn.onError = { msg -> toast(getString(R.string.connection_failed) + ": " + msg.take(80)) }
+        findViewById<ImageView>(R.id.tabSettingsIcon).setColorFilter(getColor(R.color.tab_icon_off))
+        Vpn.onError = { msg ->
+            updateStatus()
+            toast(getString(R.string.connection_failed) + ": " + msg.take(80))
+        }
         renderProfiles()
         updateStatus()
         handleIntent(intent)
@@ -124,17 +142,30 @@ class MainActivity : BaseActivity() {
 
     private fun tick() {
         handler.postDelayed({
+            if (Vpn.up && !handshaked) {
+                if (Vpn.handshakeAgeSec() >= 0) {
+                    handshaked = true
+                    updateStatus()
+                }
+            }
             if (Vpn.up) {
                 tvDuration.text = fmtTime((System.currentTimeMillis() - Vpn.since) / 1000)
-                refreshStats()
-                maybeFetchIp()
+                if (handshaked) {
+                    updateStatsUi()
+                    maybeFetchIp()
+                }
             }
+            val s = stateCode()
+            if (s != lastState) updateStatus()
             tick()
         }, 1000)
     }
 
     private fun onPower() {
-        if (Vpn.connecting) return
+        if (Vpn.connecting) {
+            Vpn.disconnect()
+            return
+        }
         if (Vpn.up || Vpn.profile != null) {
             Vpn.disconnect()
             return
@@ -144,6 +175,7 @@ class MainActivity : BaseActivity() {
             toast(R.string.select_first)
             return
         }
+        askNotifications()
         if (Store.proxy(this)) {
             Vpn.connect(applicationContext, p)
             return
@@ -157,6 +189,14 @@ class MainActivity : BaseActivity() {
         }
     }
 
+    private fun askNotifications() {
+        if (Build.VERSION.SDK_INT >= 33 &&
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 9)
+        }
+    }
+
     private fun selectedProfile(): Profile? {
         val list = Profiles.all(this)
         if (list.isEmpty()) return null
@@ -164,79 +204,101 @@ class MainActivity : BaseActivity() {
         return list.firstOrNull { it.id == sel } ?: list.first()
     }
 
+    private fun stateCode(): Int {
+        if (Vpn.up) return if (handshaked) 2 else 1
+        if (Vpn.connecting) return 1
+        if (Vpn.errorAt > 0 && System.currentTimeMillis() - Vpn.errorAt < 6000) return 3
+        return 0
+    }
+
     private fun updateStatus() {
-        val up = Vpn.up
-        val connecting = Vpn.connecting
-        busy.visibility = if (connecting) View.VISIBLE else View.GONE
-        tvStatus.text = when {
-            connecting && !up -> getString(R.string.status_connecting)
-            connecting && up -> getString(R.string.status_disconnecting)
-            up -> getString(R.string.status_on)
-            BlockService.running -> getString(R.string.kill_switch)
-            else -> getString(R.string.status_off)
-        }
-        tvStatus.setTextColor(getColor(if (up) R.color.green else R.color.text))
-        powerRing.setBackgroundResource(if (up) R.drawable.ring_on else R.drawable.ring_off)
-        powerIcon.setColorFilter(getColor(if (up) R.color.green else R.color.text2))
-        statsBox.visibility = if (up) View.VISIBLE else View.GONE
-        tvDuration.visibility = if (up) View.VISIBLE else View.GONE
-        if (up) {
-            startPulse()
-        } else {
-            stopPulse()
-            lastRx = -1
+        val state = stateCode()
+        lastState = state
+        if (state == 0) {
+            handshaked = false
             ipFor = 0
+            peakDown = 1.0
+            peakUp = 1.0
         }
+        ring.setState(state)
+        tvStatus.text = when (state) {
+            2 -> getString(R.string.status_on)
+            1 -> getString(R.string.status_connecting)
+            3 -> getString(R.string.connection_failed)
+            else -> if (BlockService.running) getString(R.string.kill_switch) else getString(R.string.status_off)
+        }
+        tvStatus.setTextColor(
+            getColor(
+                when (state) {
+                    2 -> R.color.green
+                    1 -> R.color.accent
+                    3 -> R.color.red
+                    else -> R.color.text2
+                }
+            )
+        )
+        powerBtn.setBackgroundResource(
+            when (state) {
+                2 -> R.drawable.circle_btn_on
+                3 -> R.drawable.circle_btn_error
+                else -> R.drawable.circle_btn
+            }
+        )
+        powerIcon.setColorFilter(
+            getColor(
+                when (state) {
+                    2 -> R.color.green
+                    1 -> R.color.accent
+                    3 -> R.color.red
+                    else -> R.color.text2
+                }
+            )
+        )
+        mapDots.setColorFilter(
+            getColor(
+                when (state) {
+                    2 -> R.color.green
+                    1 -> R.color.accent
+                    3 -> R.color.red
+                    else -> R.color.glass_edge
+                }
+            ), android.graphics.PorterDuff.Mode.SRC_IN
+        )
+        tvConnectLabel.text = getString(if (state == 2 || state == 1) R.string.disconnect else R.string.connect)
+        tvConnectLabel.setTextColor(getColor(if (state == 2) R.color.green else R.color.text))
+        statsBox.visibility = if (state == 2 || state == 1) View.VISIBLE else View.GONE
+        if (!Vpn.up) tvDuration.text = "00:00:00"
+        updatePerApp()
         renderProfiles()
     }
 
-    private fun startPulse() {
-        if (pulseAnim != null) return
-        pulse.visibility = View.VISIBLE
-        val a = ObjectAnimator.ofFloat(pulse, "alpha", 0.9f, 0.15f)
-        a.duration = 1400
-        a.repeatCount = ObjectAnimator.INFINITE
-        a.repeatMode = ObjectAnimator.REVERSE
-        a.interpolator = LinearInterpolator()
-        a.start()
-        pulseAnim = a
+    private fun updatePerApp() {
+        val mode = Store.splitMode(this)
+        val name = when (mode) {
+            1 -> getString(R.string.split_exclude)
+            2 -> getString(R.string.split_include)
+            else -> getString(R.string.split_off)
+        }
+        tvPerAppValue.text = String.format(getString(R.string.split_value), name, Store.splitApps(this).size)
     }
 
-    private fun stopPulse() {
-        pulseAnim?.cancel()
-        pulseAnim = null
-        pulse.visibility = View.GONE
-    }
-
-    private fun refreshStats() {
-        thread {
-            val st = Vpn.stats() ?: return@thread
-            val rx = st.totalRx()
-            val tx = st.totalTx()
-            val now = SystemClock.elapsedRealtime()
-            var down = 0.0
-            var upSpeed = 0.0
-            if (lastRx >= 0 && now > lastTime) {
-                val dt = (now - lastTime) / 1000.0
-                down = (rx - lastRx) / dt
-                upSpeed = (tx - lastTx) / dt
-            }
-            lastRx = rx
-            lastTx = tx
-            lastTime = now
-            val age = Vpn.handshakeAgeSec()
-            runOnUiThread {
-                if (!Vpn.up) return@runOnUiThread
-                tvDown.text = fmtSpeed(down)
-                tvUp.text = fmtSpeed(upSpeed)
-                tvTotal.text = getString(R.string.total) + ": " + fmtBytes(rx + tx) + "  ↓ " + fmtBytes(rx) + "  ↑ " + fmtBytes(tx)
-                tvHandshake.text = getString(R.string.handshake) + ": " + when {
-                    age < 0 -> "--"
-                    age < 5 -> getString(R.string.now)
-                    age < 60 -> String.format(getString(R.string.sec_ago), age.toInt())
-                    else -> String.format(getString(R.string.min_ago), (age / 60).toInt())
-                }
-            }
+    private fun updateStatsUi() {
+        val down = Vpn.downSpeed
+        val upS = Vpn.upSpeed
+        tvDown.text = fmtSpeed(down)
+        tvUp.text = fmtSpeed(upS)
+        peakDown = maxOf(peakDown * 0.995, down, 1024.0)
+        peakUp = maxOf(peakUp * 0.995, upS, 1024.0)
+        barDown.progress = (down / peakDown * 100).toInt().coerceIn(0, 100)
+        barUp.progress = (upS / peakUp * 100).toInt().coerceIn(0, 100)
+        tvTotal.text = getString(R.string.total) + ": " + fmtBytes(Vpn.totalRx + Vpn.totalTx) +
+            "  ↓ " + fmtBytes(Vpn.totalRx) + "  ↑ " + fmtBytes(Vpn.totalTx)
+        val age = Vpn.handshakeAgeSec()
+        tvHandshake.text = getString(R.string.handshake) + ": " + when {
+            age < 0 -> "--"
+            age < 5 -> getString(R.string.now)
+            age < 60 -> String.format(getString(R.string.sec_ago), age.toInt())
+            else -> String.format(getString(R.string.min_ago), (age / 60).toInt())
         }
     }
 
