@@ -24,7 +24,7 @@ class ConnectView @JvmOverloads constructor(context: Context, attrs: AttributeSe
         const val ERROR = 3
 
         private const val FRAME_MS = 16L
-        private const val SEGMENTS = 120
+        private const val SEGMENTS = 140
     }
 
     var state = OFF
@@ -39,7 +39,8 @@ class ConnectView @JvmOverloads constructor(context: Context, attrs: AttributeSe
     private val density = resources.displayMetrics.density
     private val skin = Paint(Paint.ANTI_ALIAS_FLAG)
     private val shade = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val shine = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val gloss = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val wave = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
     private val bubble = Path()
     private val ghost = Path()
     private var born = SystemClock.elapsedRealtime()
@@ -49,9 +50,6 @@ class ConnectView @JvmOverloads constructor(context: Context, attrs: AttributeSe
         setWillNotDraw(false)
         isClickable = true
         isFocusable = true
-        if (isInEditMode) {
-            skin.color = 0xFF4A55C7.toInt()
-        }
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
@@ -63,7 +61,7 @@ class ConnectView @JvmOverloads constructor(context: Context, attrs: AttributeSe
     }
 
     private fun blob(
-        target: Path,
+        path: Path,
         cx: Float,
         cy: Float,
         radius: Float,
@@ -71,16 +69,16 @@ class ConnectView @JvmOverloads constructor(context: Context, attrs: AttributeSe
         amp: Float,
         spin: Float
     ) {
-        target.reset()
+        path.reset()
         val base = radius - amp
         for (i in 0..SEGMENTS) {
             val a = (i.toFloat() / SEGMENTS) * 2f * PI.toFloat() + spin
             val r = base + amp * cos(lobes * a)
             val x = cx + r * cos(a)
             val y = cy + r * sin(a)
-            if (i == 0) target.moveTo(x, y) else target.lineTo(x, y)
+            if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
         }
-        target.close()
+        path.close()
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -89,10 +87,31 @@ class ConnectView @JvmOverloads constructor(context: Context, attrs: AttributeSe
         val cx = width / 2f
         val cy = height / 2f
         val half = min(width, height) / 2f
+        val unit = density
 
-        val pop = 1f + 0.06f * exp(-age * 4f)
-        val drift = 2.6f * density * sin(age * 1.15f)
-        val grow = 1f + 0.035f * sin(age * 1.35f)
+        val pop = 1f + 0.08f * exp(-age * 4.5f)
+        val drift = 4f * unit * sin(age * 1.1f)
+        val breathe = when (state) {
+            BUSY -> 1f + 0.11f * sin(age * 5.4f)
+            ON -> 1f + 0.045f * sin(age * 1.5f)
+            else -> 1f + 0.028f * sin(age * 1.25f)
+        }
+        val spin = when (state) {
+            BUSY -> age * 105f
+            ON -> age * 40f
+            ERROR -> age * 26f
+            else -> age * 22f
+        }
+        val amp = when (state) {
+            BUSY -> 12f * unit
+            ON -> 7f * unit
+            else -> 8.5f * unit
+        }
+        val baseRadius = when (state) {
+            BUSY -> 0.62f
+            ON -> 0.60f
+            else -> 0.58f
+        }
 
         val surface = ContextCompat.getColor(context, R.color.m3_surface_container_highest)
         val accent = ContextCompat.getColor(context, R.color.m3_primary)
@@ -102,56 +121,58 @@ class ConnectView @JvmOverloads constructor(context: Context, attrs: AttributeSe
         val err = ContextCompat.getColor(context, R.color.m3_error)
         val errSoft = ContextCompat.getColor(context, R.color.m3_error_container)
 
-        val spin = when (state) {
-            BUSY -> age * 55f
-            ON -> age * 22f
-            else -> age * 15f
-        }
-        val radius = half * 0.74f * grow * pop
+        val radius = half * baseRadius * breathe * pop
         val centerY = cy + drift
 
-        blob(ghost, cx + 1.5f * density, centerY + 4f * density, radius * 1.03f, 4, 3.2f * density, -spin * 0.7f)
+        blob(ghost, cx + 1.5f * unit, centerY + 5f * unit, radius * 1.02f, 4, amp * 0.9f, -spin * 0.6f)
         shade.color = 0xFF000000.toInt()
-        shade.alpha = 40
+        shade.alpha = 46
         canvas.drawPath(ghost, shade)
 
-        blob(bubble, cx, centerY, radius, 4, 3.2f * density, spin)
+        blob(bubble, cx, centerY, radius, 4, amp, spin)
         skin.color = when (state) {
             ON -> ok
             BUSY -> accentSoft
             ERROR -> err
-            else -> surface
+            else -> accent
         }
-        skin.alpha = 255
+        skin.alpha = when (state) {
+            ON -> 174
+            BUSY -> 158
+            ERROR -> 150
+            else -> 200
+        }
         canvas.drawPath(bubble, skin)
 
-        if (state == OFF) {
-            skin.color = accent
-            skin.alpha = 46
-            canvas.drawPath(bubble, skin)
-        }
-        if (state == ERROR) {
-            skin.color = errSoft
-            skin.alpha = 70
-            canvas.drawPath(bubble, skin)
-        }
-        if (state == BUSY) {
-            skin.color = accent
-            skin.alpha = (26 + 20 * sin(age * 6f)).toInt().coerceIn(6, 60)
+        if (state == BUSY || state == ERROR) {
+            skin.color = if (state == BUSY) accent else errSoft
+            skin.alpha = if (state == BUSY) (40 + 34 * sin(age * 6f)).toInt().coerceIn(14, 88) else 90
             canvas.drawPath(bubble, skin)
         }
 
-        blob(ghost, cx, centerY, radius * 0.72f, 6, 2.2f * density, -spin * 1.8f)
-        shine.color = when (state) {
+        blob(ghost, cx, centerY, radius * 0.70f, 6, amp * 0.55f, -spin * 1.6f)
+        gloss.color = when (state) {
             ON -> okSoft
             else -> accentSoft
         }
-        shine.alpha = when (state) {
-            ON -> 90
-            BUSY -> 70
-            else -> 46
+        gloss.alpha = when (state) {
+            ON -> 120
+            BUSY -> 96
+            else -> 74
         }
-        canvas.drawPath(ghost, shine)
+        canvas.drawPath(ghost, gloss)
+
+        if (state == BUSY) {
+            for (k in 0 until 2) {
+                val phase = ((age * 0.85f) + k * 0.5f) % 1f
+                val ringRadius = radius + (radius * 0.55f) * phase
+                wave.strokeWidth = (5f - 3f * phase) * unit
+                wave.color = accent
+                wave.alpha = ((1f - phase) * 130).toInt()
+                blob(ghost, cx, centerY, ringRadius, 4, amp * (1f + phase * 0.5f), spin * 0.4f)
+                canvas.drawPath(ghost, wave)
+            }
+        }
 
         if (isShown && now - lastFrame >= FRAME_MS) {
             lastFrame = now

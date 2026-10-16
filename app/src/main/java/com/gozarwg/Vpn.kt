@@ -32,7 +32,6 @@ object Vpn {
     @Volatile var ipSession = 0L
     @Volatile var stopping = false
     @Volatile private var upSince = 0L
-    @Volatile private var coldRetry = false
 
     @Volatile private var session = 0
     @Volatile private var restarting = false
@@ -78,6 +77,18 @@ object Vpn {
         return created
     }
 
+    fun warm(c: Context) {
+        val ctx = c.applicationContext
+        if (appCtx == null) appCtx = ctx
+        if (backend != null) return
+        thread {
+            try {
+                backendFor(ctx)
+            } catch (e: Exception) {
+            }
+        }
+    }
+
     fun connect(c: Context, prof: Profile) {
         val ctx = c.applicationContext
         appCtx = ctx
@@ -100,10 +111,10 @@ object Vpn {
         thread {
             try {
                 try {
-                    teardown.await(2500, TimeUnit.MILLISECONDS)
+                    teardown.await(900, TimeUnit.MILLISECONDS)
                 } catch (e: Exception) {
                 }
-                BlockService.stopAndWait(ctx, 2500)
+                BlockService.stopAndWait(ctx, 900)
                 val cfg = buildConfig(ctx, prof)
                 lastCfg = cfg
                 peerKey = cfg.peers.firstOrNull()?.publicKey
@@ -153,7 +164,6 @@ object Vpn {
         restarting = false
         stopping = true
         userStop = true
-        coldRetry = false
         if (ctx != null) Store.setWantUp(ctx, false)
         val t = tun
         val b = backend
@@ -224,7 +234,7 @@ object Vpn {
     private fun handshakeLanded(): Boolean {
         val age = handshakeAgeSec()
         if (age in 0..20) return true
-        if (upSince > 0 && System.currentTimeMillis() - upSince > 15000 && totalRx + totalTx > 1024) return true
+        if (upSince > 0 && System.currentTimeMillis() - upSince > 6000 && totalRx + totalTx > 0) return true
         return false
     }
 
@@ -239,7 +249,7 @@ object Vpn {
 
     private fun startWatchdog(sess: Int) {
         thread {
-            if (waitForHandshake(sess, 22000)) {
+            if (waitForHandshake(sess, 40000)) {
                 settled()
                 return@thread
             }
@@ -264,21 +274,11 @@ object Vpn {
             } catch (e: Exception) {
             }
             restarting = false
-            if (waitForHandshake(sess, 22000)) {
+            if (waitForHandshake(sess, 20000)) {
                 settled()
                 return@thread
             }
             if (!up || session != sess || userStop) return@thread
-
-            val c = appCtx
-            val prof = profile
-            if (!coldRetry && c != null && prof != null) {
-                coldRetry = true
-                connecting = true
-                notifyChange()
-                connect(c, prof)
-                return@thread
-            }
 
             errorAt = System.currentTimeMillis()
             connecting = false
@@ -291,7 +291,6 @@ object Vpn {
     private fun settled() {
         handshakeOk = true
         attempt = 0
-        coldRetry = false
         connecting = false
         notifyChange()
     }

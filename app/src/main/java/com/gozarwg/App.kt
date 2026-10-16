@@ -8,5 +8,6 @@ class App : Application() {
         super.onCreate()
         Crash.install(this)
         AppCompatDelegate.setDefaultNightMode(nightModeOf(Store.theme(this)))
+        Vpn.warm(this)
     }
 }

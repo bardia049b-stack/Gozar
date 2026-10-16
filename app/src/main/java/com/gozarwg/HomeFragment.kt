@@ -240,7 +240,7 @@ class HomeFragment : Fragment() {
                     2 -> R.color.m3_on_ok
                     1, 4 -> R.color.m3_on_primary_container
                     3 -> R.color.m3_on_error_container
-                    else -> R.color.m3_on_surface_variant
+                    else -> R.color.m3_primary
                 }
             )
         )
@@ -260,7 +260,8 @@ class HomeFragment : Fragment() {
                 when (state) {
                     2 -> R.color.m3_ok
                     1, 4 -> R.color.m3_warn
-                    else -> R.color.m3_error
+                    3 -> R.color.m3_error
+                    else -> R.color.m3_primary
                 }
             )
         )
