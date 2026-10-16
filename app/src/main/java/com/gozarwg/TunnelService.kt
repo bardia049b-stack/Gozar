@@ -13,9 +13,8 @@ class TunnelService : AbstractBackend.VpnService() {
     override fun onCreate() {
         super.onCreate()
         instance = this
-        ready = CountDownLatch(1)
-        dead = CountDownLatch(1)
         alive = true
+        dead = CountDownLatch(1)
         promote()
         ready.countDown()
     }
@@ -35,7 +34,7 @@ class TunnelService : AbstractBackend.VpnService() {
     override fun onDestroy() {
         alive = false
         instance = null
-        ready = CountDownLatch(1)
+        dead = CountDownLatch(1)
         try {
             stopForeground(STOP_FOREGROUND_REMOVE)
         } catch (e: Exception) {
@@ -76,14 +75,21 @@ class TunnelService : AbstractBackend.VpnService() {
             }
         }
 
-        fun ensure(c: Context): Boolean {
-            if (alive) return true
-            return try {
+        fun ensure(c: Context, timeoutMs: Long = 8000): Boolean {
+            if (instance != null) return true
+            try {
                 start(c.applicationContext)
-                ready.await(6, TimeUnit.SECONDS)
             } catch (e: Exception) {
-                alive
             }
+            val deadline = System.currentTimeMillis() + timeoutMs
+            while (System.currentTimeMillis() < deadline) {
+                if (instance != null) return true
+                try {
+                    Thread.sleep(60)
+                } catch (e: Exception) {
+                }
+            }
+            return instance != null
         }
 
         fun release(c: Context) {

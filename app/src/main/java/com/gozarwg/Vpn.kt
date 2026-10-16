@@ -120,9 +120,7 @@ object Vpn {
                 peerKey = cfg.peers.firstOrNull()?.publicKey
                 val t = Tun(prof.id) { s -> onState(s) }
                 tun = t
-                if (!Store.proxy(ctx) && !TunnelService.ensure(ctx)) {
-                    throw IllegalStateException("vpn service unavailable")
-                }
+                if (!Store.proxy(ctx)) TunnelService.ensure(ctx, 8000)
                 backendFor(ctx).setState(t, Tunnel.State.UP, cfg)
                 if (session == sess) {
                     connecting = false

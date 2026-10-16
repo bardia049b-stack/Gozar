@@ -213,7 +213,6 @@ class HomeFragment : Fragment() {
         val state = state()
         val dot = find<View>(R.id.statusDot)
         val connect = find<ConnectView>(R.id.connectButton)
-        val icon = find<ImageView>(R.id.connectIcon)
         connect.state = when (state) {
             2 -> ConnectView.ON
             1, 4 -> ConnectView.BUSY
@@ -234,16 +233,6 @@ class HomeFragment : Fragment() {
             3 -> R.string.status_failed
             else -> if (BlockService.running) R.string.lockdown_on else R.string.status_off
         })
-        icon.imageTintList = ColorStateList.valueOf(
-            color(
-                when (state) {
-                    2 -> R.color.m3_on_ok
-                    1, 4 -> R.color.m3_on_primary_container
-                    3 -> R.color.m3_on_error_container
-                    else -> R.color.m3_primary
-                }
-            )
-        )
         paint(
             R.id.tvAction,
             R.color.m3_on_surface_variant,

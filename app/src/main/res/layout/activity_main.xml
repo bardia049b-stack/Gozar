@@ -107,17 +107,8 @@
                     android:id="@+id/connectButton"
                     android:layout_width="@dimen/connect_button"
                     android:layout_height="@dimen/connect_button"
-                    android:layout_marginTop="@dimen/sp_l">
-
-                    <ImageView
-                        android:id="@+id/connectIcon"
-                        android:layout_width="76dp"
-                        android:layout_height="76dp"
-                        android:layout_gravity="center"
-                        android:contentDescription="@string/connect"
-                        android:src="@drawable/ic_power"
-                        app:tint="@color/tile_on_container" />
-                </com.gozarwg.ConnectView>
+                    android:layout_marginTop="@dimen/sp_l"
+                    android:contentDescription="@string/connect" />
 
                 <TextView
                     android:id="@+id/tvTimer"
