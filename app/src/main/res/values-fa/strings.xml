@@ -175,4 +175,5 @@
     <string name="imp_many">وارد کردن چند کانفیگ</string>
     <string name="search_settings">جست‌وجو در تنظیمات</string>
     <string name="search_hint_settings">جست‌وجو</string>
+    <string name="back">بازگشت</string>
 </resources>

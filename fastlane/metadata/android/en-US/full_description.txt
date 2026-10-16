@@ -1,0 +1,12 @@
+GozarWG is a lightweight client for reaching the open internet when it is filtered.
+
+It runs the AmneziaWG core on the device and keeps the tunnel alive while the app is in the background, so the connection is not dropped when you close the window or swipe the app away.
+
+Features:
+* Import a configuration from a link, a file, a QR code or the clipboard
+* Split tunneling, with a per app list
+* Kill switch that blocks traffic when the tunnel is down
+* Local SOCKS proxy mode
+* Connection timer and live upload and download counters
+* Light and dark themes, Persian and English interface
+* No ads, no tracking, no accounts

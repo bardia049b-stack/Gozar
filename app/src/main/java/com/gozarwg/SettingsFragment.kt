@@ -45,6 +45,7 @@ class SettingsFragment : Fragment() {
             toast(getString(R.string.proxy_note, "127.0.0.1:" + Store.proxyPort(requireContext())))
         }
 
+        find<View>(R.id.btnBack).setOnClickListener { (activity as? MainActivity)?.showHome() }
         find<View>(R.id.rowPort).setOnClickListener { editPort() }
         find<View>(R.id.rowSplitMode).setOnClickListener { pickSplitMode() }
         find<View>(R.id.rowSplitApps).setOnClickListener {

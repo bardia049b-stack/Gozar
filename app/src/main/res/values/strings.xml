@@ -175,4 +175,5 @@
     <string name="imp_many">Import configs</string>
     <string name="search_settings">Search settings</string>
     <string name="search_hint_settings">Search</string>
+    <string name="back">Back</string>
 </resources>

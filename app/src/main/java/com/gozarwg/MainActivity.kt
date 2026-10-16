@@ -2,6 +2,7 @@ package com.gozarwg
 
 import android.content.Intent
 import android.os.Bundle
+import androidx.activity.OnBackPressedCallback
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.bottomnavigation.BottomNavigationView
@@ -34,6 +35,7 @@ class MainActivity : BaseActivity() {
         home.restore(intent)
         settings.restore(intent)
 
+        back()
         applyState()
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.shell)) { target, insets ->
@@ -62,6 +64,19 @@ class MainActivity : BaseActivity() {
             }
         }
         bar.selectedItemId = if (onSettings) R.id.nav_settings else R.id.nav_home
+    }
+
+    private fun back() {
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (onSettings) {
+                    showHome()
+                } else {
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                }
+            }
+        })
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
