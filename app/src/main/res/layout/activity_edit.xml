@@ -36,7 +36,8 @@
                 style="@style/Gozar.Action.Icon"
                 android:background="@drawable/frame_puff"
                 android:contentDescription="@string/ed_qr"
-                android:src="@drawable/ic_qr" />
+                android:src="@drawable/ic_qr"
+                app:tint="@color/tile_on_container" />
 
             <TextView
                 style="@style/Gozar.Action.Label"
@@ -51,7 +52,8 @@
                 style="@style/Gozar.Action.Icon"
                 android:background="@drawable/frame_flower"
                 android:contentDescription="@string/ed_share"
-                android:src="@drawable/ic_share" />
+                android:src="@drawable/ic_share"
+                app:tint="@color/tile_on_container" />
 
             <TextView
                 style="@style/Gozar.Action.Label"
@@ -66,7 +68,8 @@
                 style="@style/Gozar.Action.Icon"
                 android:background="@drawable/frame_clover"
                 android:contentDescription="@string/ed_export"
-                android:src="@drawable/ic_save" />
+                android:src="@drawable/ic_save"
+                app:tint="@color/tile_on_container" />
 
             <TextView
                 style="@style/Gozar.Action.Label"
@@ -80,13 +83,15 @@
             <ImageView
                 style="@style/Gozar.Action.Icon"
                 android:background="@drawable/frame_burst"
+                android:backgroundTint="?attr/colorErrorContainer"
                 android:contentDescription="@string/ed_delete"
                 android:src="@drawable/ic_delete"
-                app:tint="?attr/colorError" />
+                app:tint="?attr/colorOnErrorContainer" />
 
             <TextView
                 style="@style/Gozar.Action.Label"
-                android:text="@string/ed_delete" />
+                android:text="@string/ed_delete"
+                android:textColor="?attr/colorError" />
         </LinearLayout>
     </LinearLayout>
 

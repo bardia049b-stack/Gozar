@@ -9,6 +9,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
+import android.view.animation.DecelerateInterpolator
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.TextView
@@ -107,8 +108,21 @@ class EditActivity : BaseActivity() {
 
     private fun applyMode() {
         val raw = rawMode
-        formBox.visibility = if (raw) View.GONE else View.VISIBLE
-        findViewById<View>(R.id.rawBox).visibility = if (raw) View.VISIBLE else View.GONE
+        val rawBox = findViewById<View>(R.id.rawBox)
+        val target = if (raw) rawBox else formBox
+        val other = if (raw) formBox else rawBox
+        other.visibility = View.GONE
+        if (target.visibility != View.VISIBLE) {
+            target.alpha = 0f
+            target.translationY = 8f * resources.displayMetrics.density
+            target.visibility = View.VISIBLE
+            target.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setDuration(180L)
+                .setInterpolator(DecelerateInterpolator())
+                .start()
+        }
         segForm.setBackgroundResource(if (raw) 0 else R.drawable.seg_on)
         segRaw.setBackgroundResource(if (raw) R.drawable.seg_on else 0)
         segForm.setTextColor(getColor(if (raw) R.color.m3_on_surface_variant else R.color.m3_on_primary_container))
