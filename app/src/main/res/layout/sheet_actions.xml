@@ -24,7 +24,13 @@
         android:id="@+id/llActions"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical" />
+        android:layout_marginStart="@dimen/sp_l"
+        android:layout_marginEnd="@dimen/sp_l"
+        android:background="@drawable/menu_group"
+        android:clipToOutline="true"
+        android:orientation="vertical"
+        android:paddingTop="@dimen/sp_xs"
+        android:paddingBottom="@dimen/sp_xs" />
 
     <View
         android:layout_width="32dp"

@@ -394,11 +394,11 @@ class HomeFragment : Fragment() {
             requireContext(),
             R.string.menu_title,
             listOf(
-                SheetAction(R.drawable.ic_edit, R.string.menu_edit, Tone.PRIMARY) { openEditor(profile) },
-                SheetAction(R.drawable.ic_qr, R.string.menu_qr, Tone.INFO) { showQr(profile) },
-                SheetAction(R.drawable.ic_share, R.string.menu_share, Tone.NEUTRAL) { share(profile) },
-                SheetAction(R.drawable.ic_save, R.string.menu_export, Tone.OK) { export(profile) },
-                SheetAction(R.drawable.ic_delete, R.string.menu_delete, Tone.ERROR) { confirmDelete(profile) }
+                SheetAction(R.drawable.ic_edit, R.string.menu_edit) { openEditor(profile) },
+                SheetAction(R.drawable.ic_qr, R.string.menu_qr) { showQr(profile) },
+                SheetAction(R.drawable.ic_share, R.string.menu_share) { share(profile) },
+                SheetAction(R.drawable.ic_save, R.string.menu_export) { export(profile) },
+                SheetAction(R.drawable.ic_delete, R.string.menu_delete, R.color.m3_error) { confirmDelete(profile) }
             )
         )
     }
