@@ -31,6 +31,8 @@ object Vpn {
     @Volatile var ipInfo: IpInfo? = null
     @Volatile var ipSession = 0L
     @Volatile var stopping = false
+    @Volatile private var upSince = 0L
+    @Volatile private var coldRetry = false
 
     @Volatile private var session = 0
     @Volatile private var restarting = false
@@ -151,6 +153,7 @@ object Vpn {
         restarting = false
         stopping = true
         userStop = true
+        coldRetry = false
         if (ctx != null) Store.setWantUp(ctx, false)
         val t = tun
         val b = backend
@@ -187,6 +190,7 @@ object Vpn {
         val wasUp = up
         up = s == Tunnel.State.UP
         if (up && !wasUp) {
+            upSince = System.currentTimeMillis()
             if (!restarting) since = System.currentTimeMillis()
             restarting = false
             errorAt = 0L
@@ -217,51 +221,79 @@ object Vpn {
         notifyChange()
     }
 
+    private fun handshakeLanded(): Boolean {
+        val age = handshakeAgeSec()
+        if (age in 0..20) return true
+        if (upSince > 0 && System.currentTimeMillis() - upSince > 15000 && totalRx + totalTx > 1024) return true
+        return false
+    }
+
+    private fun waitForHandshake(sess: Int, window: Long): Boolean {
+        val deadline = System.currentTimeMillis() + window
+        while (up && session == sess && !userStop && System.currentTimeMillis() < deadline) {
+            if (handshakeLanded()) return true
+            Thread.sleep(400)
+        }
+        return up && session == sess && !userStop && handshakeLanded()
+    }
+
     private fun startWatchdog(sess: Int) {
         thread {
-            val deadline = System.currentTimeMillis() + 7000
-            while (up && session == sess && !handshakeOk && System.currentTimeMillis() < deadline) {
-                val age = handshakeAgeSec()
-                if (age in 0..15) {
-                    handshakeOk = true
-                    attempt = 0
-                    connecting = false
-                    notifyChange()
-                    return@thread
-                }
-                Thread.sleep(400)
-            }
-            if (!up || session != sess || handshakeOk || userStop) return@thread
-            if (attempt >= 5) {
-                errorAt = System.currentTimeMillis()
-                main.post { onError?.invoke("handshake timeout") }
-                disconnect()
+            if (waitForHandshake(sess, 22000)) {
+                settled()
                 return@thread
             }
-            attempt++
+            if (!up || session != sess || userStop) return@thread
+
             restarting = true
+            attempt = 1
             connecting = true
             notifyChange()
             try {
-                val t = tun ?: return@thread
-                val b = backend ?: return@thread
-                val cfg = lastCfg ?: return@thread
-                b.setState(t, Tunnel.State.DOWN, null)
-                Thread.sleep(600)
-                if (session == sess && !userStop) {
-                    b.setState(t, Tunnel.State.UP, cfg)
-                    connecting = false
-                    notifyChange()
+                val t = tun
+                val b = backend
+                if (t != null && b != null) {
+                    b.setState(t, Tunnel.State.DOWN, null)
+                    Thread.sleep(700)
+                    val cfg = lastCfg
+                    if (session == sess && !userStop && cfg != null) {
+                        b.setState(t, Tunnel.State.UP, cfg)
+                        upSince = System.currentTimeMillis()
+                    }
                 }
             } catch (e: Exception) {
-                restarting = false
-                connecting = false
-                errorAt = System.currentTimeMillis()
-                notifyChange()
-                val msg = e.message ?: "error"
-                main.post { onError?.invoke(msg) }
             }
+            restarting = false
+            if (waitForHandshake(sess, 22000)) {
+                settled()
+                return@thread
+            }
+            if (!up || session != sess || userStop) return@thread
+
+            val c = appCtx
+            val prof = profile
+            if (!coldRetry && c != null && prof != null) {
+                coldRetry = true
+                connecting = true
+                notifyChange()
+                connect(c, prof)
+                return@thread
+            }
+
+            errorAt = System.currentTimeMillis()
+            connecting = false
+            notifyChange()
+            main.post { onError?.invoke("handshake timeout") }
+            disconnect()
         }
+    }
+
+    private fun settled() {
+        handshakeOk = true
+        attempt = 0
+        coldRetry = false
+        connecting = false
+        notifyChange()
     }
 
     private fun startMonitor() {
@@ -278,13 +310,18 @@ object Vpn {
                     val st = stats() ?: continue
                     val rx = st.totalRx()
                     val tx = st.totalTx()
-                    val key = peerKey
-                    if (key != null) {
-                        try {
-                            val ms = st.peer(key)?.latestHandshakeEpochMillis() ?: 0L
-                            handshakeAge = if (ms > 0) (System.currentTimeMillis() - ms) / 1000 else -1L
-                        } catch (e: Exception) {
+                    try {
+                        var newest = 0L
+                        val keys = st.peers()
+                        if (keys != null) {
+                            for (key in keys) {
+                                val peer = st.peer(key) ?: continue
+                                val ms = peer.latestHandshakeEpochMillis()
+                                if (ms > newest) newest = ms
+                            }
                         }
+                        handshakeAge = if (newest > 0) (System.currentTimeMillis() - newest) / 1000 else -1L
+                    } catch (e: Exception) {
                     }
                     totalRx = rx
                     totalTx = tx

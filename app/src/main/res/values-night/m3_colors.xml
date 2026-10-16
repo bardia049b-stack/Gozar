@@ -41,11 +41,11 @@
     <color name="m3_outline">#9A99A9</color>
     <color name="m3_outline_variant">#6B6B7A</color>
     <color name="m3_scrim">#000000</color>
-    <color name="m3_ok">#9AD4A1</color>
-    <color name="m3_on_ok">#002B0F</color>
-    <color name="m3_ok_container">#42784D</color>
-    <color name="m3_on_ok_container">#FFFFFF</color>
-    <color name="m3_warn">#F5BC6F</color>
+    <color name="m3_ok">#81C784</color>
+    <color name="m3_on_ok">#00390E</color>
+    <color name="m3_ok_container">#2E7D32</color>
+    <color name="m3_on_ok_container">#C8E6C9</color>
+    <color name="m3_warn">#FFB74D</color>
     <color name="m3_on_warn">#352000</color>
     <color name="m3_warn_container">#90641F</color>
     <color name="m3_on_warn_container">#FFFFFF</color>

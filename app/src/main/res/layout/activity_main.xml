@@ -59,7 +59,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="300dp"
                 android:layout_gravity="center"
-                android:alpha="0.12"
+                android:alpha="0.18"
                 android:contentDescription="@string/app_name"
                 android:scaleType="centerCrop"
                 android:src="@drawable/iran_map"
@@ -88,8 +88,8 @@
 
                     <View
                         android:id="@+id/statusDot"
-                        android:layout_width="8dp"
-                        android:layout_height="8dp"
+                        android:layout_width="10dp"
+                        android:layout_height="10dp"
                         android:background="@drawable/dot"
                         android:backgroundTint="?attr/colorOnSurfaceVariant" />
 

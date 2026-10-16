@@ -237,7 +237,7 @@ class HomeFragment : Fragment() {
         icon.imageTintList = ColorStateList.valueOf(
             color(
                 when (state) {
-                    2 -> R.color.m3_on_primary
+                    2 -> R.color.m3_on_ok
                     1, 4 -> R.color.m3_on_primary_container
                     3 -> R.color.m3_on_error_container
                     else -> R.color.m3_on_surface_variant
