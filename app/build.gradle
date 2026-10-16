@@ -7,11 +7,11 @@ def keystoreFile = System.getenv('KEYSTORE_FILE')
 def hasSigning = keystoreFile != null && !keystoreFile.isEmpty() && file(keystoreFile).exists()
 
 android {
-    namespace 'com.beofoq.wg'
+    namespace 'com.gozarwg'
     compileSdk 36
 
     defaultConfig {
-        applicationId 'com.beofoq.wg'
+        applicationId 'com.gozarwg'
         minSdk 24
         targetSdk 35
         versionCode 8

@@ -1,4 +1,4 @@
-package com.beofoq.wg
+package com.gozarwg
 
 import android.content.BroadcastReceiver
 import android.content.Context

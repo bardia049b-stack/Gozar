@@ -1,10 +1,10 @@
-package com.beofoq.wg
+package com.gozarwg
 
 import android.net.Uri
 import android.util.Base64
 
 object Link {
-    private val schemes = setOf("gozarwg", "beofoqwg", "beofoq", "wireguard", "amneziawg", "awg")
+    private val schemes = setOf("gozarwg", "wireguard", "amneziawg", "awg")
 
     fun parse(raw: String): String? {
         val s = raw.trim()

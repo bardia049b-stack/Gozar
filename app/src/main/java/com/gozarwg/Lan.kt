@@ -1,4 +1,4 @@
-package com.beofoq.wg
+package com.gozarwg
 
 object Lan {
     private val privateRanges = listOf(

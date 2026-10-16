@@ -88,7 +88,7 @@
                         android:textColor="?attr/colorOnSurfaceVariant" />
                 </LinearLayout>
 
-                <com.beofoq.wg.ConnectView
+                <com.gozarwg.ConnectView
                     android:id="@+id/connectButton"
                     android:layout_width="@dimen/connect_button"
                     android:layout_height="@dimen/connect_button"
@@ -102,7 +102,7 @@
                         android:contentDescription="@string/connect"
                         android:src="@drawable/ic_power"
                         app:tint="?attr/colorOnPrimaryContainer" />
-                </com.beofoq.wg.ConnectView>
+                </com.gozarwg.ConnectView>
 
                 <TextView
                     android:id="@+id/tvTimer"

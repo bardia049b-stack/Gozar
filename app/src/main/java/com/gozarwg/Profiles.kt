@@ -1,4 +1,4 @@
-package com.beofoq.wg
+package com.gozarwg
 
 import android.content.Context
 import org.amnezia.awg.config.Config

@@ -37,8 +37,6 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="gozarwg" />
-                <data android:scheme="beofoqwg" />
-                <data android:scheme="beofoq" />
                 <data android:scheme="wireguard" />
                 <data android:scheme="amneziawg" />
             </intent-filter>

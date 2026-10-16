@@ -1,4 +1,4 @@
-package com.beofoq.wg
+package com.gozarwg
 
 import android.content.Intent
 import android.os.Bundle

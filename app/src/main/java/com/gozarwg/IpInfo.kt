@@ -1,4 +1,4 @@
-package com.beofoq.wg
+package com.gozarwg
 
 import org.json.JSONObject
 import java.net.HttpURLConnection

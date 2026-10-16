@@ -1,4 +1,4 @@
-package com.beofoq.wg
+package com.gozarwg
 
 import android.app.Notification
 import android.app.NotificationChannel

@@ -1,12 +1,12 @@
-package com.beofoq.wg
+package com.gozarwg
 
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 
 object Actions {
-    const val DISCONNECT = "com.beofoq.wg.action.DISCONNECT"
-    const val TOGGLE = "com.beofoq.wg.action.TOGGLE"
+    const val DISCONNECT = "com.gozarwg.action.DISCONNECT"
+    const val TOGGLE = "com.gozarwg.action.TOGGLE"
 }
 
 class ActionReceiver : BroadcastReceiver() {
