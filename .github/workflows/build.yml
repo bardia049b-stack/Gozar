@@ -1,17 +1,32 @@
 name: Build
 
 on:
-  workflow_dispatch:
   push:
     branches: [main]
     tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      release:
+        description: Create a GitHub release
+        type: boolean
+        default: false
+      tag:
+        description: Release tag (defaults to v<versionName>)
+        type: string
+        required: false
 
 permissions:
   contents: write
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
+
     steps:
       - uses: actions/checkout@v4
 
@@ -28,35 +43,83 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
 
       - name: Signing key
-        if: env.KEYSTORE_BASE64 != ''
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-        run: echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::KEYSTORE_BASE64 is missing - refusing to build an unsigned release"
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
 
       - name: Build release
         env:
-          KEYSTORE_FILE: ${{ secrets.KEYSTORE_BASE64 != '' && format('{0}/release.jks', runner.temp) || '' }}
+          KEYSTORE_FILE: ${{ runner.temp }}/release.keystore
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: ./gradlew assembleRelease --no-daemon --stacktrace
 
       - name: Collect APKs
+        id: collect
         run: |
+          set -e
+          VERSION=$(grep -m1 'versionName' app/build.gradle | sed -E "s/.*'([^']+)'.*/\1/" | tr -d ' ')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           mkdir -p out
-          find app/build/outputs/apk/release -name "*.apk" -exec cp {} out/ \;
-          ls -la out
+          for f in app/build/outputs/apk/release/*.apk; do
+            b=$(basename "$f" .apk)
+            case "$b" in
+              *arm64-v8a*) abi=arm64-v8a ;;
+              *armeabi-v7a*) abi=armeabi-v7a ;;
+              *x86_64*) abi=x86_64 ;;
+              *x86*) abi=x86 ;;
+              *universal*) abi=universal ;;
+              *) abi=universal ;;
+            esac
+            cp "$f" "out/GozarWG_${VERSION}_${abi}.apk"
+          done
+          ls -l out
+
+      - name: Import GPG key
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          set -e
+          if [ -z "$GPG_PRIVATE_KEY" ]; then
+            echo "::error::GPG_PRIVATE_KEY is missing"
+            exit 1
+          fi
+          printf '%s\n' "$GPG_PRIVATE_KEY" > "$RUNNER_TEMP/gpg.asc"
+          gpg --batch --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" --import "$RUNNER_TEMP/gpg.asc"
+          FPR=$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr/ {print $10; exit}')
+          gpg --armor --export "$FPR" > out/gozarwg-public-key.asc
+          echo "signing key: $FPR"
+
+      - name: Sign APKs
+        env:
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          set -e
+          for f in out/*.apk; do
+            gpg --batch --yes --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" --detach-sign --output "$f.sig" "$f"
+            gpg --verify "$f.sig" "$f"
+          done
+          ls -l out
 
       - uses: actions/upload-artifact@v4
         with:
-          name: BeOfoqWG-apk
-          path: out/*.apk
+          name: GozarWG-${{ steps.collect.outputs.version }}
+          path: out/*
 
-      - name: Release
-        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.release)
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || format('v1.0.{0}', github.run_number) }}
-          name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || format('BeOfoqWG v1.0.{0}', github.run_number) }}
-          files: out/*.apk
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || (inputs.tag != '' && inputs.tag || format('v{0}', steps.collect.outputs.version)) }}
+          name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || (inputs.tag != '' && inputs.tag || format('v{0}', steps.collect.outputs.version)) }}
+          generate_release_notes: false
+          make_latest: true
+          files: out/*
           fail_on_unmatched_files: true
