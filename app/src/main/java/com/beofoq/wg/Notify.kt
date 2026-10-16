@@ -6,57 +6,114 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.graphics.drawable.Icon
 import android.os.Build
+import android.os.SystemClock
 
 object Notify {
-    private const val CHANNEL = "status"
-    private const val ID = 1
+    const val ID = 101
+    const val ID_BLOCK = 102
+    private const val CHANNEL = "tunnel"
+
+    @Volatile private var lastText = ""
+    @Volatile private var lastAt = 0L
+
+    private fun mgr(c: Context) = c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
     private fun channel(c: Context) {
         if (Build.VERSION.SDK_INT < 26) return
-        val mgr = c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        if (mgr.getNotificationChannel(CHANNEL) == null) {
-            val ch = NotificationChannel(CHANNEL, c.getString(R.string.notif_channel), NotificationManager.IMPORTANCE_LOW)
-            ch.setShowBadge(false)
-            mgr.createNotificationChannel(ch)
+        val m = mgr(c)
+        if (m.getNotificationChannel(CHANNEL) != null) return
+        val ch = NotificationChannel(CHANNEL, c.getString(R.string.notif_channel), NotificationManager.IMPORTANCE_LOW)
+        ch.setShowBadge(false)
+        ch.enableVibration(false)
+        ch.setSound(null, null)
+        m.createNotificationChannel(ch)
+    }
+
+    private fun piFlags(): Int {
+        return if (Build.VERSION.SDK_INT >= 23) {
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        } else {
+            PendingIntent.FLAG_UPDATE_CURRENT
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun newBuilder(c: Context): Notification.Builder {
+        return if (Build.VERSION.SDK_INT >= 26) Notification.Builder(c, CHANNEL) else Notification.Builder(c)
+    }
+
+    private fun builder(c: Context, title: String, text: String): Notification.Builder {
+        channel(c)
+        val open = PendingIntent.getActivity(
+            c,
+            1,
+            Intent(c, MainActivity::class.java).setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_NEW_TASK),
+            piFlags()
+        )
+        val off = PendingIntent.getBroadcast(
+            c,
+            2,
+            Intent(c, ActionReceiver::class.java).setAction(Actions.DISCONNECT),
+            piFlags()
+        )
+        val b = newBuilder(c)
+        b.setSmallIcon(R.drawable.ic_power)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setShowWhen(false)
+            .setContentIntent(open)
+            .setCategory(Notification.CATEGORY_SERVICE)
+        if (Build.VERSION.SDK_INT < 26) b.setPriority(Notification.PRIORITY_LOW)
+        try {
+            b.addAction(
+                Notification.Action.Builder(
+                    Icon.createWithResource(c, R.drawable.ic_power),
+                    c.getString(R.string.disconnect),
+                    off
+                ).build()
+            )
+        } catch (e: Exception) {
+        }
+        return b
+    }
+
+    fun build(c: Context): Notification {
+        val name = Vpn.profile?.name ?: c.getString(R.string.app_name)
+        return builder(c, name, c.getString(R.string.status_on)).build()
+    }
+
+    fun buildLockdown(c: Context): Notification {
+        return builder(c, c.getString(R.string.kill_switch), c.getString(R.string.lockdown_on)).build()
+    }
+
+    fun cancelLockdown(c: Context) {
+        try {
+            mgr(c).cancel(ID_BLOCK)
+        } catch (e: Exception) {
         }
     }
 
     fun update(c: Context, name: String, down: Double, up: Double) {
+        val text = "↓ " + fmtSpeed(down) + "     ↑ " + fmtSpeed(up)
+        val now = SystemClock.elapsedRealtime()
+        if (text == lastText && now - lastAt < 4000) return
+        lastText = text
+        lastAt = now
         try {
-            channel(c)
-            val intent = Intent(c, MainActivity::class.java)
-            intent.flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
-            val flags = if (Build.VERSION.SDK_INT >= 23) {
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            } else {
-                PendingIntent.FLAG_UPDATE_CURRENT
-            }
-            val pending = PendingIntent.getActivity(c, 0, intent, flags)
-            val text = "↓ " + fmtSpeed(down) + "   ↑ " + fmtSpeed(up)
-            val builder = if (Build.VERSION.SDK_INT >= 26) {
-                Notification.Builder(c, CHANNEL)
-            } else {
-                @Suppress("DEPRECATION")
-                Notification.Builder(c)
-            }
-            builder.setSmallIcon(R.drawable.ic_power)
-                .setContentTitle(name)
-                .setContentText(text)
-                .setOngoing(true)
-                .setOnlyAlertOnce(true)
-                .setShowWhen(false)
-                .setContentIntent(pending)
-            val mgr = c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            mgr.notify(ID, builder.build())
+            mgr(c).notify(ID, builder(c, name, text).build())
         } catch (e: Exception) {
         }
     }
 
     fun cancel(c: Context) {
+        lastText = ""
+        lastAt = 0L
         try {
-            val mgr = c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            mgr.cancel(ID)
+            mgr(c).cancel(ID)
         } catch (e: Exception) {
         }
     }

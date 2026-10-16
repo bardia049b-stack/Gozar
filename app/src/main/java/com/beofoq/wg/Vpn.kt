@@ -11,6 +11,8 @@ import org.amnezia.awg.backend.Statistics
 import org.amnezia.awg.backend.Tunnel
 import org.amnezia.awg.config.Config
 import org.amnezia.awg.config.proxy.Socks5Proxy
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 
 object Vpn {
@@ -32,6 +34,7 @@ object Vpn {
 
     @Volatile private var session = 0
     @Volatile private var restarting = false
+    @Volatile private var teardown: CountDownLatch = CountDownLatch(0)
     private var lastCfg: Config? = null
     @Volatile private var peerKey: org.amnezia.awg.crypto.Key? = null
 
@@ -39,10 +42,11 @@ object Vpn {
     private var mLastRx = -1L
     private var mLastTx = -1L
     private var mLastTime = 0L
+
     var listener: ((Boolean) -> Unit)? = null
     var onError: ((String) -> Unit)? = null
 
-    private var appCtx: Context? = null
+    @Volatile private var appCtx: Context? = null
     private var backend: Backend? = null
     private var backendProxy: Boolean? = null
     private var tun: Tun? = null
@@ -55,6 +59,8 @@ object Vpn {
         override fun isIpv4ResolutionPreferred(): Boolean = false
         override fun isMetered(): Boolean = false
     }
+
+    fun context(): Context? = appCtx
 
     private fun backendFor(c: Context): Backend {
         val wantProxy = Store.proxy(c)
@@ -71,8 +77,8 @@ object Vpn {
     }
 
     fun connect(c: Context, prof: Profile) {
-        appCtx = c.applicationContext
-        BlockService.stop(c.applicationContext)
+        val ctx = c.applicationContext
+        appCtx = ctx
         profile = prof
         errorAt = 0L
         handshakeOk = false
@@ -85,16 +91,26 @@ object Vpn {
         session++
         userStop = false
         connecting = true
+        Store.setWantUp(ctx, true)
+        Store.setLastProfile(ctx, prof.id)
         notifyChange()
         val sess = session
         thread {
             try {
-                val cfg = buildConfig(c, prof)
+                try {
+                    teardown.await(2500, TimeUnit.MILLISECONDS)
+                } catch (e: Exception) {
+                }
+                BlockService.stopAndWait(ctx, 2500)
+                val cfg = buildConfig(ctx, prof)
                 lastCfg = cfg
                 peerKey = cfg.peers.firstOrNull()?.publicKey
                 val t = Tun(prof.id) { s -> onState(s) }
                 tun = t
-                backendFor(c).setState(t, Tunnel.State.UP, cfg)
+                if (!Store.proxy(ctx) && !TunnelService.ensure(ctx)) {
+                    throw IllegalStateException("vpn service unavailable")
+                }
+                backendFor(ctx).setState(t, Tunnel.State.UP, cfg)
                 if (session == sess) {
                     connecting = false
                     notifyChange()
@@ -111,8 +127,19 @@ object Vpn {
         }
     }
 
+    fun restore(c: Context) {
+        if (up || connecting) return
+        val ctx = c.applicationContext
+        val id = Store.lastProfile(ctx).ifBlank { Store.selected(ctx) }
+        if (id.isBlank()) return
+        val p = Profiles.get(ctx, id) ?: return
+        connect(ctx, p)
+    }
+
     fun disconnect() {
+        val ctx = appCtx
         session++
+        teardown = CountDownLatch(1)
         handshakeOk = false
         handshakeAge = -1L
         ipInfo = null
@@ -124,7 +151,7 @@ object Vpn {
         restarting = false
         stopping = true
         userStop = true
-        appCtx?.let { Notify.cancel(it) }
+        if (ctx != null) Store.setWantUp(ctx, false)
         val t = tun
         val b = backend
         if (t == null || b == null) {
@@ -132,6 +159,9 @@ object Vpn {
             connecting = false
             up = false
             profile = null
+            ctx?.let { Notify.cancel(it) }
+            ctx?.let { TunnelService.release(it) }
+            teardown.countDown()
             notifyChange()
             return
         }
@@ -146,6 +176,9 @@ object Vpn {
             up = false
             profile = null
             stopping = false
+            ctx?.let { Notify.cancel(it) }
+            ctx?.let { TunnelService.release(it) }
+            teardown.countDown()
             notifyChange()
         }
     }
@@ -175,7 +208,7 @@ object Vpn {
             val c = appCtx
             val prof = profile
             if (c != null && prof != null && Store.kill(c)) {
-                BlockService.start(c.applicationContext)
+                BlockService.start(c)
                 main.postDelayed({
                     if (!up && !userStop && profile != null) connect(c, prof)
                 }, 3000)
@@ -274,7 +307,7 @@ object Vpn {
                     }
                     val c = appCtx
                     val p = profile
-                    if (c != null && p != null) Notify.update(c, p.name, downSpeed, upSpeed)
+                    if (c != null && p != null && Store.notify(c)) Notify.update(c, p.name, downSpeed, upSpeed)
                 }
             } catch (e: Exception) {
             }

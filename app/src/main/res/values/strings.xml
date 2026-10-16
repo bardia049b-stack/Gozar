@@ -124,4 +124,9 @@
     <string name="gallery_failed">No QR code found in this image</string>
     <string name="active">Active</string>
     <string name="notif_channel">Connection status</string>
+    <string name="lockdown_on">Traffic blocked</string>
+    <string name="notif_speed">Speed in notification</string>
+    <string name="notif_speed_desc">Show live up/down speed in the ongoing notification</string>
+    <string name="notifications">Notifications</string>
+    <string name="notif_off_hint">Android may stop the tunnel when the app is closed without this permission</string>
 </resources>

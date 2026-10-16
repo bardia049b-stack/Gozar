@@ -124,4 +124,9 @@
     <string name="gallery_failed">در این تصویر کد QR پیدا نشد</string>
     <string name="active">فعال</string>
     <string name="notif_channel">وضعیت اتصال</string>
+    <string name="lockdown_on">ترافیک مسدود شد</string>
+    <string name="notif_speed">نمایش سرعت در اعلان</string>
+    <string name="notif_speed_desc">سرعت لحظه‌ای دانلود و آپلود در اعلان دائمی نمایش داده شود</string>
+    <string name="notifications">اعلان‌ها</string>
+    <string name="notif_off_hint">بدون این اجازه، اندروید ممکن است پس از بستن برنامه تونل را متوقف کند</string>
 </resources>

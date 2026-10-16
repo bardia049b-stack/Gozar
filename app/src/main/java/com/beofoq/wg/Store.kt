@@ -27,6 +27,14 @@ object Store {
     fun setSplitApps(c: Context, v: Set<String>) = p(c).edit().putStringSet("split_apps", v).apply()
     fun selected(c: Context) = p(c).getString("selected", "") ?: ""
     fun setSelected(c: Context, v: String) = p(c).edit().putString("selected", v).apply()
+    fun wantUp(c: Context) = p(c).getBoolean("want_up", false)
+    fun setWantUp(c: Context, v: Boolean) = p(c).edit().putBoolean("want_up", v).apply()
+    fun lastProfile(c: Context) = p(c).getString("last_profile", "") ?: ""
+    fun setLastProfile(c: Context, v: String) = p(c).edit().putString("last_profile", v).apply()
+    fun notify(c: Context) = p(c).getBoolean("notify_speed", true)
+    fun setNotify(c: Context, v: Boolean) = p(c).edit().putBoolean("notify_speed", v).apply()
+    fun recents(c: Context) = p(c).getBoolean("recents", false)
+    fun setRecents(c: Context, v: Boolean) = p(c).edit().putBoolean("recents", v).apply()
 
     fun wrap(base: Context): Context {
         val conf = Configuration(base.resources.configuration)
