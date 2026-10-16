@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="sp_xs">4dp</dimen>
+    <dimen name="sp_s">8dp</dimen>
+    <dimen name="sp_m">12dp</dimen>
+    <dimen name="sp_l">16dp</dimen>
+    <dimen name="sp_xl">20dp</dimen>
+    <dimen name="sp_xxl">24dp</dimen>
+    <dimen name="screen_gutter">20dp</dimen>
+    <dimen name="card_radius">28dp</dimen>
+    <dimen name="tile_size">40dp</dimen>
+    <dimen name="tile_radius">12dp</dimen>
+    <dimen name="tile_icon">22dp</dimen>
+    <dimen name="row_height">64dp</dimen>
+    <dimen name="row_pad_start">16dp</dimen>
+    <dimen name="row_pad_end">16dp</dimen>
+    <dimen name="icon_action">44dp</dimen>
+    <dimen name="connect_button">196dp</dimen>
+    <dimen name="touch_target">48dp</dimen>
+</resources>

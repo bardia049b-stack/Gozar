@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#000000"
+    android:background="@android:color/black"
     android:fitsSystemWindows="true">
 
     <TextureView
@@ -11,31 +12,54 @@
         android:layout_height="match_parent" />
 
     <View
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/scan_scrim" />
+
+    <View
         android:layout_width="240dp"
         android:layout_height="240dp"
         android:layout_gravity="center"
         android:background="@drawable/scan_frame" />
 
-    <ImageView
-        android:id="@+id/btnCloseScan"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:layout_margin="20dp"
-        android:background="@drawable/circle_glass"
-        android:padding="10dp"
-        android:src="@drawable/ic_close" />
-
-    <TextView
+    <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom|center_horizontal"
-        android:layout_marginBottom="44dp"
-        android:background="@drawable/glass_pill"
-        android:paddingStart="20dp"
-        android:paddingTop="12dp"
-        android:paddingEnd="20dp"
-        android:paddingBottom="12dp"
-        android:text="@string/scan_hint"
-        android:textColor="@color/text"
-        android:textSize="14sp" />
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="96dp"
+        android:background="@drawable/pill"
+        android:backgroundTint="#66000000"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="@dimen/sp_l"
+        android:paddingTop="@dimen/sp_s"
+        android:paddingEnd="@dimen/sp_l"
+        android:paddingBottom="@dimen/sp_s">
+
+        <ImageView
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:src="@drawable/ic_qr"
+            app:tint="@android:color/white" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/sp_s"
+            android:text="@string/scan_hint"
+            android:textAppearance="@style/TextAppearance.Gozar.LabelLarge"
+            android:textColor="@android:color/white" />
+    </LinearLayout>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnCloseScan"
+        style="@style/Widget.Material3.Button.IconButton.Filled"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_gravity="top|end"
+        android:layout_margin="@dimen/sp_l"
+        android:contentDescription="@string/close"
+        app:backgroundTint="#66000000"
+        app:icon="@drawable/ic_close"
+        app:iconTint="@android:color/white" />
 </FrameLayout>

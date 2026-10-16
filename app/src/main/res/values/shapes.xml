@@ -121,7 +121,6 @@
     <style name="Widget.Gozar.BottomSheet" parent="Widget.Material3.BottomSheet.Modal">
         <item name="shapeAppearanceOverlay">@style/ShapeAppearanceOverlay.Gozar.Sheet</item>
         <item name="backgroundTint">?attr/colorSurfaceContainerLow</item>
-        <item name="dragHandleColor">?attr/colorOutlineVariant</item>
     </style>
 
     <style name="ShapeAppearanceOverlay.Gozar.Sheet" parent="">

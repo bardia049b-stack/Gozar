@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="?attr/selectableItemBackground"
+    android:clickable="true"
+    android:focusable="true"
+    android:gravity="center_vertical"
+    android:minHeight="60dp"
+    android:orientation="horizontal"
+    android:paddingStart="@dimen/sp_xxl"
+    android:paddingTop="@dimen/sp_s"
+    android:paddingEnd="@dimen/sp_xxl"
+    android:paddingBottom="@dimen/sp_s">
+
+    <ImageView
+        android:id="@+id/actionIcon"
+        style="@style/Gozar.Tile"
+        android:contentDescription="@string/add"
+        app:tint="?attr/colorOnSecondaryContainer" />
+
+    <TextView
+        android:id="@+id/actionLabel"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/sp_l"
+        android:layout_weight="1"
+        android:textAppearance="@style/TextAppearance.Gozar.TitleMedium"
+        android:textColor="?attr/colorOnSurface" />
+</LinearLayout>

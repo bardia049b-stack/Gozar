@@ -1,25 +1,26 @@
 package com.beofoq.wg
 
-import android.app.Activity
 import android.content.Context
-import android.content.res.Configuration
-import android.content.res.Resources
+import android.os.Bundle
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.view.WindowCompat
 
-abstract class BaseActivity : Activity() {
+abstract class BaseActivity : AppCompatActivity() {
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(Store.wrap(newBase))
     }
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+    }
+
     override fun onResume() {
         super.onResume()
-        val want = when (Store.theme(this)) {
-            "light" -> Configuration.UI_MODE_NIGHT_NO
-            "dark" -> Configuration.UI_MODE_NIGHT_YES
-            else -> Resources.getSystem().configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
-        }
-        val now = resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
-        if (want != now) recreate()
+        val mode = nightModeOf(Store.theme(this))
+        if (AppCompatDelegate.getDefaultNightMode() != mode) AppCompatDelegate.setDefaultNightMode(mode)
     }
 
     fun toast(msg: String) {
@@ -29,6 +30,12 @@ abstract class BaseActivity : Activity() {
     fun toast(res: Int) {
         runOnUiThread { Toast.makeText(this, res, Toast.LENGTH_SHORT).show() }
     }
+}
+
+fun nightModeOf(theme: String): Int = when (theme) {
+    "light" -> AppCompatDelegate.MODE_NIGHT_NO
+    "dark" -> AppCompatDelegate.MODE_NIGHT_YES
+    else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
 }
 
 fun fmtBytes(v: Long): String {

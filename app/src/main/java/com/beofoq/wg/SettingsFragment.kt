@@ -1,150 +1,127 @@
 package com.beofoq.wg
 
-import android.app.Activity
-import android.app.AlertDialog
-import android.app.Fragment
-import android.view.LayoutInflater
-import android.view.ViewGroup
-import android.widget.Toast
 import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
+import android.view.LayoutInflater
 import android.view.View
-import android.widget.EditText
+import android.view.ViewGroup
 import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.fragment.app.Fragment
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.materialswitch.MaterialSwitch
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 import kotlin.concurrent.thread
 
 class SettingsFragment : Fragment() {
-    private lateinit var root: View
 
-    private val act: Activity get() = activity
-
-    private fun <T : View> find(id: Int): T = root.findViewById(id)
-
-    fun toast(msg: String) {
-        act.runOnUiThread { Toast.makeText(act, msg, Toast.LENGTH_SHORT).show() }
-    }
-
-    fun toast(res: Int) {
-        act.runOnUiThread { Toast.makeText(act, res, Toast.LENGTH_SHORT).show() }
-    }
-
+    private fun <T : View> find(id: Int): T = view!!.findViewById(id)
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        root = inflater.inflate(R.layout.activity_settings, container, false)
-        return root
+        return inflater.inflate(R.layout.activity_settings, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        find<View>(R.id.btnBack).setOnClickListener { (activity as? MainActivity)?.showHome() }
-
-        bindSwitch(R.id.swKill, Store.kill(act)) { Store.setKill(act, it) }
-        bindSwitch(R.id.swAuto, Store.auto(act)) { Store.setAuto(act, it) }
-        bindSwitch(R.id.swLan, Store.lan(act)) { Store.setLan(act, it) }
-        bindSwitch(R.id.swProxy, Store.proxy(act)) { v ->
-            Store.setProxy(act, v)
-            toast(getString(R.string.proxy_note, "127.0.0.1:" + Store.proxyPort(act)))
+        bind(R.id.rowKill, R.id.swKill, Store.kill(requireContext())) { Store.setKill(requireContext(), it) }
+        bind(R.id.rowAuto, R.id.swAuto, Store.auto(requireContext())) { Store.setAuto(requireContext(), it) }
+        bind(R.id.rowLan, R.id.swLan, Store.lan(requireContext())) { Store.setLan(requireContext(), it) }
+        bind(R.id.rowProxy, R.id.swProxy, Store.proxy(requireContext())) { value ->
+            Store.setProxy(requireContext(), value)
+            toast(getString(R.string.proxy_note, "127.0.0.1:" + Store.proxyPort(requireContext())))
         }
 
-        updateProxyText()
-        rowClick(R.id.tvProxyPort) { editPort() }
-
-        updateSplitTexts()
-        rowClick(R.id.tvSplitMode) { pickSplitMode() }
-        rowClick(R.id.tvSplitApps) {
-            startActivity(Intent(act, AppsActivity::class.java))
+        find<View>(R.id.rowPort).setOnClickListener { editPort() }
+        find<View>(R.id.rowSplitMode).setOnClickListener { pickSplitMode() }
+        find<View>(R.id.rowSplitApps).setOnClickListener {
+            startActivity(Intent(requireContext(), AppsActivity::class.java))
         }
+        find<View>(R.id.rowLang).setOnClickListener { pickLanguage() }
+        find<View>(R.id.rowTheme).setOnClickListener { pickTheme() }
+        find<View>(R.id.rowVpnSettings).setOnClickListener { openSystemVpn() }
 
-        updateLangThemeTexts()
-        rowClick(R.id.tvLang) { pickLang() }
-        rowClick(R.id.tvTheme) { pickTheme() }
-        rowClick(R.id.tvVpnSettings) {
-            try {
-                startActivity(Intent(Settings.ACTION_VPN_SETTINGS))
-            } catch (e: Exception) {
-                try {
-                    startActivity(Intent(Settings.ACTION_WIRELESS_SETTINGS))
-                } catch (e2: Exception) {
-                }
-            }
-        }
-
-        val tvAbout = find<TextView>(R.id.tvAbout)
         val version = try {
-            act.packageManager.getPackageInfo(act.packageName, 0).versionName
+            requireContext().packageManager.getPackageInfo(requireContext().packageName, 0).versionName
         } catch (e: Exception) {
             ""
         }
-        tvAbout.text = getString(R.string.app_name) + " · " + String.format(getString(R.string.version), version)
+        find<TextView>(R.id.tvAbout).text = getString(R.string.app_name) + " · " + String.format(getString(R.string.version), version)
+        find<TextView>(R.id.tvCore).setText(R.string.built_in)
         thread {
             val core = try {
-                Vpn.coreVersion(act.applicationContext)
+                Vpn.coreVersion(requireContext().applicationContext)
             } catch (e: Throwable) {
                 ""
             }
             if (core.isNotBlank()) {
-                act.runOnUiThread {
-                    tvAbout.text = tvAbout.text.toString() + "\n" + String.format(getString(R.string.core_version), core)
+                activity?.runOnUiThread {
+                    if (view != null) find<TextView>(R.id.tvCore).text = String.format(getString(R.string.core_version), core)
                 }
             }
         }
+        paint()
     }
 
     override fun onResume() {
         super.onResume()
-        updateSplitTexts()
-        updateProxyText()
+        paint()
     }
 
-    private fun rowClick(id: Int, action: () -> Unit) {
-        var v: View? = find(id)
-        repeat(3) {
-            v?.setOnClickListener { action() }
-            v = v?.parent as? View
-        }
+    private fun toast(message: String) {
+        activity?.runOnUiThread { Toast.makeText(context, message, Toast.LENGTH_SHORT).show() }
     }
 
-    private fun bindSwitch(id: Int, initial: Boolean, save: (Boolean) -> Unit) {
-        val sw = find<GlassSwitch>(id)
-        sw.setChecked(initial, false)
-        sw.onChange = { save(it) }
+    private fun bind(row: Int, switchId: Int, initial: Boolean, save: (Boolean) -> Unit) {
+        val toggle = find<MaterialSwitch>(switchId)
+        toggle.isChecked = initial
+        toggle.setOnCheckedChangeListener { _, checked -> save(checked) }
+        find<View>(row).setOnClickListener { toggle.isChecked = !toggle.isChecked }
     }
 
-    private fun updateProxyText() {
-        find<TextView>(R.id.tvProxyPort).text = "SOCKS5 · 127.0.0.1:" + Store.proxyPort(act)
-    }
-
-    private fun editPort() {
-        val input = EditText(act)
-        input.inputType = android.text.InputType.TYPE_CLASS_NUMBER
-        input.setText(Store.proxyPort(act).toString())
-        AlertDialog.Builder(act)
-            .setTitle(R.string.proxy_port)
-            .setView(input)
-            .setPositiveButton(R.string.ok) { _, _ ->
-                val port = input.text.toString().toIntOrNull()
-                if (port != null && port in 1024..65535) {
-                    Store.setProxyPort(act, port)
-                    updateProxyText()
-                }
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
-    }
-
-    private fun splitModeName(mode: Int): String {
-        return when (mode) {
+    private fun paint() {
+        if (view == null) return
+        find<TextView>(R.id.tvProxyPort).text = "SOCKS5 · 127.0.0.1:" + Store.proxyPort(requireContext())
+        val mode = Store.splitMode(requireContext())
+        find<TextView>(R.id.tvSplitMode).text = when (mode) {
             1 -> getString(R.string.split_exclude)
             2 -> getString(R.string.split_include)
             else -> getString(R.string.split_off)
         }
+        find<TextView>(R.id.tvSplitApps).text =
+            String.format(getString(R.string.selected_count), Store.splitApps(requireContext()).size)
+        find<TextView>(R.id.tvLang).text = when (Store.lang(requireContext())) {
+            "fa" -> getString(R.string.lang_fa)
+            "en" -> getString(R.string.lang_en)
+            else -> getString(R.string.lang_system)
+        }
+        find<TextView>(R.id.tvTheme).text = when (Store.theme(requireContext())) {
+            "light" -> getString(R.string.theme_light)
+            "dark" -> getString(R.string.theme_dark)
+            else -> getString(R.string.theme_auto)
+        }
     }
 
-    private fun updateSplitTexts() {
-        find<TextView>(R.id.tvSplitMode).text = splitModeName(Store.splitMode(act))
-        find<TextView>(R.id.tvSplitApps).text =
-            String.format(getString(R.string.selected_count), Store.splitApps(act).size)
+    private fun editPort() {
+        val content = layoutInflater.inflate(R.layout.dialog_port, null)
+        val box = content.findViewById<TextInputLayout>(R.id.portBox)
+        val input = content.findViewById<TextInputEditText>(R.id.etPort)
+        input.setText(Store.proxyPort(requireContext()).toString())
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.proxy_port)
+            .setView(content)
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.apply) { _, _ ->
+                val port = input.text.toString().toIntOrNull()
+                if (port == null || port !in 1024..65535) {
+                    box.error = getString(R.string.invalid_port)
+                } else {
+                    Store.setProxyPort(requireContext(), port)
+                    paint()
+                }
+            }
+            .show()
     }
 
     private fun pickSplitMode() {
@@ -153,39 +130,27 @@ class SettingsFragment : Fragment() {
             getString(R.string.split_exclude),
             getString(R.string.split_include)
         )
-        AlertDialog.Builder(act)
+        MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.split_mode)
-            .setSingleChoiceItems(items, Store.splitMode(act)) { dialog, which ->
-                Store.setSplitMode(act, which)
-                updateSplitTexts()
+            .setSingleChoiceItems(items, Store.splitMode(requireContext())) { dialog, which ->
+                Store.setSplitMode(requireContext(), which)
                 dialog.dismiss()
+                paint()
             }
             .show()
     }
 
-    private fun updateLangThemeTexts() {
-        find<TextView>(R.id.tvLang).text = when (Store.lang(act)) {
-            "fa" -> getString(R.string.lang_fa)
-            "en" -> getString(R.string.lang_en)
-            else -> getString(R.string.lang_system)
-        }
-        find<TextView>(R.id.tvTheme).text = when (Store.theme(act)) {
-            "light" -> getString(R.string.theme_light)
-            "dark" -> getString(R.string.theme_dark)
-            else -> getString(R.string.theme_auto)
-        }
-    }
-
-    private fun pickLang() {
-        val items = arrayOf(getString(R.string.lang_fa), getString(R.string.lang_en), getString(R.string.lang_system))
-        val values = arrayOf("fa", "en", "")
-        val current = values.indexOf(Store.lang(act)).coerceAtLeast(2)
-        AlertDialog.Builder(act)
+    private fun pickLanguage() {
+        val items = arrayOf(getString(R.string.lang_system), getString(R.string.lang_fa), getString(R.string.lang_en))
+        val values = arrayOf("", "fa", "en")
+        val current = values.indexOf(Store.lang(requireContext())).coerceAtLeast(0)
+        MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.language)
             .setSingleChoiceItems(items, current) { dialog, which ->
-                Store.setLang(act, values[which])
+                Store.setLang(requireContext(), values[which])
                 dialog.dismiss()
-                act.recreate()
+                paint()
+                activity?.recreate()
             }
             .show()
     }
@@ -193,14 +158,26 @@ class SettingsFragment : Fragment() {
     private fun pickTheme() {
         val items = arrayOf(getString(R.string.theme_auto), getString(R.string.theme_light), getString(R.string.theme_dark))
         val values = arrayOf("auto", "light", "dark")
-        val current = values.indexOf(Store.theme(act)).coerceAtLeast(0)
-        AlertDialog.Builder(act)
+        val current = values.indexOf(Store.theme(requireContext())).coerceAtLeast(0)
+        MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.theme)
             .setSingleChoiceItems(items, current) { dialog, which ->
-                Store.setTheme(act, values[which])
+                Store.setTheme(requireContext(), values[which])
                 dialog.dismiss()
-                act.recreate()
+                paint()
+                AppCompatDelegate.setDefaultNightMode(nightModeOf(values[which]))
             }
             .show()
+    }
+
+    private fun openSystemVpn() {
+        try {
+            startActivity(Intent(Settings.ACTION_VPN_SETTINGS))
+        } catch (e: Exception) {
+            try {
+                startActivity(Intent(Settings.ACTION_WIRELESS_SETTINGS))
+            } catch (e2: Exception) {
+            }
+        }
     }
 }

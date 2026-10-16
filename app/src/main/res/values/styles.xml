@@ -1,87 +1,146 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Divider">
+
+    <style name="Gozar.Divider" parent="">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">1dp</item>
-        <item name="android:background">@color/separator</item>
+        <item name="android:layout_marginStart">@dimen/row_pad_start</item>
+        <item name="android:layout_marginEnd">@dimen/row_pad_end</item>
+        <item name="android:background">?attr/colorOutlineVariant</item>
     </style>
-    <style name="SheetRow">
+
+    <style name="Gozar.Section" parent="">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginStart">@dimen/sp_m</item>
+        <item name="android:layout_marginTop">@dimen/sp_xxl</item>
+        <item name="android:layout_marginBottom">@dimen/sp_s</item>
+        <item name="android:textAppearance">@style/TextAppearance.Gozar.TitleSmall</item>
+        <item name="android:textColor">?attr/colorPrimary</item>
+    </style>
+
+    <style name="Gozar.Row" parent="">
         <item name="android:layout_width">match_parent</item>
-        <item name="android:layout_height">54dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">@dimen/row_height</item>
         <item name="android:gravity">center_vertical</item>
         <item name="android:orientation">horizontal</item>
-        <item name="android:paddingStart">12dp</item>
-        <item name="android:paddingEnd">12dp</item>
+        <item name="android:paddingStart">@dimen/row_pad_start</item>
+        <item name="android:paddingEnd">@dimen/row_pad_end</item>
+        <item name="android:paddingTop">@dimen/sp_m</item>
+        <item name="android:paddingBottom">@dimen/sp_m</item>
+        <item name="android:background">?attr/selectableItemBackground</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
     </style>
-    <style name="SheetIcon">
-        <item name="android:layout_width">24dp</item>
-        <item name="android:layout_height">24dp</item>
+
+    <style name="Gozar.Row.Static" parent="@style/Gozar.Row">
+        <item name="android:background">@null</item>
+        <item name="android:clickable">false</item>
+        <item name="android:focusable">false</item>
     </style>
-    <style name="SheetText">
+
+    <style name="Gozar.Row.Text" parent="">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:layout_marginStart">@dimen/sp_l</item>
+        <item name="android:layout_marginEnd">@dimen/sp_m</item>
+        <item name="android:orientation">vertical</item>
+    </style>
+
+    <style name="Gozar.Row.Title" parent="">
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
-        <item name="android:layout_marginStart">14dp</item>
-        <item name="android:textColor">@color/text</item>
-        <item name="android:textSize">16sp</item>
+        <item name="android:textAppearance">@style/TextAppearance.Gozar.TitleMedium</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
     </style>
-    <style name="SectionLabel">
-        <item name="android:layout_width">wrap_content</item>
-        <item name="android:layout_height">wrap_content</item>
-        <item name="android:layout_marginStart">6dp</item>
-        <item name="android:layout_marginTop">22dp</item>
-        <item name="android:layout_marginBottom">8dp</item>
-        <item name="android:textColor">@color/text2</item>
-        <item name="android:textSize">13sp</item>
-        <item name="android:textStyle">bold</item>
-    </style>
-    <style name="FieldLabel">
-        <item name="android:layout_width">wrap_content</item>
-        <item name="android:layout_height">wrap_content</item>
-        <item name="android:layout_marginTop">14dp</item>
-        <item name="android:layout_marginBottom">6dp</item>
-        <item name="android:textColor">@color/text2</item>
-        <item name="android:textSize">13sp</item>
-    </style>
-    <style name="Field">
+
+    <style name="Gozar.Row.Subtitle" parent="">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
-        <item name="android:background">@drawable/field</item>
-        <item name="android:paddingStart">14dp</item>
-        <item name="android:paddingTop">12dp</item>
-        <item name="android:paddingEnd">14dp</item>
-        <item name="android:paddingBottom">12dp</item>
-        <item name="android:textColor">@color/text</item>
-        <item name="android:textColorHint">@color/text2</item>
-        <item name="android:textSize">15sp</item>
-        <item name="android:singleLine">true</item>
+        <item name="android:layout_marginTop">2dp</item>
+        <item name="android:textAppearance">@style/TextAppearance.Gozar.BodyMedium</item>
+        <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
+        <item name="android:maxLines">2</item>
+        <item name="android:ellipsize">end</item>
     </style>
-    <style name="SmallBtn">
+
+    <style name="Gozar.Row.Chevron" parent="">
+        <item name="android:layout_width">20dp</item>
+        <item name="android:layout_height">20dp</item>
+        <item name="android:src">@drawable/ic_chev</item>
+        <item name="android:tint">?attr/colorOnSurfaceVariant</item>
+    </style>
+
+    <style name="Gozar.Tile" parent="">
+        <item name="android:layout_width">@dimen/tile_size</item>
+        <item name="android:layout_height">@dimen/tile_size</item>
+        <item name="android:padding">9dp</item>
+        <item name="android:background">@drawable/tile</item>
+        <item name="android:backgroundTint">?attr/colorSecondaryContainer</item>
+    </style>
+
+    <style name="Gozar.Tile.Icon" parent="@style/Gozar.Tile">
+        <item name="android:tint">?attr/colorOnSecondaryContainer</item>
+    </style>
+
+    <style name="Gozar.Sheet.Row" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">60dp</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:paddingStart">@dimen/sp_xxl</item>
+        <item name="android:paddingEnd">@dimen/sp_xxl</item>
+        <item name="android:paddingTop">@dimen/sp_m</item>
+        <item name="android:paddingBottom">@dimen/sp_m</item>
+        <item name="android:background">?attr/selectableItemBackground</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+    </style>
+
+    <style name="Gozar.Sheet.Title" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:paddingStart">@dimen/sp_xxl</item>
+        <item name="android:paddingEnd">@dimen/sp_xxl</item>
+        <item name="android:paddingTop">@dimen/sp_m</item>
+        <item name="android:paddingBottom">@dimen/sp_s</item>
+        <item name="android:textAppearance">@style/TextAppearance.Gozar.TitleLarge</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+
+    <style name="Gozar.Toolbar.Title" parent="">
+        <item name="android:textAppearance">@style/TextAppearance.Gozar.TitleLarge</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
+        <item name="android:maxLines">2</item>
+    </style>
+
+    <style name="Gozar.Stat.Value" parent="">
         <item name="android:layout_width">wrap_content</item>
-        <item name="android:layout_height">40dp</item>
-        <item name="android:background">@drawable/chip</item>
-        <item name="android:gravity">center</item>
-        <item name="android:paddingStart">10dp</item>
-        <item name="android:paddingEnd">10dp</item>
-        <item name="android:textColor">@color/accent</item>
-        <item name="android:textSize">13sp</item>
-        <item name="android:textStyle">bold</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textAppearance">@style/TextAppearance.Gozar.TitleLarge</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
         <item name="android:singleLine">true</item>
-        <item name="android:maxLines">1</item>
-        <item name="android:ellipsize">end</item>
     </style>
-    <style name="ActionBtn">
-        <item name="android:layout_width">0dp</item>
-        <item name="android:layout_height">48dp</item>
-        <item name="android:background">@drawable/chip</item>
-        <item name="android:gravity">center</item>
-        <item name="android:paddingStart">12dp</item>
-        <item name="android:paddingEnd">12dp</item>
-        <item name="android:textColor">@color/accent</item>
-        <item name="android:textSize">14sp</item>
-        <item name="android:textStyle">bold</item>
-        <item name="android:singleLine">true</item>
-        <item name="android:maxLines">1</item>
-        <item name="android:ellipsize">end</item>
-        <item name="android:drawablePadding">8dp</item>
+
+    <style name="Gozar.Stat.Label" parent="">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textAppearance">@style/TextAppearance.Gozar.LabelMedium</item>
+        <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
     </style>
+
+    <style name="Gozar.Field" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="boxCornerRadiusTopStart">16dp</item>
+        <item name="boxCornerRadiusTopEnd">16dp</item>
+        <item name="boxCornerRadiusBottomStart">16dp</item>
+        <item name="boxCornerRadiusBottomEnd">16dp</item>
+        <item name="boxStrokeWidth">1dp</item>
+        <item name="hintTextAppearance">@style/TextAppearance.Gozar.BodyMedium</item>
+    </style>
+
 </resources>

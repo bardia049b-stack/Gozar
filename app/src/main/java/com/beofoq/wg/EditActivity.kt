@@ -1,14 +1,14 @@
 package com.beofoq.wg
 
-import android.app.AlertDialog
-import android.app.Dialog
 import android.content.Intent
 import android.graphics.Bitmap
 import android.os.Bundle
+import androidx.appcompat.app.AppCompatDelegate
+import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
-import android.view.Window
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.TextView
@@ -35,7 +35,7 @@ class EditActivity : BaseActivity() {
         segForm = findViewById(R.id.segForm)
         segRaw = findViewById(R.id.segRaw)
 
-        findViewById<View>(R.id.btnClose).setOnClickListener { finish() }
+        findViewById<MaterialToolbar>(R.id.toolbar).setNavigationOnClickListener { finish() }
         findViewById<View>(R.id.btnSaveTop).setOnClickListener { save() }
         segForm.setOnClickListener { setMode(false) }
         segRaw.setOnClickListener { setMode(true) }
@@ -61,7 +61,7 @@ class EditActivity : BaseActivity() {
 
         val id = profileId
         if (id != null) {
-            findViewById<TextView>(R.id.tvEditTitle).setText(R.string.ed_edit)
+            findViewById<MaterialToolbar>(R.id.toolbar).setTitle(R.string.ed_edit)
             findViewById<View>(R.id.actionRow).visibility = View.VISIBLE
             val p = Profiles.get(this, id)
             if (p != null) {
@@ -107,11 +107,11 @@ class EditActivity : BaseActivity() {
     private fun applyMode() {
         val raw = rawMode
         formBox.visibility = if (raw) View.GONE else View.VISIBLE
-        etRaw.visibility = if (raw) View.VISIBLE else View.GONE
-        segForm.setBackgroundResource(if (raw) 0 else R.drawable.chip)
-        segRaw.setBackgroundResource(if (raw) R.drawable.chip else 0)
-        segForm.setTextColor(getColor(if (raw) R.color.text2 else R.color.text))
-        segRaw.setTextColor(getColor(if (raw) R.color.text else R.color.text2))
+        findViewById<View>(R.id.rawBox).visibility = if (raw) View.VISIBLE else View.GONE
+        segForm.setBackgroundResource(if (raw) 0 else R.drawable.seg_on)
+        segRaw.setBackgroundResource(if (raw) R.drawable.seg_on else 0)
+        segForm.setTextColor(getColor(if (raw) R.color.m3_on_surface_variant else R.color.m3_on_primary_container))
+        segRaw.setTextColor(getColor(if (raw) R.color.m3_on_primary_container else R.color.m3_on_surface_variant))
     }
 
     private fun fillForm(text: String) {
@@ -255,7 +255,7 @@ class EditActivity : BaseActivity() {
         val text = if (rawMode) etRaw.text.toString() else buildText()
         val error = Profiles.check(text)
         if (error != null) {
-            AlertDialog.Builder(this)
+            MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.ed_edit)
                 .setMessage(String.format(getString(R.string.invalid_config), error))
                 .setPositiveButton(R.string.ok, null)
@@ -332,7 +332,7 @@ class EditActivity : BaseActivity() {
     }
 
     private fun confirmDelete(p: Profile) {
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setTitle(R.string.del_title)
             .setMessage(String.format(getString(R.string.del_msg), p.name))
             .setPositiveButton(R.string.yes) { _, _ ->
@@ -345,23 +345,26 @@ class EditActivity : BaseActivity() {
     }
 
     private fun showQr(p: Profile) {
-        val dialog = Dialog(this)
-        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
-        dialog.setContentView(R.layout.dialog_qr)
-        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-        dialog.findViewById<TextView>(R.id.tvQrName).text = p.name
-        val iv = dialog.findViewById<ImageView>(R.id.ivQr)
+        val content = layoutInflater.inflate(R.layout.dialog_qr, null)
+        content.findViewById<TextView>(R.id.tvQrName).text = p.name
+        val image = content.findViewById<ImageView>(R.id.ivQr)
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setView(content)
+            .create()
         var bmp: Bitmap? = null
         thread {
             val made = Qr.make(p.text)
             bmp = made
-            runOnUiThread { iv.setImageBitmap(made) }
+            runOnUiThread { image.setImageBitmap(made) }
         }
-        dialog.findViewById<View>(R.id.btnQrSave).setOnClickListener {
+        content.findViewById<View>(R.id.btnQrSave).setOnClickListener {
             val b = bmp
             if (b != null && saveToGallery(p.name, b)) toast(R.string.qr_saved)
         }
-        dialog.findViewById<View>(R.id.btnQrShare).setOnClickListener { shareProfile(p) }
+        content.findViewById<View>(R.id.btnQrShare).setOnClickListener {
+            dialog.dismiss()
+            shareProfile(p)
+        }
         dialog.show()
     }
 

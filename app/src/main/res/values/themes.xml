@@ -31,13 +31,11 @@
         <item name="colorSurfaceDim">@color/m3_surface_dim</item>
         <item name="colorSurfaceInverse">@color/m3_inverse_surface</item>
         <item name="colorOnSurfaceInverse">@color/m3_inverse_on_surface</item>
-        <item name="colorSurfaceTint">@color/m3_surface_tint</item>
         <item name="colorOutline">@color/m3_outline</item>
         <item name="colorOutlineVariant">@color/m3_outline_variant</item>
         <item name="colorControlHighlight">@color/m3_ripple</item>
         <item name="android:colorBackground">@color/m3_surface</item>
         <item name="colorOnBackground">@color/m3_on_surface</item>
-        <item name="colorScrim">@color/m3_scrim</item>
         <item name="textAppearanceDisplayLarge">@style/TextAppearance.Gozar.DisplayLarge</item>
         <item name="textAppearanceDisplayMedium">@style/TextAppearance.Gozar.DisplayMedium</item>
         <item name="textAppearanceDisplaySmall">@style/TextAppearance.Gozar.DisplaySmall</item>

@@ -2,11 +2,13 @@ package com.beofoq.wg
 
 import android.content.Intent
 import android.os.Bundle
-import android.view.View
-import android.widget.ImageView
-import android.widget.TextView
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updatePadding
+import com.google.android.material.bottomnavigation.BottomNavigationView
 
 class MainActivity : BaseActivity() {
+
     private lateinit var home: HomeFragment
     private lateinit var settings: SettingsFragment
     private var onSettings = false
@@ -14,21 +16,40 @@ class MainActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_shell)
-        home = HomeFragment()
-        settings = SettingsFragment()
-        fragmentManager.beginTransaction()
-            .add(R.id.container, settings, "settings")
-            .hide(settings)
-            .add(R.id.container, home, "home")
-            .commit()
-        fragmentManager.executePendingTransactions()
-        findViewById<View>(R.id.btnHome).setOnClickListener { showHome() }
-        findViewById<View>(R.id.btnSettings).setOnClickListener { showSettings() }
-        findViewById<View>(R.id.btnAdd).setOnClickListener {
-            showHome()
-            findViewById<View>(R.id.container).post { home.showAddSheet() }
+        val manager = supportFragmentManager
+        val existingHome = manager.findFragmentByTag("home") as? HomeFragment
+        val existingSettings = manager.findFragmentByTag("settings") as? SettingsFragment
+        home = existingHome ?: HomeFragment()
+        settings = existingSettings ?: SettingsFragment()
+        if (existingHome == null || existingSettings == null) {
+            val transaction = manager.beginTransaction()
+            transaction.add(R.id.container, settings, "settings")
+            transaction.add(R.id.container, home, "home")
+            transaction.hide(settings)
+            transaction.commitNow()
         }
-        updateNav()
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.container)) { target, insets ->
+            val bars = insets.getInsets(
+                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
+            )
+            target.updatePadding(top = bars.top)
+            insets
+        }
+        val nav = findViewById<BottomNavigationView>(R.id.bottomNav)
+        nav.setOnItemSelectedListener { item ->
+            when (item.itemId) {
+                R.id.nav_home -> {
+                    showHome()
+                    true
+                }
+                R.id.nav_settings -> {
+                    showSettings()
+                    true
+                }
+                else -> false
+            }
+        }
+        nav.selectedItemId = if (onSettings) R.id.nav_settings else R.id.nav_home
         home.handleIntent(intent)
     }
 
@@ -36,31 +57,28 @@ class MainActivity : BaseActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         showHome()
-        findViewById<View>(R.id.container).post { home.handleIntent(intent) }
+        home.handleIntent(intent)
     }
 
     fun showHome() {
         if (!onSettings) return
         onSettings = false
-        fragmentManager.beginTransaction().hide(settings).show(home).commit()
-        updateNav()
+        supportFragmentManager.beginTransaction().hide(settings).show(home).commit()
     }
 
     fun showSettings() {
         if (onSettings) return
         onSettings = true
-        fragmentManager.beginTransaction().hide(home).show(settings).commit()
-        updateNav()
+        supportFragmentManager.beginTransaction().hide(home).show(settings).commit()
     }
 
-    private fun updateNav() {
-        findViewById<ImageView>(R.id.tabHomeIcon).setColorFilter(getColor(if (onSettings) R.color.tab_icon_off else R.color.accent))
-        findViewById<TextView>(R.id.tabHomeText).setTextColor(getColor(if (onSettings) R.color.tab_icon_off else R.color.accent))
-        findViewById<ImageView>(R.id.tabSettingsIcon).setColorFilter(getColor(if (onSettings) R.color.accent else R.color.tab_icon_off))
-        findViewById<TextView>(R.id.tabSettingsText).setTextColor(getColor(if (onSettings) R.color.accent else R.color.tab_icon_off))
+    fun openSettings() {
+        showSettings()
+        findViewById<BottomNavigationView>(R.id.bottomNav).selectedItemId = R.id.nav_settings
     }
 
-    override fun onBackPressed() {
-        if (onSettings) showHome() else super.onBackPressed()
+    fun openHome() {
+        showHome()
+        findViewById<BottomNavigationView>(R.id.bottomNav).selectedItemId = R.id.nav_home
     }
 }
