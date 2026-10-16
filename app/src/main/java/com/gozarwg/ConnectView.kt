@@ -25,7 +25,7 @@ class ConnectView @JvmOverloads constructor(context: Context, attrs: AttributeSe
         const val ERROR = 3
 
         private const val FRAME_MS = 33L
-        private const val SEGMENTS = 84
+        private const val SEGMENTS = 96
     }
 
     var state = OFF
@@ -43,9 +43,9 @@ class ConnectView @JvmOverloads constructor(context: Context, attrs: AttributeSe
     }
     private val disc = Paint(Paint.ANTI_ALIAS_FLAG)
     private val bubble = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val glow = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val track = Paint(Paint.ANTI_ALIAS_FLAG)
     private val shell = Path()
-    private val inner = Path()
+    private val ghost = Path()
     private var born = SystemClock.elapsedRealtime()
     private var lastFrame = 0L
     private val box = RectF()
@@ -65,20 +65,21 @@ class ConnectView @JvmOverloads constructor(context: Context, attrs: AttributeSe
         setMeasuredDimension(side, side)
     }
 
-    private fun outline(
+    private fun blob(
         target: Path,
         cx: Float,
         cy: Float,
         radius: Float,
         lobes: Int,
         amp: Float,
-        spin: Float
+        spin: Float,
+        wobble: Float
     ) {
         target.reset()
         val base = radius - amp
         for (i in 0..SEGMENTS) {
             val a = (i.toFloat() / SEGMENTS) * 2f * PI.toFloat() + spin
-            val r = base + amp * cos(lobes * a)
+            val r = base + amp * cos(lobes * a) + wobble * sin(2f * a + spin * 2.6f)
             val x = cx + r * cos(a)
             val y = cy + r * sin(a)
             if (i == 0) target.moveTo(x, y) else target.lineTo(x, y)
@@ -93,87 +94,72 @@ class ConnectView @JvmOverloads constructor(context: Context, attrs: AttributeSe
         val cy = height / 2f
         val half = min(width, height) / 2f
         val pop = 1f + 0.05f * exp(-age * 5f)
-        val breath = 1f + 0.022f * sin(age * 1.6f)
+        val breath = 1f + 0.02f * sin(age * 1.5f)
 
         val surface = ContextCompat.getColor(context, R.color.m3_surface_container_highest)
-        val outlineColor = ContextCompat.getColor(context, R.color.m3_outline_variant)
+        val outline = ContextCompat.getColor(context, R.color.m3_outline_variant)
         val accent = ContextCompat.getColor(context, R.color.m3_primary)
         val accentSoft = ContextCompat.getColor(context, R.color.m3_primary_container)
         val ok = ContextCompat.getColor(context, R.color.m3_ok)
         val err = ContextCompat.getColor(context, R.color.m3_error)
         val errSoft = ContextCompat.getColor(context, R.color.m3_error_container)
 
-        val shellRadius = half * 0.88f * breath * pop
         val spin = when (state) {
-            BUSY -> age * 26f
-            ON -> age * 9f
-            else -> age * 4f
+            BUSY -> age * 22f
+            ON -> age * 7f
+            else -> age * 3f
         }
-        outline(shell, cx, cy, shellRadius, 7, 4f * density * breath, spin)
-        bubble.color = when (state) {
-            ON -> ok
-            BUSY -> accentSoft
-            ERROR -> err
-            else -> surface
-        }
-        bubble.alpha = when (state) {
-            ON -> 62
-            BUSY -> 150
-            ERROR -> 54
-            else -> 214
-        }
+        val wobble = min(half * 0.012f, 2.2f * density)
+
+        blob(shell, cx, cy, half * 0.86f * breath * pop, 4, 3f * density * breath, spin, wobble)
+        bubble.color = if (state == ON) ok else surface
+        bubble.alpha = if (state == ON) 140 else 235
         canvas.drawPath(shell, bubble)
 
-        outline(inner, cx, cy, half * 0.80f * breath, 5, 2.5f * density, -age * 6f)
-        glow.color = when (state) {
-            ON -> ok
-            BUSY -> accent
-            ERROR -> err
-            else -> accentSoft
-        }
-        glow.alpha = when (state) {
-            ON -> 34
-            else -> 40
-        }
-        canvas.drawPath(inner, glow)
+        blob(ghost, cx, cy, half * 0.78f * breath, 8, 2.4f * density, -spin * 1.4f, wobble * 0.7f)
+        bubble.color = if (state == ON) accent else accentSoft
+        bubble.alpha = if (state == ON) 46 else 40
+        canvas.drawPath(ghost, bubble)
 
         val outer = half * 0.70f
+        val trackR = half * 0.585f
         val stroke = 6 * density
-
-        if (state == ON) {
-            ring.style = Paint.Style.STROKE
-            ring.strokeWidth = 14 * density
-            ring.color = accent
-            ring.alpha = (16 + 12 * sin(age * 2.2)).toInt().coerceIn(4, 34)
-            canvas.drawCircle(cx, cy, outer + 5 * density, ring)
-        }
 
         ring.style = Paint.Style.STROKE
         ring.strokeWidth = stroke
         ring.alpha = 255
-        ring.color = outlineColor
+        ring.color = when (state) {
+            ON -> ok
+            BUSY -> outline
+            ERROR -> err
+            else -> outline
+        }
         canvas.drawCircle(cx, cy, outer, ring)
 
-        val track = half * 0.585f
-        box.set(cx - track, cy - track, cx + track, cy + track)
-
+        box.set(cx - trackR, cy - trackR, cx + trackR, cy + trackR)
         when (state) {
             BUSY -> {
                 sweep = (age * 300f) % 360f
                 ring.color = accent
-                ring.strokeWidth = stroke
                 canvas.drawArc(box, sweep, 260f, false, ring)
             }
             ON -> {
-                ring.color = ok
-                ring.strokeWidth = stroke
-                canvas.drawArc(box, -90f, 360f, false, ring)
+                track.style = Paint.Style.STROKE
+                track.strokeWidth = stroke * 0.7f
+                track.strokeCap = Paint.Cap.ROUND
+                track.color = ok
+                track.alpha = 90
+                canvas.drawCircle(cx, cy, trackR, track)
             }
-            ERROR -> {
-                ring.color = err
-                ring.strokeWidth = stroke
-                canvas.drawArc(box, -90f, 360f, false, ring)
-            }
+            ERROR -> canvas.drawArc(box, -90f, 360f, false, ring)
+        }
+
+        if (state == ON) {
+            ring.style = Paint.Style.STROKE
+            ring.strokeWidth = 12 * density
+            ring.color = accent
+            ring.alpha = (14 + 12 * sin(age * 2.2)).toInt().coerceIn(4, 32)
+            canvas.drawCircle(cx, cy, outer + 6 * density, ring)
         }
 
         val face = half * 0.44f * pop
@@ -183,12 +169,18 @@ class ConnectView @JvmOverloads constructor(context: Context, attrs: AttributeSe
             ERROR -> errSoft
             else -> surface
         }
-        disc.alpha = 255
         canvas.drawCircle(cx, cy, face, disc)
 
         if (state == OFF || state == BUSY) {
             disc.color = accentSoft
-            disc.alpha = if (state == BUSY) 60 else 34
+            disc.alpha = if (state == BUSY) 60 else 36
+            canvas.drawCircle(cx, cy, face, disc)
+            disc.alpha = 255
+        }
+
+        if (state == ERROR) {
+            disc.color = err
+            disc.alpha = 30
             canvas.drawCircle(cx, cy, face, disc)
             disc.alpha = 255
         }
