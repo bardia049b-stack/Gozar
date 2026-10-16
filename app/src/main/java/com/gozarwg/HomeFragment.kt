@@ -64,7 +64,7 @@ class HomeFragment : Fragment() {
             val found = mutableListOf<Pair<String, String>>()
             for (uri in uris) {
                 val text = readText(uri) ?: continue
-                found.add(nameOf(uri) ?: getString(R.string.unnamed) to text)
+                found.add((nameOf(uri) ?: getString(R.string.unnamed)) to text)
             }
             activity?.runOnUiThread {
                 when {
@@ -149,7 +149,7 @@ class HomeFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         find<View>(R.id.connectButton).setOnClickListener { toggle() }
-        find<View>(R.id.btnSettingsTop).setOnClickListener { (activity as? MainActivity)?.openSettings() }
+        find<View>(R.id.btnSettingsTop).setOnClickListener { (activity as? MainActivity)?.showSettings() }
         find<View>(R.id.profileCard).setOnClickListener { showProfiles() }
         find<View>(R.id.rowPerApp).setOnClickListener { startActivity(Intent(requireContext(), AppsActivity::class.java)) }
         find<View>(R.id.btnAddProfile).setOnClickListener { showAdd() }
