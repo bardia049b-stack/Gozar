@@ -285,7 +285,7 @@ class HomeFragment : Fragment() {
             return
         }
         target.alpha = 0f
-        target.translationY = dp(8f)
+        target.translationY = dp(8f).toFloat()
         target.visibility = View.VISIBLE
         target.animate().alpha(1f).translationY(0f).setDuration(220L).setInterpolator(DecelerateInterpolator()).start()
     }
