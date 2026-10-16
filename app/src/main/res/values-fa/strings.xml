@@ -19,8 +19,8 @@
     <string name="total">مجموع</string>
     <string name="handshake">آخرین هندشیک</string>
     <string name="now">الان</string>
-    <string name="sec_ago">٪d ثانیه پیش</string>
-    <string name="min_ago">٪d دقیقه پیش</string>
+    <string name="sec_ago">%d ثانیه پیش</string>
+    <string name="min_ago">%d دقیقه پیش</string>
     <string name="select_first">اول یک کانفیگ اضافه یا انتخاب کن</string>
     <string name="menu_edit">ویرایش</string>
     <string name="menu_qr">کد QR</string>
@@ -157,4 +157,22 @@
     <string name="apps_count">%d برنامه</string>
     <string name="kill_switch_short">در صورت قطع تونل، ترافیک را مسدود کن</string>
     <string name="notif_on">اعلان</string>
+    <string name="imported_count">%d کانفیگ اضافه شد</string>
+    <string name="crash_title">گزارش خطا</string>
+    <string name="crash_desc">آخرین کرش ثبت شده است. برای ارسال لمس کن.</string>
+    <string name="crash_share">ارسال گزارش خطا</string>
+    <string name="crash_clear">پاک کردن</string>
+    <string name="support">حمایت از توسعه‌دهنده</string>
+    <string name="support_desc">این برنامه رایگان و متن‌باز است. با ستاره دادن در گیت‌هاب به ادامه‌اش کمک کن.</string>
+    <string name="support_open">باز کردن گیت‌هاب</string>
+    <string name="visual">ظاهر و نمایش</string>
+    <string name="network">شبکه</string>
+    <string name="data_section">داده</string>
+    <string name="connection_section">اتصال</string>
+    <string name="proxy_section">پروکسی</string>
+    <string name="about_section">درباره</string>
+    <string name="export_note">کانفیگ‌های نسخه قبلی با این نسخه به اشتراک گذاشته نمی‌شوند؛ دوباره واردشان کن.</string>
+    <string name="imp_many">وارد کردن چند کانفیگ</string>
+    <string name="search_settings">جست‌وجو در تنظیمات</string>
+    <string name="search_hint_settings">جست‌وجو</string>
 </resources>

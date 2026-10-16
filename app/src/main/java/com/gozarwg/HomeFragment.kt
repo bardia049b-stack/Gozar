@@ -51,11 +51,27 @@ class HomeFragment : Fragment() {
 
     private val filePicker = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode != Activity.RESULT_OK) return@registerForActivityResult
-        val uri = result.data?.data ?: return@registerForActivityResult
+        val data = result.data ?: return@registerForActivityResult
+        val uris = mutableListOf<Uri>()
+        val clip = data.clipData
+        if (clip != null) {
+            for (i in 0 until clip.itemCount) uris.add(clip.getItemAt(i).uri)
+        } else {
+            data.data?.let { uris.add(it) }
+        }
+        if (uris.isEmpty()) return@registerForActivityResult
         thread {
-            val text = readText(uri)
+            val found = mutableListOf<Pair<String, String>>()
+            for (uri in uris) {
+                val text = readText(uri) ?: continue
+                found.add(nameOf(uri) ?: getString(R.string.unnamed) to text)
+            }
             activity?.runOnUiThread {
-                if (text == null) toast(R.string.import_failed) else importText(text, nameOf(uri))
+                when {
+                    found.isEmpty() -> toast(R.string.import_failed)
+                    found.size == 1 -> importText(found[0].second, found[0].first)
+                    else -> importMany(found)
+                }
             }
         }
     }
@@ -236,7 +252,7 @@ class HomeFragment : Fragment() {
                 else -> R.string.tap_connect
             }
         )
-        find<View>(R.id.statsCard).visibility = if (state == 2) View.VISIBLE else View.GONE
+        find<View>(R.id.statsRow).visibility = if (state == 2) View.VISIBLE else View.GONE
         find<View>(R.id.ipRow).visibility = if (state == 2 && Vpn.ipInfo != null) View.VISIBLE else View.GONE
         if (state == 2) paintStats()
         paintPerApp()
@@ -264,6 +280,7 @@ class HomeFragment : Fragment() {
         val flag = Ip.flag(info.code)
         put(R.id.tvLocation, if (flag.isBlank()) place else "$flag $place")
         put(R.id.tvIp, info.ip)
+        find<View>(R.id.ivFlag).visibility = if (info.code.equals("IR", true)) View.VISIBLE else View.GONE
     }
 
     private fun fetchIp() {
@@ -301,6 +318,14 @@ class HomeFragment : Fragment() {
         val profile = selected()
         val name = find<TextView>(R.id.tvCurrentName)
         val meta = find<TextView>(R.id.tvCurrentMeta)
+        val tile = find<ImageView>(R.id.profileTile)
+        val active = Vpn.profile != null && Vpn.profile?.id == profile?.id && (Vpn.up || Vpn.connecting)
+        tile.backgroundTintList = ColorStateList.valueOf(
+            color(if (active) R.color.kind_total_container else R.color.kind_server_container)
+        )
+        tile.imageTintList = ColorStateList.valueOf(
+            color(if (active) R.color.kind_total_on_container else R.color.kind_server_on_container)
+        )
         if (profile == null) {
             name.setText(R.string.empty_title)
             meta.setText(R.string.empty_desc)
@@ -408,6 +433,7 @@ class HomeFragment : Fragment() {
             when (key) {
                 "file" -> filePicker.launch(Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
                     addCategory(Intent.CATEGORY_OPENABLE)
+                    putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
                     type = "*/*"
                 })
                 "qr" -> scanner.launch(Intent(requireContext(), ScanActivity::class.java))
@@ -552,7 +578,33 @@ class HomeFragment : Fragment() {
             .show()
     }
 
-    fun handleIntent(intent: Intent?) {
+    fun restore(intent: Intent?) {
+        handleIntent(intent)
+    }
+
+    private fun importMany(items: List<Pair<String, String>>) {
+        var added = 0
+        var last: Profile? = null
+        for (item in items) {
+            val text = Link.parse(item.second) ?: continue
+            val profile = Profiles.add(requireContext(), text, item.first) ?: continue
+            added++
+            last = profile
+        }
+        if (added == 0) {
+            toast(R.string.import_failed)
+            return
+        }
+        val newest = last
+        if (newest != null) {
+            Store.setSelected(requireContext(), newest.id)
+            Store.setLastProfile(requireContext(), newest.id)
+        }
+        toast(String.format(getString(R.string.imported_count), added))
+        paintProfiles()
+    }
+
+    private fun handleIntent(intent: Intent?) {
         if (intent == null) return
         when (intent.action) {
             Intent.ACTION_VIEW -> {

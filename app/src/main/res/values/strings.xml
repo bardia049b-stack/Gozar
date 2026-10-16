@@ -157,4 +157,22 @@
     <string name="apps_count">%d apps</string>
     <string name="kill_switch_short">Block traffic when the tunnel drops</string>
     <string name="notif_on">Notification</string>
+    <string name="imported_count">Imported %d profiles</string>
+    <string name="crash_title">Crash log</string>
+    <string name="crash_desc">The last crash was recorded. Tap to share it.</string>
+    <string name="crash_share">Share crash log</string>
+    <string name="crash_clear">Clear</string>
+    <string name="support">Support development</string>
+    <string name="support_desc">This app is free and open source. Star it on GitHub to help.</string>
+    <string name="support_open">Open GitHub</string>
+    <string name="visual">Appearance</string>
+    <string name="network">Network</string>
+    <string name="data_section">Data</string>
+    <string name="connection_section">Connection</string>
+    <string name="proxy_section">Proxy</string>
+    <string name="about_section">About</string>
+    <string name="export_note">Configs from the old version are not shared with this build; import them again.</string>
+    <string name="imp_many">Import configs</string>
+    <string name="search_settings">Search settings</string>
+    <string name="search_hint_settings">Search</string>
 </resources>

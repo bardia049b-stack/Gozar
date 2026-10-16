@@ -17,4 +17,7 @@
     <dimen name="icon_action">44dp</dimen>
     <dimen name="connect_button">196dp</dimen>
     <dimen name="touch_target">48dp</dimen>
+    <dimen name="row_gap">8dp</dimen>
+    <dimen name="tile_big_size">56dp</dimen>
+    <dimen name="logo_height">34dp</dimen>
 </resources>

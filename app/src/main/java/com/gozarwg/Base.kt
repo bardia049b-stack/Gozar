@@ -17,6 +17,8 @@ abstract class BaseActivity : AppCompatActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
     }
 
+    protected fun <T : android.view.View> bind(id: Int): T = findViewById(id)
+
     override fun onResume() {
         super.onResume()
         val mode = nightModeOf(Store.theme(this))

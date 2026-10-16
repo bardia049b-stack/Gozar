@@ -17,385 +17,438 @@
 
         <TextView
             android:layout_width="match_parent"
-            android:layout_height="56dp"
+            android:layout_height="64dp"
             android:gravity="center_vertical"
             android:text="@string/settings"
             android:textAppearance="@style/TextAppearance.Gozar.HeadlineSmall"
             android:textColor="?attr/colorOnSurface" />
 
-        <TextView
-            style="@style/Gozar.Section"
-            android:text="@string/st_connection" />
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/searchBox"
+            style="@style/Gozar.Field"
+            app:startIconDrawable="@drawable/ic_search">
 
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:cardBackgroundColor="?attr/colorSurfaceContainerLow"
-            app:cardCornerRadius="@dimen/card_radius"
-            app:cardElevation="0dp">
-
-            <LinearLayout
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etSettingsSearch"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:hint="@string/search_settings"
+                android:imeOptions="actionSearch"
+                android:inputType="text"
+                android:maxLines="1" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <LinearLayout
+            android:id="@+id/bannerSupport"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/sp_l"
+            android:background="@drawable/banner"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="@dimen/sp_l">
+
+            <ImageView
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="@drawable/circle_soft"
+                android:backgroundTint="?attr/colorSurfaceContainerHighest"
+                android:contentDescription="@string/support"
+                android:padding="11dp"
+                android:src="@drawable/ic_heart"
+                app:tint="?attr/colorPrimary" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/sp_l"
+                android:layout_weight="1"
                 android:orientation="vertical">
 
-                <LinearLayout
-                    android:id="@+id/rowKill"
-                    style="@style/Gozar.Row">
+                <TextView
+                    style="@style/Gozar.Row.Title"
+                    android:text="@string/support"
+                    android:textColor="?attr/colorOnPrimaryContainer" />
 
-                    <ImageView
-                        style="@style/Gozar.Tile"
-                        android:backgroundTint="@color/kind_kill_container"
-                        android:src="@drawable/ic_shield"
-                        app:tint="@color/kind_kill_on_container" />
-
-                    <LinearLayout style="@style/Gozar.Row.Text">
-
-                        <TextView
-                            style="@style/Gozar.Row.Title"
-                            android:text="@string/kill_switch" />
-
-                        <TextView
-                            style="@style/Gozar.Row.Subtitle"
-                            android:text="@string/kill_switch_short" />
-                    </LinearLayout>
-
-                    <com.google.android.material.materialswitch.MaterialSwitch
-                        android:id="@+id/swKill"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content" />
-                </LinearLayout>
-
-                <View style="@style/Gozar.Divider" />
-
-                <LinearLayout
-                    android:id="@+id/rowAuto"
-                    style="@style/Gozar.Row">
-
-                    <ImageView
-                        style="@style/Gozar.Tile"
-                        android:backgroundTint="@color/kind_auto_container"
-                        android:src="@drawable/ic_rocket"
-                        app:tint="@color/kind_auto_on_container" />
-
-                    <LinearLayout style="@style/Gozar.Row.Text">
-
-                        <TextView
-                            style="@style/Gozar.Row.Title"
-                            android:text="@string/auto_connect" />
-
-                        <TextView
-                            style="@style/Gozar.Row.Subtitle"
-                            android:text="@string/auto_connect_desc" />
-                    </LinearLayout>
-
-                    <com.google.android.material.materialswitch.MaterialSwitch
-                        android:id="@+id/swAuto"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content" />
-                </LinearLayout>
-
-                <View style="@style/Gozar.Divider" />
-
-                <LinearLayout
-                    android:id="@+id/rowLan"
-                    style="@style/Gozar.Row">
-
-                    <ImageView
-                        style="@style/Gozar.Tile"
-                        android:backgroundTint="@color/kind_lan_container"
-                        android:src="@drawable/ic_lan"
-                        app:tint="@color/kind_lan_on_container" />
-
-                    <LinearLayout style="@style/Gozar.Row.Text">
-
-                        <TextView
-                            style="@style/Gozar.Row.Title"
-                            android:text="@string/lan" />
-
-                        <TextView
-                            style="@style/Gozar.Row.Subtitle"
-                            android:text="@string/lan_desc" />
-                    </LinearLayout>
-
-                    <com.google.android.material.materialswitch.MaterialSwitch
-                        android:id="@+id/swLan"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content" />
-                </LinearLayout>
+                <TextView
+                    style="@style/Gozar.Row.Subtitle"
+                    android:text="@string/support_desc"
+                    android:textColor="?attr/colorOnPrimaryContainer" />
             </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
 
         <TextView
             style="@style/Gozar.Section"
-            android:text="@string/st_proxy" />
+            android:text="@string/visual" />
 
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:cardBackgroundColor="?attr/colorSurfaceContainerLow"
-            app:cardCornerRadius="@dimen/card_radius"
-            app:cardElevation="0dp">
+        <LinearLayout
+            android:id="@+id/rowLang"
+            style="@style/Gozar.Row">
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
+            <ImageView
+                style="@style/Gozar.Tile"
+                android:backgroundTint="@color/kind_lang_container"
+                android:contentDescription="@string/language"
+                android:src="@drawable/ic_translate"
+                app:tint="@color/kind_lang_on_container" />
 
-                <LinearLayout
-                    android:id="@+id/rowProxy"
-                    style="@style/Gozar.Row">
-
-                    <ImageView
-                        style="@style/Gozar.Tile"
-                        android:backgroundTint="@color/kind_proxy_container"
-                        android:src="@drawable/ic_hub"
-                        app:tint="@color/kind_proxy_on_container" />
-
-                    <LinearLayout style="@style/Gozar.Row.Text">
-
-                        <TextView
-                            style="@style/Gozar.Row.Title"
-                            android:text="@string/proxy_mode" />
-
-                        <TextView
-                            style="@style/Gozar.Row.Subtitle"
-                            android:text="@string/proxy_desc" />
-                    </LinearLayout>
-
-                    <com.google.android.material.materialswitch.MaterialSwitch
-                        android:id="@+id/swProxy"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content" />
-                </LinearLayout>
-
-                <View style="@style/Gozar.Divider" />
-
-                <LinearLayout
-                    android:id="@+id/rowPort"
-                    style="@style/Gozar.Row">
-
-                    <ImageView
-                        style="@style/Gozar.Tile"
-                        android:backgroundTint="@color/kind_info_container"
-                        android:src="@drawable/ic_router"
-                        app:tint="@color/kind_info_on_container" />
-
-                    <LinearLayout style="@style/Gozar.Row.Text">
-
-                        <TextView
-                            style="@style/Gozar.Row.Title"
-                            android:text="@string/proxy_port" />
-
-                        <TextView
-                            android:id="@+id/tvProxyPort"
-                            style="@style/Gozar.Row.Subtitle" />
-                    </LinearLayout>
-
-                    <ImageView style="@style/Gozar.Row.Chevron" />
-                </LinearLayout>
+            <LinearLayout style="@style/Gozar.Row.Text">
+                <TextView
+                    style="@style/Gozar.Row.Title"
+                    android:text="@string/language" />
+                <TextView
+                    android:id="@+id/tvLang"
+                    style="@style/Gozar.Row.Subtitle" />
             </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+            <ImageView
+                style="@style/Gozar.Row.Chevron" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/rowTheme"
+            style="@style/Gozar.Row">
+
+            <ImageView
+                style="@style/Gozar.Tile"
+                android:backgroundTint="@color/kind_theme_container"
+                android:contentDescription="@string/theme"
+                android:src="@drawable/ic_palette"
+                app:tint="@color/kind_theme_on_container" />
+
+            <LinearLayout style="@style/Gozar.Row.Text">
+                <TextView
+                    style="@style/Gozar.Row.Title"
+                    android:text="@string/theme" />
+                <TextView
+                    android:id="@+id/tvTheme"
+                    style="@style/Gozar.Row.Subtitle" />
+            </LinearLayout>
+            <ImageView
+                style="@style/Gozar.Row.Chevron" />
+        </LinearLayout>
+
+        <TextView
+            style="@style/Gozar.Section"
+            android:text="@string/connection_section" />
+
+        <LinearLayout
+            android:id="@+id/rowKill"
+            style="@style/Gozar.Row">
+
+            <ImageView
+                style="@style/Gozar.Tile"
+                android:backgroundTint="@color/kind_kill_container"
+                android:contentDescription="@string/kill_switch"
+                android:src="@drawable/ic_shield"
+                app:tint="@color/kind_kill_on_container" />
+
+            <LinearLayout style="@style/Gozar.Row.Text">
+                <TextView
+                    style="@style/Gozar.Row.Title"
+                    android:text="@string/kill_switch" />
+                <TextView
+                    style="@style/Gozar.Row.Subtitle"
+                    android:text="@string/kill_switch_short" />
+            </LinearLayout>
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/swKill"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/rowAuto"
+            style="@style/Gozar.Row">
+
+            <ImageView
+                style="@style/Gozar.Tile"
+                android:backgroundTint="@color/kind_auto_container"
+                android:contentDescription="@string/auto_connect"
+                android:src="@drawable/ic_rocket"
+                app:tint="@color/kind_auto_on_container" />
+
+            <LinearLayout style="@style/Gozar.Row.Text">
+                <TextView
+                    style="@style/Gozar.Row.Title"
+                    android:text="@string/auto_connect" />
+                <TextView
+                    style="@style/Gozar.Row.Subtitle"
+                    android:text="@string/auto_connect_desc" />
+            </LinearLayout>
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/swAuto"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/rowLan"
+            style="@style/Gozar.Row">
+
+            <ImageView
+                style="@style/Gozar.Tile"
+                android:backgroundTint="@color/kind_lan_container"
+                android:contentDescription="@string/lan"
+                android:src="@drawable/ic_lan"
+                app:tint="@color/kind_lan_on_container" />
+
+            <LinearLayout style="@style/Gozar.Row.Text">
+                <TextView
+                    style="@style/Gozar.Row.Title"
+                    android:text="@string/lan" />
+                <TextView
+                    style="@style/Gozar.Row.Subtitle"
+                    android:text="@string/lan_desc" />
+            </LinearLayout>
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/swLan"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/rowNotif"
+            style="@style/Gozar.Row">
+
+            <ImageView
+                style="@style/Gozar.Tile"
+                android:backgroundTint="@color/kind_notif_container"
+                android:contentDescription="@string/notif_speed"
+                android:src="@drawable/ic_bell"
+                app:tint="@color/kind_notif_on_container" />
+
+            <LinearLayout style="@style/Gozar.Row.Text">
+                <TextView
+                    style="@style/Gozar.Row.Title"
+                    android:text="@string/notif_speed" />
+                <TextView
+                    style="@style/Gozar.Row.Subtitle"
+                    android:text="@string/notif_speed_desc" />
+            </LinearLayout>
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/swNotif"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+
+        <TextView
+            style="@style/Gozar.Section"
+            android:text="@string/proxy_section" />
+
+        <LinearLayout
+            android:id="@+id/rowProxy"
+            style="@style/Gozar.Row">
+
+            <ImageView
+                style="@style/Gozar.Tile"
+                android:backgroundTint="@color/kind_proxy_container"
+                android:contentDescription="@string/proxy_mode"
+                android:src="@drawable/ic_hub"
+                app:tint="@color/kind_proxy_on_container" />
+
+            <LinearLayout style="@style/Gozar.Row.Text">
+                <TextView
+                    style="@style/Gozar.Row.Title"
+                    android:text="@string/proxy_mode" />
+                <TextView
+                    style="@style/Gozar.Row.Subtitle"
+                    android:text="@string/proxy_desc" />
+            </LinearLayout>
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/swProxy"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/rowPort"
+            style="@style/Gozar.Row">
+
+            <ImageView
+                style="@style/Gozar.Tile"
+                android:backgroundTint="@color/kind_info_container"
+                android:contentDescription="@string/proxy_port"
+                android:src="@drawable/ic_router"
+                app:tint="@color/kind_info_on_container" />
+
+            <LinearLayout style="@style/Gozar.Row.Text">
+                <TextView
+                    style="@style/Gozar.Row.Title"
+                    android:text="@string/proxy_port" />
+                <TextView
+                    android:id="@+id/tvProxyPort"
+                    style="@style/Gozar.Row.Subtitle" />
+            </LinearLayout>
+            <ImageView
+                style="@style/Gozar.Row.Chevron" />
+        </LinearLayout>
 
         <TextView
             style="@style/Gozar.Section"
             android:text="@string/split" />
 
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:cardBackgroundColor="?attr/colorSurfaceContainerLow"
-            app:cardCornerRadius="@dimen/card_radius"
-            app:cardElevation="0dp">
+        <LinearLayout
+            android:id="@+id/rowSplitMode"
+            style="@style/Gozar.Row">
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
+            <ImageView
+                style="@style/Gozar.Tile"
+                android:backgroundTint="@color/kind_split_container"
+                android:contentDescription="@string/split_mode"
+                android:src="@drawable/ic_tune"
+                app:tint="@color/kind_split_on_container" />
 
-                <LinearLayout
-                    android:id="@+id/rowSplitMode"
-                    style="@style/Gozar.Row">
-
-                    <ImageView
-                        style="@style/Gozar.Tile"
-                        android:backgroundTint="@color/kind_split_container"
-                        android:src="@drawable/ic_tune"
-                        app:tint="@color/kind_split_on_container" />
-
-                    <LinearLayout style="@style/Gozar.Row.Text">
-
-                        <TextView
-                            style="@style/Gozar.Row.Title"
-                            android:text="@string/split_mode" />
-
-                        <TextView
-                            android:id="@+id/tvSplitMode"
-                            style="@style/Gozar.Row.Subtitle" />
-                    </LinearLayout>
-
-                    <ImageView style="@style/Gozar.Row.Chevron" />
-                </LinearLayout>
-
-                <View style="@style/Gozar.Divider" />
-
-                <LinearLayout
-                    android:id="@+id/rowSplitApps"
-                    style="@style/Gozar.Row">
-
-                    <ImageView
-                        style="@style/Gozar.Tile"
-                        android:backgroundTint="@color/kind_apps_container"
-                        android:src="@drawable/ic_apps"
-                        app:tint="@color/kind_apps_on_container" />
-
-                    <LinearLayout style="@style/Gozar.Row.Text">
-
-                        <TextView
-                            style="@style/Gozar.Row.Title"
-                            android:text="@string/split_apps" />
-
-                        <TextView
-                            android:id="@+id/tvSplitApps"
-                            style="@style/Gozar.Row.Subtitle" />
-                    </LinearLayout>
-
-                    <ImageView style="@style/Gozar.Row.Chevron" />
-                </LinearLayout>
+            <LinearLayout style="@style/Gozar.Row.Text">
+                <TextView
+                    style="@style/Gozar.Row.Title"
+                    android:text="@string/split_mode" />
+                <TextView
+                    android:id="@+id/tvSplitMode"
+                    style="@style/Gozar.Row.Subtitle" />
             </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+            <ImageView
+                style="@style/Gozar.Row.Chevron" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/rowSplitApps"
+            style="@style/Gozar.Row">
+
+            <ImageView
+                style="@style/Gozar.Tile"
+                android:backgroundTint="@color/kind_apps_container"
+                android:contentDescription="@string/split_apps"
+                android:src="@drawable/ic_apps"
+                app:tint="@color/kind_apps_on_container" />
+
+            <LinearLayout style="@style/Gozar.Row.Text">
+                <TextView
+                    style="@style/Gozar.Row.Title"
+                    android:text="@string/split_apps" />
+                <TextView
+                    android:id="@+id/tvSplitApps"
+                    style="@style/Gozar.Row.Subtitle" />
+            </LinearLayout>
+            <ImageView
+                style="@style/Gozar.Row.Chevron" />
+        </LinearLayout>
 
         <TextView
             style="@style/Gozar.Section"
-            android:text="@string/theme" />
+            android:text="@string/about_section" />
 
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:cardBackgroundColor="?attr/colorSurfaceContainerLow"
-            app:cardCornerRadius="@dimen/card_radius"
-            app:cardElevation="0dp">
+        <LinearLayout
+            android:id="@+id/rowVpnSettings"
+            style="@style/Gozar.Row">
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
+            <ImageView
+                style="@style/Gozar.Tile"
+                android:backgroundTint="@color/kind_secure_container"
+                android:contentDescription="@string/vpn_settings"
+                android:src="@drawable/ic_gpp"
+                app:tint="@color/kind_secure_on_container" />
 
-                <LinearLayout
-                    android:id="@+id/rowLang"
-                    style="@style/Gozar.Row">
-
-                    <ImageView
-                        style="@style/Gozar.Tile"
-                        android:backgroundTint="@color/kind_lang_container"
-                        android:src="@drawable/ic_translate"
-                        app:tint="@color/kind_lang_on_container" />
-
-                    <LinearLayout style="@style/Gozar.Row.Text">
-
-                        <TextView
-                            style="@style/Gozar.Row.Title"
-                            android:text="@string/language" />
-
-                        <TextView
-                            android:id="@+id/tvLang"
-                            style="@style/Gozar.Row.Subtitle" />
-                    </LinearLayout>
-
-                    <ImageView style="@style/Gozar.Row.Chevron" />
-                </LinearLayout>
-
-                <View style="@style/Gozar.Divider" />
-
-                <LinearLayout
-                    android:id="@+id/rowTheme"
-                    style="@style/Gozar.Row">
-
-                    <ImageView
-                        style="@style/Gozar.Tile"
-                        android:backgroundTint="@color/kind_theme_container"
-                        android:src="@drawable/ic_contrast"
-                        app:tint="@color/kind_theme_on_container" />
-
-                    <LinearLayout style="@style/Gozar.Row.Text">
-
-                        <TextView
-                            style="@style/Gozar.Row.Title"
-                            android:text="@string/theme" />
-
-                        <TextView
-                            android:id="@+id/tvTheme"
-                            style="@style/Gozar.Row.Subtitle" />
-                    </LinearLayout>
-
-                    <ImageView style="@style/Gozar.Row.Chevron" />
-                </LinearLayout>
+            <LinearLayout style="@style/Gozar.Row.Text">
+                <TextView
+                    style="@style/Gozar.Row.Title"
+                    android:text="@string/vpn_settings" />
+                <TextView
+                    style="@style/Gozar.Row.Subtitle"
+                    android:text="@string/vpn_settings_desc" />
             </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+            <ImageView
+                style="@style/Gozar.Row.Chevron" />
+        </LinearLayout>
 
-        <TextView
-            style="@style/Gozar.Section"
-            android:text="@string/about" />
+        <LinearLayout
+            android:id="@+id/rowGithub"
+            style="@style/Gozar.Row">
 
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:cardBackgroundColor="?attr/colorSurfaceContainerLow"
-            app:cardCornerRadius="@dimen/card_radius"
-            app:cardElevation="0dp">
+            <ImageView
+                style="@style/Gozar.Tile"
+                android:backgroundTint="@color/kind_lang_container"
+                android:contentDescription="@string/support"
+                android:src="@drawable/ic_star"
+                app:tint="@color/kind_lang_on_container" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
-
-                <LinearLayout
-                    android:id="@+id/rowVpnSettings"
-                    style="@style/Gozar.Row">
-
-                    <ImageView
-                        style="@style/Gozar.Tile"
-                        android:backgroundTint="@color/kind_secure_container"
-                        android:src="@drawable/ic_gpp"
-                        app:tint="@color/kind_secure_on_container" />
-
-                    <LinearLayout style="@style/Gozar.Row.Text">
-
-                        <TextView
-                            style="@style/Gozar.Row.Title"
-                            android:text="@string/vpn_settings" />
-
-                        <TextView
-                            style="@style/Gozar.Row.Subtitle"
-                            android:text="@string/vpn_settings_desc" />
-                    </LinearLayout>
-
-                    <ImageView style="@style/Gozar.Row.Chevron" />
-                </LinearLayout>
-
-                <View style="@style/Gozar.Divider" />
-
-                <LinearLayout style="@style/Gozar.Row.Static">
-
-                    <ImageView
-                        style="@style/Gozar.Tile"
-                        android:backgroundTint="@color/kind_info_container"
-                        android:src="@drawable/ic_info"
-                        app:tint="@color/kind_info_on_container" />
-
-                    <LinearLayout style="@style/Gozar.Row.Text">
-
-                        <TextView
-                            android:id="@+id/tvAbout"
-                            style="@style/Gozar.Row.Title" />
-
-                        <TextView
-                            android:id="@+id/tvCore"
-                            style="@style/Gozar.Row.Subtitle" />
-                    </LinearLayout>
-                </LinearLayout>
+            <LinearLayout style="@style/Gozar.Row.Text">
+                <TextView
+                    style="@style/Gozar.Row.Title"
+                    android:text="@string/support" />
+                <TextView
+                    style="@style/Gozar.Row.Subtitle"
+                    android:text="@string/support_desc" />
             </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
+            <ImageView
+                style="@style/Gozar.Row.Chevron" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/rowCrash"
+            style="@style/Gozar.Row">
+
+            <ImageView
+                style="@style/Gozar.Tile"
+                android:backgroundTint="@color/kind_kill_container"
+                android:contentDescription="@string/crash_title"
+                android:src="@drawable/ic_error"
+                app:tint="@color/kind_kill_on_container" />
+
+            <LinearLayout style="@style/Gozar.Row.Text">
+                <TextView
+                    style="@style/Gozar.Row.Title"
+                    android:text="@string/crash_title" />
+                <TextView
+                    style="@style/Gozar.Row.Subtitle"
+                    android:text="@string/crash_desc" />
+            </LinearLayout>
+            <ImageView
+                style="@style/Gozar.Row.Chevron" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/rowCore"
+            style="@style/Gozar.Row">
+
+            <ImageView
+                style="@style/Gozar.Tile"
+                android:backgroundTint="@color/kind_total_container"
+                android:contentDescription="@string/core"
+                android:src="@drawable/ic_memory"
+                app:tint="@color/kind_total_on_container" />
+
+            <LinearLayout style="@style/Gozar.Row.Text">
+                <TextView
+                    style="@style/Gozar.Row.Title"
+                    android:text="@string/core" />
+                <TextView
+                    android:id="@+id/tvCore"
+                    style="@style/Gozar.Row.Subtitle" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/rowAbout"
+            style="@style/Gozar.Row">
+
+            <ImageView
+                style="@style/Gozar.Tile"
+                android:backgroundTint="@color/kind_info_container"
+                android:contentDescription="@string/about"
+                android:src="@drawable/ic_info"
+                app:tint="@color/kind_info_on_container" />
+
+            <LinearLayout style="@style/Gozar.Row.Text">
+                <TextView
+                    style="@style/Gozar.Row.Title"
+                    android:text="@string/about" />
+                <TextView
+                    android:id="@+id/tvAbout"
+                    style="@style/Gozar.Row.Subtitle" />
+            </LinearLayout>
+        </LinearLayout>
 
         <TextView
             android:id="@+id/tvKillDesc"
@@ -405,8 +458,17 @@
             android:lineSpacingMultiplier="1.4"
             android:text="@string/kill_switch_desc"
             android:textAppearance="@style/TextAppearance.Gozar.BodySmall"
-            android:textColor="?attr/colorOnSurfaceVariant"
-            android:textDirection="locale" />
+            android:textColor="?attr/colorOnSurfaceVariant" />
+
+        <TextView
+            android:id="@+id/tvExportNote"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/sp_s"
+            android:lineSpacingMultiplier="1.4"
+            android:text="@string/export_note"
+            android:textAppearance="@style/TextAppearance.Gozar.BodySmall"
+            android:textColor="?attr/colorOnSurfaceVariant" />
 
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

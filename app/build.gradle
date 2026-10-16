@@ -14,8 +14,8 @@ android {
         applicationId 'com.gozarwg'
         minSdk 24
         targetSdk 35
-        versionCode 8
-        versionName '1.7.0'
+        versionCode 9
+        versionName '1.7.1'
         resourceConfigurations += ['en', 'fa']
     }
 
@@ -71,6 +71,11 @@ android {
         }
     }
 
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
+    }
+
     lint {
         checkReleaseBuilds false
         abortOnError false
@@ -80,12 +85,9 @@ android {
 dependencies {
     implementation 'com.zaneschepke:amneziawg-android:2.3.7'
     implementation 'com.google.zxing:core:3.5.3'
-    implementation 'androidx.core:core-ktx:1.17.0'
     implementation 'androidx.appcompat:appcompat:1.7.1'
-    implementation 'androidx.activity:activity-ktx:1.12.4'
-    implementation 'androidx.fragment:fragment-ktx:1.8.9'
+    implementation 'androidx.fragment:fragment:1.8.9'
     implementation 'androidx.recyclerview:recyclerview:1.4.0'
-    implementation 'androidx.constraintlayout:constraintlayout:2.2.1'
     implementation 'com.google.android.material:material:1.13.0'
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
 }

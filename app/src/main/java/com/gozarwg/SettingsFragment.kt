@@ -1,8 +1,11 @@
 package com.gozarwg
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -18,6 +21,14 @@ import kotlin.concurrent.thread
 
 class SettingsFragment : Fragment() {
 
+    private val rows = listOf(
+        R.id.rowLang, R.id.rowTheme,
+        R.id.rowKill, R.id.rowAuto, R.id.rowLan, R.id.rowNotif,
+        R.id.rowProxy, R.id.rowPort,
+        R.id.rowSplitMode, R.id.rowSplitApps,
+        R.id.rowVpnSettings, R.id.rowGithub, R.id.rowCrash, R.id.rowCore, R.id.rowAbout
+    )
+
     private fun <T : View> find(id: Int): T = view!!.findViewById(id)
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -25,10 +36,11 @@ class SettingsFragment : Fragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        bind(R.id.rowKill, R.id.swKill, Store.kill(requireContext())) { Store.setKill(requireContext(), it) }
-        bind(R.id.rowAuto, R.id.swAuto, Store.auto(requireContext())) { Store.setAuto(requireContext(), it) }
-        bind(R.id.rowLan, R.id.swLan, Store.lan(requireContext())) { Store.setLan(requireContext(), it) }
-        bind(R.id.rowProxy, R.id.swProxy, Store.proxy(requireContext())) { value ->
+        bindSwitch(R.id.rowKill, R.id.swKill, Store.kill(requireContext())) { Store.setKill(requireContext(), it) }
+        bindSwitch(R.id.rowAuto, R.id.swAuto, Store.auto(requireContext())) { Store.setAuto(requireContext(), it) }
+        bindSwitch(R.id.rowLan, R.id.swLan, Store.lan(requireContext())) { Store.setLan(requireContext(), it) }
+        bindSwitch(R.id.rowNotif, R.id.swNotif, Store.notify(requireContext())) { Store.setNotify(requireContext(), it) }
+        bindSwitch(R.id.rowProxy, R.id.swProxy, Store.proxy(requireContext())) { value ->
             Store.setProxy(requireContext(), value)
             toast(getString(R.string.proxy_note, "127.0.0.1:" + Store.proxyPort(requireContext())))
         }
@@ -41,32 +53,57 @@ class SettingsFragment : Fragment() {
         find<View>(R.id.rowLang).setOnClickListener { pickLanguage() }
         find<View>(R.id.rowTheme).setOnClickListener { pickTheme() }
         find<View>(R.id.rowVpnSettings).setOnClickListener { openSystemVpn() }
+        find<View>(R.id.rowGithub).setOnClickListener { openProject() }
+        find<View>(R.id.rowCrash).setOnClickListener { shareCrashLog() }
+        find<View>(R.id.bannerSupport).setOnClickListener { openProject() }
 
-        val version = try {
-            requireContext().packageManager.getPackageInfo(requireContext().packageName, 0).versionName
-        } catch (e: Exception) {
-            ""
-        }
-        find<TextView>(R.id.tvAbout).text = getString(R.string.app_name) + " · " + String.format(getString(R.string.version), version)
-        find<TextView>(R.id.tvCore).setText(R.string.built_in)
-        thread {
-            val core = try {
-                Vpn.coreVersion(requireContext().applicationContext)
-            } catch (e: Throwable) {
-                ""
+        find<TextInputEditText>(R.id.etSettingsSearch).addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+            override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                filter(s?.toString() ?: "")
             }
-            if (core.isNotBlank()) {
-                activity?.runOnUiThread {
-                    if (view != null) find<TextView>(R.id.tvCore).text = String.format(getString(R.string.core_version), core)
-                }
-            }
-        }
+        })
+
         paint()
     }
 
     override fun onResume() {
         super.onResume()
         paint()
+    }
+
+    fun restore(intent: Intent?) {
+        paint()
+    }
+
+    private fun filter(query: String) {
+        if (view == null) return
+        val text = query.trim().lowercase()
+        for (id in rows) {
+            val row = find<View>(id)
+            if (text.isEmpty()) {
+                row.visibility = View.VISIBLE
+                continue
+            }
+            row.visibility = if (labelOf(row).contains(text)) View.VISIBLE else View.GONE
+        }
+        if (text.isEmpty()) paint()
+    }
+
+    private fun labelOf(row: View): String {
+        val builder = StringBuilder()
+        for (i in 0 until (row as ViewGroup).childCount) {
+            val child = row.getChildAt(i)
+            if (child is TextView) builder.append(child.text).append(' ')
+            if (child is ViewGroup) {
+                for (j in 0 until child.childCount) {
+                    val nested = child.getChildAt(j)
+                    if (nested is TextView) builder.append(nested.text).append(' ')
+                }
+            }
+        }
+        return builder.toString().lowercase()
     }
 
     private fun toast(message: String) {
@@ -81,26 +118,49 @@ class SettingsFragment : Fragment() {
     }
 
     private fun paint() {
-        if (view == null) return
-        find<TextView>(R.id.tvProxyPort).text = "SOCKS5 · 127.0.0.1:" + Store.proxyPort(requireContext())
-        val mode = Store.splitMode(requireContext())
-        find<TextView>(R.id.tvSplitMode).text = when (mode) {
+        if (view == null || context == null) return
+        val context = requireContext()
+        find<TextView>(R.id.tvProxyPort).text = "127.0.0.1:" + Store.proxyPort(context)
+        find<TextView>(R.id.tvSplitMode).text = when (Store.splitMode(context)) {
             1 -> getString(R.string.split_exclude)
             2 -> getString(R.string.split_include)
             else -> getString(R.string.split_off)
         }
         find<TextView>(R.id.tvSplitApps).text =
-            String.format(getString(R.string.selected_count), Store.splitApps(requireContext()).size)
-        find<TextView>(R.id.tvLang).text = when (Store.lang(requireContext())) {
+            String.format(getString(R.string.selected_count), Store.splitApps(context).size)
+        find<TextView>(R.id.tvLang).text = when (Store.lang(context)) {
             "fa" -> getString(R.string.lang_fa)
             "en" -> getString(R.string.lang_en)
             else -> getString(R.string.lang_system)
         }
-        find<TextView>(R.id.tvTheme).text = when (Store.theme(requireContext())) {
+        find<TextView>(R.id.tvTheme).text = when (Store.theme(context)) {
             "light" -> getString(R.string.theme_light)
             "dark" -> getString(R.string.theme_dark)
             else -> getString(R.string.theme_auto)
         }
+        val version = try {
+            context.packageManager.getPackageInfo(context.packageName, 0).versionName
+        } catch (e: Exception) {
+            ""
+        }
+        val core = find<TextView>(R.id.tvCore)
+        if (core.text.isNullOrBlank()) {
+            find<TextView>(R.id.tvAbout).text = getString(R.string.version, version)
+            core.setText(R.string.built_in)
+            thread {
+                val value = try {
+                    Vpn.coreVersion(context.applicationContext)
+                } catch (e: Throwable) {
+                    ""
+                }
+                if (value.isNotBlank()) {
+                    activity?.runOnUiThread {
+                        if (view != null) find<TextView>(R.id.tvCore).text = value
+                    }
+                }
+            }
+        }
+        find<View>(R.id.rowCrash).visibility = if (Crash.log(context) != null) View.VISIBLE else View.GONE
     }
 
     private fun editPort() {
@@ -148,8 +208,8 @@ class SettingsFragment : Fragment() {
             .setTitle(R.string.language)
             .setSingleChoiceItems(items, current) { dialog, which ->
                 Store.setLang(requireContext(), values[which])
+                Store.setRecents(requireContext(), false)
                 dialog.dismiss()
-                paint()
                 activity?.recreate()
             }
             .show()
@@ -164,8 +224,8 @@ class SettingsFragment : Fragment() {
             .setSingleChoiceItems(items, current) { dialog, which ->
                 Store.setTheme(requireContext(), values[which])
                 dialog.dismiss()
-                paint()
                 AppCompatDelegate.setDefaultNightMode(nightModeOf(values[which]))
+                paint()
             }
             .show()
     }
@@ -178,6 +238,28 @@ class SettingsFragment : Fragment() {
                 startActivity(Intent(Settings.ACTION_WIRELESS_SETTINGS))
             } catch (e2: Exception) {
             }
+        }
+    }
+
+    private fun openProject() {
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/bardia049b-stack/GozarWG")))
+        } catch (e: Exception) {
+            toast(R.string.import_failed)
+        }
+    }
+
+    private fun shareCrashLog() {
+        val log = Crash.log(requireContext()) ?: return
+        val intent = Intent(Intent.ACTION_SEND)
+        intent.type = "text/plain"
+        intent.putExtra(Intent.EXTRA_SUBJECT, getString(R.string.crash_title))
+        intent.putExtra(Intent.EXTRA_TEXT, log)
+        val chooser = Intent.createChooser(intent, getString(R.string.crash_share))
+        try {
+            startActivity(chooser)
+        } catch (e: Exception) {
+            toast(R.string.import_failed)
         }
     }
 }
