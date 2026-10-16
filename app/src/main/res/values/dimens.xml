@@ -20,4 +20,6 @@
     <dimen name="row_gap">8dp</dimen>
     <dimen name="tile_big_size">56dp</dimen>
     <dimen name="logo_height">34dp</dimen>
+    <dimen name="tile_action">46dp</dimen>
+    <dimen name="tile_action_pad">12dp</dimen>
 </resources>

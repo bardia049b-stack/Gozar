@@ -176,4 +176,9 @@
     <string name="search_settings">جست‌وجو در تنظیمات</string>
     <string name="search_hint_settings">جست‌وجو</string>
     <string name="back">بازگشت</string>
+    <string name="ed_qr">QR</string>
+    <string name="ed_share">اشتراک</string>
+    <string name="ed_export">خروجی</string>
+    <string name="ed_delete">حذف</string>
+    <string name="hs_short">دست‌داد</string>
 </resources>

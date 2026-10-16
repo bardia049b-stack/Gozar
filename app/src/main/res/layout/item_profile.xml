@@ -17,6 +17,7 @@
     <ImageView
         android:id="@+id/profileTile"
         style="@style/Gozar.Tile"
+        android:background="@drawable/frame_squircle"
         android:contentDescription="@string/profiles"
         android:src="@drawable/ic_dns"
         app:tint="?attr/colorOnSurfaceVariant" />

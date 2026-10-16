@@ -145,4 +145,36 @@
         <item name="hintTextAppearance">@style/TextAppearance.Gozar.BodyMedium</item>
     </style>
 
+
+    <style name="Gozar.Action" parent="">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:gravity">center_horizontal</item>
+        <item name="android:paddingTop">@dimen/sp_s</item>
+        <item name="android:paddingBottom">@dimen/sp_s</item>
+        <item name="android:background">?attr/selectableItemBackgroundBorderless</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+    </style>
+
+    <style name="Gozar.Action.Icon" parent="">
+        <item name="android:layout_width">@dimen/tile_action</item>
+        <item name="android:layout_height">@dimen/tile_action</item>
+        <item name="android:padding">@dimen/tile_action_pad</item>
+        <item name="android:background">@drawable/frame_puff</item>
+        <item name="android:backgroundTint">@color/tile_container</item>
+    </style>
+
+    <style name="Gozar.Action.Label" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">@dimen/sp_s</item>
+        <item name="android:gravity">center</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:textAppearance">@style/TextAppearance.Gozar.LabelMedium</item>
+        <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
+    </style>
 </resources>

@@ -44,14 +44,30 @@
             android:visibility="gone" />
     </FrameLayout>
 
-    <com.google.android.material.button.MaterialButton
+    <LinearLayout
         android:id="@+id/btnSheetAdd"
-        style="@style/Widget.Gozar.Button.Tonal"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        style="@style/Gozar.Row"
         android:layout_marginStart="@dimen/sp_l"
         android:layout_marginTop="@dimen/sp_s"
         android:layout_marginEnd="@dimen/sp_l"
-        android:text="@string/add_profile"
-        app:icon="@drawable/ic_plus" />
+        android:background="@drawable/pill_outline"
+        android:minHeight="56dp">
+
+        <ImageView
+            style="@style/Gozar.Tile"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:background="@drawable/frame_clover"
+            android:backgroundTint="@color/tile_container"
+            android:contentDescription="@string/add_profile"
+            android:padding="8dp"
+            android:src="@drawable/ic_plus"
+            app:tint="@color/tile_on_container" />
+
+        <TextView
+            style="@style/Gozar.Row.Title"
+            android:layout_marginStart="@dimen/sp_m"
+            android:text="@string/add_profile"
+            android:textColor="?attr/colorPrimary" />
+    </LinearLayout>
 </LinearLayout>

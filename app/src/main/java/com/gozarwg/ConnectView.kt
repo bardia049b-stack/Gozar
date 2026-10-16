@@ -3,11 +3,15 @@ package com.gozarwg
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.RectF
 import android.os.SystemClock
 import android.util.AttributeSet
 import android.widget.FrameLayout
 import androidx.core.content.ContextCompat
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.exp
 import kotlin.math.min
 import kotlin.math.sin
 
@@ -19,6 +23,9 @@ class ConnectView @JvmOverloads constructor(context: Context, attrs: AttributeSe
         const val BUSY = 1
         const val ON = 2
         const val ERROR = 3
+
+        private const val FRAME_MS = 33L
+        private const val SEGMENTS = 84
     }
 
     var state = OFF
@@ -35,7 +42,12 @@ class ConnectView @JvmOverloads constructor(context: Context, attrs: AttributeSe
         strokeCap = Paint.Cap.ROUND
     }
     private val disc = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val bubble = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val glow = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val shell = Path()
+    private val inner = Path()
     private var born = SystemClock.elapsedRealtime()
+    private var lastFrame = 0L
     private val box = RectF()
     private var sweep = 0f
 
@@ -46,11 +58,32 @@ class ConnectView @JvmOverloads constructor(context: Context, attrs: AttributeSe
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        val want = (resources.getDimension(R.dimen.connect_button)).toInt()
+        val want = resources.getDimension(R.dimen.connect_button).toInt()
         val w = resolveSize(want, widthMeasureSpec)
         val h = resolveSize(want, heightMeasureSpec)
         val side = min(w, h)
         setMeasuredDimension(side, side)
+    }
+
+    private fun outline(
+        target: Path,
+        cx: Float,
+        cy: Float,
+        radius: Float,
+        lobes: Int,
+        amp: Float,
+        spin: Float
+    ) {
+        target.reset()
+        val base = radius - amp
+        for (i in 0..SEGMENTS) {
+            val a = (i.toFloat() / SEGMENTS) * 2f * PI.toFloat() + spin
+            val r = base + amp * cos(lobes * a)
+            val x = cx + r * cos(a)
+            val y = cy + r * sin(a)
+            if (i == 0) target.moveTo(x, y) else target.lineTo(x, y)
+        }
+        target.close()
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -58,35 +91,70 @@ class ConnectView @JvmOverloads constructor(context: Context, attrs: AttributeSe
         val age = (now - born) / 1000f
         val cx = width / 2f
         val cy = height / 2f
-        val outer = min(width, height) / 2f - 10 * density
-        val stroke = 6 * density
-
-        box.set(cx - outer, cy - outer, cx + outer, cy + outer)
+        val half = min(width, height) / 2f
+        val pop = 1f + 0.05f * exp(-age * 5f)
+        val breath = 1f + 0.022f * sin(age * 1.6f)
 
         val surface = ContextCompat.getColor(context, R.color.m3_surface_container_highest)
-        val outline = ContextCompat.getColor(context, R.color.m3_outline_variant)
+        val outlineColor = ContextCompat.getColor(context, R.color.m3_outline_variant)
         val accent = ContextCompat.getColor(context, R.color.m3_primary)
         val accentSoft = ContextCompat.getColor(context, R.color.m3_primary_container)
-        val onSoft = ContextCompat.getColor(context, R.color.m3_on_primary_container)
         val ok = ContextCompat.getColor(context, R.color.m3_ok)
         val err = ContextCompat.getColor(context, R.color.m3_error)
         val errSoft = ContextCompat.getColor(context, R.color.m3_error_container)
+
+        val shellRadius = half * 0.88f * breath * pop
+        val spin = when (state) {
+            BUSY -> age * 26f
+            ON -> age * 9f
+            else -> age * 4f
+        }
+        outline(shell, cx, cy, shellRadius, 7, 4f * density * breath, spin)
+        bubble.color = when (state) {
+            ON -> ok
+            BUSY -> accentSoft
+            ERROR -> err
+            else -> surface
+        }
+        bubble.alpha = when (state) {
+            ON -> 62
+            BUSY -> 150
+            ERROR -> 54
+            else -> 214
+        }
+        canvas.drawPath(shell, bubble)
+
+        outline(inner, cx, cy, half * 0.80f * breath, 5, 2.5f * density, -age * 6f)
+        glow.color = when (state) {
+            ON -> ok
+            BUSY -> accent
+            ERROR -> err
+            else -> accentSoft
+        }
+        glow.alpha = when (state) {
+            ON -> 34
+            else -> 40
+        }
+        canvas.drawPath(inner, glow)
+
+        val outer = half * 0.70f
+        val stroke = 6 * density
 
         if (state == ON) {
             ring.style = Paint.Style.STROKE
             ring.strokeWidth = 14 * density
             ring.color = accent
-            ring.alpha = (18 + 14 * sin(age * 2.2)).toInt().coerceIn(6, 40)
-            canvas.drawCircle(cx, cy, outer + 4 * density, ring)
+            ring.alpha = (16 + 12 * sin(age * 2.2)).toInt().coerceIn(4, 34)
+            canvas.drawCircle(cx, cy, outer + 5 * density, ring)
         }
 
         ring.style = Paint.Style.STROKE
         ring.strokeWidth = stroke
         ring.alpha = 255
-        ring.color = outline
+        ring.color = outlineColor
         canvas.drawCircle(cx, cy, outer, ring)
 
-        val track = outer - 22 * density
+        val track = half * 0.585f
         box.set(cx - track, cy - track, cx + track, cy + track)
 
         when (state) {
@@ -108,22 +176,26 @@ class ConnectView @JvmOverloads constructor(context: Context, attrs: AttributeSe
             }
         }
 
-        val inner = outer - 40 * density
+        val face = half * 0.44f * pop
         disc.color = when (state) {
             ON -> accent
             BUSY -> accentSoft
             ERROR -> errSoft
             else -> surface
         }
-        canvas.drawCircle(cx, cy, inner, disc)
+        disc.alpha = 255
+        canvas.drawCircle(cx, cy, face, disc)
 
         if (state == OFF || state == BUSY) {
             disc.color = accentSoft
             disc.alpha = if (state == BUSY) 60 else 34
-            canvas.drawCircle(cx, cy, inner, disc)
+            canvas.drawCircle(cx, cy, face, disc)
             disc.alpha = 255
         }
 
-        if (state == ON || state == BUSY) postInvalidateOnAnimation()
+        if (isShown && now - lastFrame >= FRAME_MS) {
+            lastFrame = now
+            postInvalidateOnAnimation()
+        }
     }
 }

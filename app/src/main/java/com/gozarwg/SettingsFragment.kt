@@ -9,6 +9,7 @@ import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.DecelerateInterpolator
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatDelegate
@@ -28,6 +29,8 @@ class SettingsFragment : Fragment() {
         R.id.rowSplitMode, R.id.rowSplitApps,
         R.id.rowVpnSettings, R.id.rowGithub, R.id.rowCrash, R.id.rowCore, R.id.rowAbout
     )
+
+    private var entered = false
 
     private fun <T : View> find(id: Int): T = view!!.findViewById(id)
 
@@ -67,6 +70,24 @@ class SettingsFragment : Fragment() {
         })
 
         paint()
+        entrance()
+    }
+
+    private fun entrance() {
+        if (entered) return
+        entered = true
+        for ((index, id) in rows.withIndex()) {
+            val row = find<View>(id)
+            row.alpha = 0f
+            row.translationY = 10f * resources.displayMetrics.density
+            row.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setStartDelay(index * 22L)
+                .setDuration(200L)
+                .setInterpolator(DecelerateInterpolator())
+                .start()
+        }
     }
 
     override fun onResume() {

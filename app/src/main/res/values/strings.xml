@@ -176,4 +176,9 @@
     <string name="search_settings">Search settings</string>
     <string name="search_hint_settings">Search</string>
     <string name="back">Back</string>
+    <string name="ed_qr">QR</string>
+    <string name="ed_share">Share</string>
+    <string name="ed_export">Export</string>
+    <string name="ed_delete">Delete</string>
+    <string name="hs_short">Handshake</string>
 </resources>

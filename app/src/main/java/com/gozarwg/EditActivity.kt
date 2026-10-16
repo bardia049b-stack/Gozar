@@ -82,6 +82,7 @@ class EditActivity : BaseActivity() {
             field(R.id.etPriv).setText(pair.first)
             findViewById<TextView>(R.id.tvPub).text = pair.second
         }
+        applyMode()
     }
 
     private fun field(id: Int): EditText = findViewById(id)

@@ -55,14 +55,15 @@
             android:clipToOutline="true">
 
             <ImageView
+                android:id="@+id/heroMap"
                 android:layout_width="match_parent"
                 android:layout_height="300dp"
                 android:layout_gravity="center"
-                android:alpha="0.10"
+                android:alpha="0.12"
                 android:contentDescription="@string/app_name"
                 android:scaleType="centerCrop"
                 android:src="@drawable/iran_map"
-                app:tint="?attr/colorPrimary" />
+                app:tint="@color/m3_error" />
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -139,22 +140,22 @@
 
                 <LinearLayout
                     android:id="@+id/ipRow"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/sp_l"
                     android:background="@drawable/pill_outline"
                     android:gravity="center_vertical"
                     android:orientation="horizontal"
                     android:paddingStart="@dimen/sp_m"
-                    android:paddingTop="@dimen/sp_xs"
+                    android:paddingTop="@dimen/sp_s"
                     android:paddingEnd="@dimen/sp_m"
-                    android:paddingBottom="@dimen/sp_xs"
+                    android:paddingBottom="@dimen/sp_s"
                     android:visibility="gone">
 
                     <ImageView
                         android:id="@+id/ivFlag"
-                        android:layout_width="20dp"
-                        android:layout_height="14dp"
+                        android:layout_width="22dp"
+                        android:layout_height="16dp"
                         android:adjustViewBounds="true"
                         android:contentDescription="@string/location"
                         android:scaleType="fitCenter"
@@ -166,17 +167,27 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="@dimen/sp_s"
+                        android:maxLines="1"
+                        android:ellipsize="end"
                         android:textAppearance="@style/TextAppearance.Gozar.LabelLarge"
                         android:textColor="?attr/colorOnSurfaceVariant" />
 
                     <TextView
                         android:id="@+id/tvIp"
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="@dimen/sp_s"
+                        android:layout_marginStart="@dimen/sp_m"
+                        android:layout_weight="1"
+                        android:gravity="end"
+                        android:maxLines="1"
+                        android:singleLine="true"
                         android:textAppearance="@style/TextAppearance.Gozar.LabelLarge"
                         android:textColor="?attr/colorPrimary"
-                        android:textDirection="ltr" />
+                        android:textDirection="ltr"
+                        app:autoSizeMaxTextSize="14sp"
+                        app:autoSizeMinTextSize="9sp"
+                        app:autoSizeStepGranularity="1sp"
+                        app:autoSizeTextType="uniform" />
                 </LinearLayout>
             </LinearLayout>
         </FrameLayout>
@@ -374,14 +385,29 @@
                 style="@style/Gozar.Row.Chevron" />
         </LinearLayout>
 
-        <com.google.android.material.button.MaterialButton
+        <LinearLayout
             android:id="@+id/btnAddProfile"
-            style="@style/Widget.Gozar.Button.Tonal"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            style="@style/Gozar.Row"
             android:layout_marginTop="@dimen/sp_l"
-            android:text="@string/add_profile"
-            app:icon="@drawable/ic_plus" />
+            android:background="@drawable/pill_outline">
+
+            <ImageView
+                style="@style/Gozar.Tile"
+                android:layout_width="@dimen/tile_size"
+                android:layout_height="@dimen/tile_size"
+                android:background="@drawable/frame_clover"
+                android:backgroundTint="@color/tile_container"
+                android:contentDescription="@string/add_profile"
+                android:padding="9dp"
+                android:src="@drawable/ic_plus"
+                app:tint="@color/tile_on_container" />
+
+            <TextView
+                style="@style/Gozar.Row.Title"
+                android:layout_marginStart="@dimen/sp_l"
+                android:text="@string/add_profile"
+                android:textColor="?attr/colorPrimary" />
+        </LinearLayout>
 
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

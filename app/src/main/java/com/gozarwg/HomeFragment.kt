@@ -7,6 +7,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
+import android.view.animation.DecelerateInterpolator
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -21,6 +22,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -252,10 +254,40 @@ class HomeFragment : Fragment() {
                 else -> R.string.tap_connect
             }
         )
-        find<View>(R.id.statsRow).visibility = if (state == 2) View.VISIBLE else View.GONE
-        find<View>(R.id.ipRow).visibility = if (state == 2 && Vpn.ipInfo != null) View.VISIBLE else View.GONE
-        if (state == 2) paintStats()
+        val map = find<ImageView>(R.id.heroMap)
+        map.imageTintList = ColorStateList.valueOf(
+            color(
+                when (state) {
+                    2 -> R.color.m3_ok
+                    1, 4 -> R.color.m3_warn
+                    else -> R.color.m3_error
+                }
+            )
+        )
+        val stats = find<View>(R.id.statsRow)
+        if (state == 2) {
+            if (stats.visibility != View.VISIBLE) reveal(stats)
+            reveal(find<View>(R.id.ipRow), state == 2 && Vpn.ipInfo != null)
+            paintStats()
+        } else {
+            stats.visibility = View.GONE
+            find<View>(R.id.ipRow).visibility = View.GONE
+        }
         paintPerApp()
+    }
+
+    private fun dp(value: Float): Int = (value * resources.displayMetrics.density).toInt()
+
+    private fun reveal(target: View, shown: Boolean = true) {
+        if (target.visibility == View.VISIBLE) return
+        if (!shown) {
+            target.visibility = View.GONE
+            return
+        }
+        target.alpha = 0f
+        target.translationY = dp(8f)
+        target.visibility = View.VISIBLE
+        target.animate().alpha(1f).translationY(0f).setDuration(220L).setInterpolator(DecelerateInterpolator()).start()
     }
 
     private fun paint(id: Int, colorRes: Int, textRes: Int) {
@@ -277,10 +309,14 @@ class HomeFragment : Fragment() {
         })
         val info = Vpn.ipInfo ?: return
         val place = listOf(info.city, info.country).filter { it.isNotBlank() }.joinToString(", ")
-        val flag = Ip.flag(info.code)
+        val ir = info.code.equals("IR", true)
+        val flag = if (ir) "" else Ip.flag(info.code)
         put(R.id.tvLocation, if (flag.isBlank()) place else "$flag $place")
         put(R.id.tvIp, info.ip)
-        find<View>(R.id.ivFlag).visibility = if (info.code.equals("IR", true)) View.VISIBLE else View.GONE
+        val mark = find<ImageView>(R.id.ivFlag)
+        mark.visibility = if (ir) View.VISIBLE else View.GONE
+        (find<TextView>(R.id.tvLocation).layoutParams as LinearLayout.LayoutParams).marginStart =
+            if (ir || flag.isNotBlank()) dp(8f) else 0
     }
 
     private fun fetchIp() {
@@ -295,7 +331,7 @@ class HomeFragment : Fragment() {
                     Vpn.ipInfo = info
                     Vpn.ipSession = System.currentTimeMillis()
                     paintStats()
-                    find<View>(R.id.ipRow).visibility = View.VISIBLE
+                    reveal(find<View>(R.id.ipRow))
                 }
             }
         }

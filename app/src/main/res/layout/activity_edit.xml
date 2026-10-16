@@ -23,49 +23,71 @@
         android:id="@+id/actionRow"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingStart="@dimen/screen_gutter"
-        android:paddingEnd="@dimen/screen_gutter"
+        android:paddingStart="@dimen/sp_s"
+        android:paddingEnd="@dimen/sp_s"
         android:visibility="gone">
 
-        <com.google.android.material.button.MaterialButton
+        <LinearLayout
             android:id="@+id/btnQr"
-            style="@style/Widget.Gozar.Button.Text"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/menu_qr"
-            app:icon="@drawable/ic_qr" />
+            style="@style/Gozar.Action">
 
-        <com.google.android.material.button.MaterialButton
+            <ImageView
+                style="@style/Gozar.Action.Icon"
+                android:background="@drawable/frame_puff"
+                android:contentDescription="@string/ed_qr"
+                android:src="@drawable/ic_qr" />
+
+            <TextView
+                style="@style/Gozar.Action.Label"
+                android:text="@string/ed_qr" />
+        </LinearLayout>
+
+        <LinearLayout
             android:id="@+id/btnShare"
-            style="@style/Widget.Gozar.Button.Text"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/menu_share"
-            app:icon="@drawable/ic_share" />
+            style="@style/Gozar.Action">
 
-        <com.google.android.material.button.MaterialButton
+            <ImageView
+                style="@style/Gozar.Action.Icon"
+                android:background="@drawable/frame_flower"
+                android:contentDescription="@string/ed_share"
+                android:src="@drawable/ic_share" />
+
+            <TextView
+                style="@style/Gozar.Action.Label"
+                android:text="@string/ed_share" />
+        </LinearLayout>
+
+        <LinearLayout
             android:id="@+id/btnExport"
-            style="@style/Widget.Gozar.Button.Text"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/menu_export"
-            app:icon="@drawable/ic_save" />
+            style="@style/Gozar.Action">
 
-        <com.google.android.material.button.MaterialButton
+            <ImageView
+                style="@style/Gozar.Action.Icon"
+                android:background="@drawable/frame_clover"
+                android:contentDescription="@string/ed_export"
+                android:src="@drawable/ic_save" />
+
+            <TextView
+                style="@style/Gozar.Action.Label"
+                android:text="@string/ed_export" />
+        </LinearLayout>
+
+        <LinearLayout
             android:id="@+id/btnDelete"
-            style="@style/Widget.Gozar.Button.Text"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/menu_delete"
-            android:textColor="?attr/colorError"
-            app:icon="@drawable/ic_delete"
-            app:iconTint="?attr/colorError" />
+            style="@style/Gozar.Action">
+
+            <ImageView
+                style="@style/Gozar.Action.Icon"
+                android:background="@drawable/frame_burst"
+                android:contentDescription="@string/ed_delete"
+                android:src="@drawable/ic_delete"
+                app:tint="?attr/colorError" />
+
+            <TextView
+                style="@style/Gozar.Action.Label"
+                android:text="@string/ed_delete" />
+        </LinearLayout>
     </LinearLayout>
 
     <ScrollView
