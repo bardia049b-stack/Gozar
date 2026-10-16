@@ -17,7 +17,7 @@
         app:navigationIcon="@drawable/ic_back"
         app:navigationIconTint="?attr/colorOnSurface"
         app:title="@string/apps_title"
-        app:titleTextAppearance="@style/Gozar.Toolbar.Title" />
+        app:titleTextAppearance="@style/TextAppearance.Gozar.TitleLarge" />
 
     <LinearLayout
         android:layout_width="match_parent"

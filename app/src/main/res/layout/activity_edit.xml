@@ -17,7 +17,7 @@
         app:navigationIcon="@drawable/ic_close"
         app:navigationIconTint="?attr/colorOnSurface"
         app:title="@string/ed_new"
-        app:titleTextAppearance="@style/Gozar.Toolbar.Title" />
+        app:titleTextAppearance="@style/TextAppearance.Gozar.TitleLarge" />
 
     <LinearLayout
         android:id="@+id/actionRow"

@@ -48,12 +48,6 @@ object Store {
             conf.setLocale(locale)
             conf.setLayoutDirection(locale)
         }
-        val night = when (theme(base)) {
-            "light" -> Configuration.UI_MODE_NIGHT_NO
-            "dark" -> Configuration.UI_MODE_NIGHT_YES
-            else -> conf.uiMode and Configuration.UI_MODE_NIGHT_MASK
-        }
-        conf.uiMode = (conf.uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or night
         return base.createConfigurationContext(conf)
     }
 }
