@@ -36,11 +36,11 @@ class SettingsFragment : Fragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        bindSwitch(R.id.rowKill, R.id.swKill, Store.kill(requireContext())) { Store.setKill(requireContext(), it) }
-        bindSwitch(R.id.rowAuto, R.id.swAuto, Store.auto(requireContext())) { Store.setAuto(requireContext(), it) }
-        bindSwitch(R.id.rowLan, R.id.swLan, Store.lan(requireContext())) { Store.setLan(requireContext(), it) }
-        bindSwitch(R.id.rowNotif, R.id.swNotif, Store.notify(requireContext())) { Store.setNotify(requireContext(), it) }
-        bindSwitch(R.id.rowProxy, R.id.swProxy, Store.proxy(requireContext())) { value ->
+        bind(R.id.rowKill, R.id.swKill, Store.kill(requireContext())) { Store.setKill(requireContext(), it) }
+        bind(R.id.rowAuto, R.id.swAuto, Store.auto(requireContext())) { Store.setAuto(requireContext(), it) }
+        bind(R.id.rowLan, R.id.swLan, Store.lan(requireContext())) { Store.setLan(requireContext(), it) }
+        bind(R.id.rowNotif, R.id.swNotif, Store.notify(requireContext())) { Store.setNotify(requireContext(), it) }
+        bind(R.id.rowProxy, R.id.swProxy, Store.proxy(requireContext())) { value ->
             Store.setProxy(requireContext(), value)
             toast(getString(R.string.proxy_note, "127.0.0.1:" + Store.proxyPort(requireContext())))
         }
@@ -104,6 +104,10 @@ class SettingsFragment : Fragment() {
             }
         }
         return builder.toString().lowercase()
+    }
+
+    private fun toast(res: Int) {
+        toast(getString(res))
     }
 
     private fun toast(message: String) {
