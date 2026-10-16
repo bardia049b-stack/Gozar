@@ -313,7 +313,7 @@
 
                 <TextView
                     style="@style/Gozar.Stat.Label"
-                    android:text="@string/handshake" />
+                    android:text="@string/hs_short" />
             </LinearLayout>
         </LinearLayout>
 
