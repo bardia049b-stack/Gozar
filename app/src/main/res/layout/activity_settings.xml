@@ -110,10 +110,11 @@
 
             <ImageView
                 style="@style/Gozar.Tile"
-                android:backgroundTint="@color/kind_lang_container"
+                android:background="@drawable/frame_flower"
+                android:backgroundTint="@color/tile_container"
                 android:contentDescription="@string/language"
                 android:src="@drawable/ic_translate"
-                app:tint="@color/kind_lang_on_container" />
+                app:tint="@color/tile_on_container" />
 
             <LinearLayout style="@style/Gozar.Row.Text">
                 <TextView
@@ -133,10 +134,11 @@
 
             <ImageView
                 style="@style/Gozar.Tile"
-                android:backgroundTint="@color/kind_theme_container"
+                android:background="@drawable/frame_puff"
+                android:backgroundTint="@color/tile_container"
                 android:contentDescription="@string/theme"
                 android:src="@drawable/ic_palette"
-                app:tint="@color/kind_theme_on_container" />
+                app:tint="@color/tile_on_container" />
 
             <LinearLayout style="@style/Gozar.Row.Text">
                 <TextView
@@ -160,10 +162,11 @@
 
             <ImageView
                 style="@style/Gozar.Tile"
-                android:backgroundTint="@color/kind_kill_container"
+                android:background="@drawable/frame_hex"
+                android:backgroundTint="@color/tile_container"
                 android:contentDescription="@string/kill_switch"
                 android:src="@drawable/ic_shield"
-                app:tint="@color/kind_kill_on_container" />
+                app:tint="@color/tile_on_container" />
 
             <LinearLayout style="@style/Gozar.Row.Text">
                 <TextView
@@ -185,10 +188,11 @@
 
             <ImageView
                 style="@style/Gozar.Tile"
-                android:backgroundTint="@color/kind_auto_container"
+                android:background="@drawable/frame_burst"
+                android:backgroundTint="@color/tile_container"
                 android:contentDescription="@string/auto_connect"
                 android:src="@drawable/ic_rocket"
-                app:tint="@color/kind_auto_on_container" />
+                app:tint="@color/tile_on_container" />
 
             <LinearLayout style="@style/Gozar.Row.Text">
                 <TextView
@@ -210,10 +214,11 @@
 
             <ImageView
                 style="@style/Gozar.Tile"
-                android:backgroundTint="@color/kind_lan_container"
+                android:background="@drawable/frame_squircle"
+                android:backgroundTint="@color/tile_container"
                 android:contentDescription="@string/lan"
                 android:src="@drawable/ic_lan"
-                app:tint="@color/kind_lan_on_container" />
+                app:tint="@color/tile_on_container" />
 
             <LinearLayout style="@style/Gozar.Row.Text">
                 <TextView
@@ -235,10 +240,11 @@
 
             <ImageView
                 style="@style/Gozar.Tile"
-                android:backgroundTint="@color/kind_notif_container"
+                android:background="@drawable/frame_gem"
+                android:backgroundTint="@color/tile_container"
                 android:contentDescription="@string/notif_speed"
                 android:src="@drawable/ic_bell"
-                app:tint="@color/kind_notif_on_container" />
+                app:tint="@color/tile_on_container" />
 
             <LinearLayout style="@style/Gozar.Row.Text">
                 <TextView
@@ -264,10 +270,11 @@
 
             <ImageView
                 style="@style/Gozar.Tile"
-                android:backgroundTint="@color/kind_proxy_container"
+                android:background="@drawable/frame_clover"
+                android:backgroundTint="@color/tile_container"
                 android:contentDescription="@string/proxy_mode"
                 android:src="@drawable/ic_hub"
-                app:tint="@color/kind_proxy_on_container" />
+                app:tint="@color/tile_on_container" />
 
             <LinearLayout style="@style/Gozar.Row.Text">
                 <TextView
@@ -289,10 +296,11 @@
 
             <ImageView
                 style="@style/Gozar.Tile"
-                android:backgroundTint="@color/kind_info_container"
+                android:background="@drawable/frame_circle"
+                android:backgroundTint="@color/tile_container"
                 android:contentDescription="@string/proxy_port"
                 android:src="@drawable/ic_router"
-                app:tint="@color/kind_info_on_container" />
+                app:tint="@color/tile_on_container" />
 
             <LinearLayout style="@style/Gozar.Row.Text">
                 <TextView
@@ -316,10 +324,11 @@
 
             <ImageView
                 style="@style/Gozar.Tile"
-                android:backgroundTint="@color/kind_split_container"
+                android:background="@drawable/frame_hex"
+                android:backgroundTint="@color/tile_container"
                 android:contentDescription="@string/split_mode"
                 android:src="@drawable/ic_tune"
-                app:tint="@color/kind_split_on_container" />
+                app:tint="@color/tile_on_container" />
 
             <LinearLayout style="@style/Gozar.Row.Text">
                 <TextView
@@ -339,10 +348,11 @@
 
             <ImageView
                 style="@style/Gozar.Tile"
-                android:backgroundTint="@color/kind_apps_container"
+                android:background="@drawable/frame_squircle"
+                android:backgroundTint="@color/tile_container"
                 android:contentDescription="@string/split_apps"
                 android:src="@drawable/ic_apps"
-                app:tint="@color/kind_apps_on_container" />
+                app:tint="@color/tile_on_container" />
 
             <LinearLayout style="@style/Gozar.Row.Text">
                 <TextView
@@ -366,10 +376,11 @@
 
             <ImageView
                 style="@style/Gozar.Tile"
-                android:backgroundTint="@color/kind_secure_container"
+                android:background="@drawable/frame_puff"
+                android:backgroundTint="@color/tile_container"
                 android:contentDescription="@string/vpn_settings"
                 android:src="@drawable/ic_gpp"
-                app:tint="@color/kind_secure_on_container" />
+                app:tint="@color/tile_on_container" />
 
             <LinearLayout style="@style/Gozar.Row.Text">
                 <TextView
@@ -389,10 +400,11 @@
 
             <ImageView
                 style="@style/Gozar.Tile"
-                android:backgroundTint="@color/kind_lang_container"
+                android:background="@drawable/frame_burst"
+                android:backgroundTint="@color/tile_container"
                 android:contentDescription="@string/support"
                 android:src="@drawable/ic_star"
-                app:tint="@color/kind_lang_on_container" />
+                app:tint="@color/tile_on_container" />
 
             <LinearLayout style="@style/Gozar.Row.Text">
                 <TextView
@@ -412,10 +424,11 @@
 
             <ImageView
                 style="@style/Gozar.Tile"
-                android:backgroundTint="@color/kind_kill_container"
+                android:background="@drawable/frame_flower"
+                android:backgroundTint="@color/tile_container"
                 android:contentDescription="@string/crash_title"
                 android:src="@drawable/ic_error"
-                app:tint="@color/kind_kill_on_container" />
+                app:tint="@color/tile_on_container" />
 
             <LinearLayout style="@style/Gozar.Row.Text">
                 <TextView
@@ -435,10 +448,11 @@
 
             <ImageView
                 style="@style/Gozar.Tile"
-                android:backgroundTint="@color/kind_total_container"
+                android:background="@drawable/frame_gem"
+                android:backgroundTint="@color/tile_container"
                 android:contentDescription="@string/core"
                 android:src="@drawable/ic_memory"
-                app:tint="@color/kind_total_on_container" />
+                app:tint="@color/tile_on_container" />
 
             <LinearLayout style="@style/Gozar.Row.Text">
                 <TextView
@@ -456,10 +470,11 @@
 
             <ImageView
                 style="@style/Gozar.Tile"
-                android:backgroundTint="@color/kind_info_container"
+                android:background="@drawable/frame_clover"
+                android:backgroundTint="@color/tile_container"
                 android:contentDescription="@string/about"
                 android:src="@drawable/ic_info"
-                app:tint="@color/kind_info_on_container" />
+                app:tint="@color/tile_on_container" />
 
             <LinearLayout style="@style/Gozar.Row.Text">
                 <TextView

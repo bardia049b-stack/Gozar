@@ -54,4 +54,6 @@
     <color name="m3_info_container">#4C6E9F</color>
     <color name="m3_on_info_container">#FFFFFF</color>
     <color name="m3_ripple">#1FFFFFFF</color>
+    <color name="tile_container">#5661D3</color>
+    <color name="tile_on_container">#FFFFFF</color>
 </resources>

@@ -115,7 +115,7 @@
                         android:layout_gravity="center"
                         android:contentDescription="@string/connect"
                         android:src="@drawable/ic_power"
-                        app:tint="?attr/colorOnPrimaryContainer" />
+                        app:tint="@color/tile_on_container" />
                 </com.gozarwg.ConnectView>
 
                 <TextView
@@ -199,12 +199,12 @@
                 <ImageView
                     android:layout_width="@dimen/tile_big_size"
                     android:layout_height="@dimen/tile_big_size"
-                    android:background="@drawable/tile_big"
-                    android:backgroundTint="@color/kind_down_container"
+                    android:background="@drawable/frame_clover"
+                    android:backgroundTint="@color/tile_container"
                     android:contentDescription="@string/download"
                     android:padding="14dp"
                     android:src="@drawable/ic_down"
-                    app:tint="@color/kind_down_on_container" />
+                    app:tint="@color/tile_on_container" />
 
                 <TextView
                     android:id="@+id/tvDown"
@@ -228,12 +228,12 @@
                 <ImageView
                     android:layout_width="@dimen/tile_big_size"
                     android:layout_height="@dimen/tile_big_size"
-                    android:background="@drawable/tile_big"
-                    android:backgroundTint="@color/kind_up_container"
+                    android:background="@drawable/frame_burst"
+                    android:backgroundTint="@color/tile_container"
                     android:contentDescription="@string/upload"
                     android:padding="14dp"
                     android:src="@drawable/ic_up"
-                    app:tint="@color/kind_up_on_container" />
+                    app:tint="@color/tile_on_container" />
 
                 <TextView
                     android:id="@+id/tvUp"
@@ -257,12 +257,12 @@
                 <ImageView
                     android:layout_width="@dimen/tile_big_size"
                     android:layout_height="@dimen/tile_big_size"
-                    android:background="@drawable/tile_big"
-                    android:backgroundTint="@color/kind_total_container"
+                    android:background="@drawable/frame_puff"
+                    android:backgroundTint="@color/tile_container"
                     android:contentDescription="@string/total"
                     android:padding="14dp"
                     android:src="@drawable/ic_data"
-                    app:tint="@color/kind_total_on_container" />
+                    app:tint="@color/tile_on_container" />
 
                 <TextView
                     android:id="@+id/tvTotal"
@@ -286,12 +286,12 @@
                 <ImageView
                     android:layout_width="@dimen/tile_big_size"
                     android:layout_height="@dimen/tile_big_size"
-                    android:background="@drawable/tile_big"
-                    android:backgroundTint="@color/kind_handshake_container"
+                    android:background="@drawable/frame_flower"
+                    android:backgroundTint="@color/tile_container"
                     android:contentDescription="@string/handshake"
                     android:padding="14dp"
                     android:src="@drawable/ic_sync"
-                    app:tint="@color/kind_handshake_on_container" />
+                    app:tint="@color/tile_on_container" />
 
                 <TextView
                     android:id="@+id/tvHandshake"
@@ -320,9 +320,10 @@
                 style="@style/Gozar.Tile"
                 android:layout_width="@dimen/tile_size"
                 android:layout_height="@dimen/tile_size"
-                android:backgroundTint="@color/kind_server_container"
+                android:background="@drawable/frame_squircle"
+                android:backgroundTint="@color/tile_container"
                 android:src="@drawable/ic_dns"
-                app:tint="@color/kind_server_on_container" />
+                app:tint="@color/tile_on_container" />
 
             <LinearLayout style="@style/Gozar.Row.Text">
 
@@ -351,10 +352,11 @@
 
             <ImageView
                 style="@style/Gozar.Tile"
-                android:backgroundTint="@color/kind_apps_container"
+                android:background="@drawable/frame_hex"
+                android:backgroundTint="@color/tile_container"
                 android:contentDescription="@string/split"
                 android:src="@drawable/ic_apps"
-                app:tint="@color/kind_apps_on_container" />
+                app:tint="@color/tile_on_container" />
 
             <LinearLayout style="@style/Gozar.Row.Text">
 

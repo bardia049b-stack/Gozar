@@ -156,12 +156,27 @@
 
     <style name="Widget.Gozar.Switch" parent="Widget.Material3.CompoundButton.MaterialSwitch" />
 
+    <style name="Gozar.Dialog.Title" parent="MaterialAlertDialog.Material3.Title.Text">
+        <item name="android:textAppearance">@style/TextAppearance.Gozar.HeadlineSmall</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+
+    <style name="Gozar.Dialog.Body" parent="MaterialAlertDialog.Material3.Body.Text">
+        <item name="android:textAppearance">@style/TextAppearance.Gozar.BodyMedium</item>
+        <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
+    </style>
+
+    <style name="Gozar.Dialog.Button" parent="Widget.Material3.Button.TextButton.Dialog">
+        <item name="android:textAppearance">@style/TextAppearance.Gozar.TitleSmall</item>
+        <item name="android:textColor">?attr/colorPrimary</item>
+    </style>
+
     <style name="ThemeOverlay.Gozar.Dialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
-        <item name="materialAlertDialogTitleTextStyle">@style/TextAppearance.Gozar.HeadlineSmall</item>
-        <item name="materialAlertDialogBodyTextStyle">@style/TextAppearance.Gozar.BodyMedium</item>
-        <item name="buttonBarPositiveButtonStyle">@style/Widget.Gozar.Button.Text</item>
-        <item name="buttonBarNegativeButtonStyle">@style/Widget.Gozar.Button.Text</item>
-        <item name="buttonBarNeutralButtonStyle">@style/Widget.Gozar.Button.Text</item>
+        <item name="materialAlertDialogTitleTextStyle">@style/Gozar.Dialog.Title</item>
+        <item name="materialAlertDialogBodyTextStyle">@style/Gozar.Dialog.Body</item>
+        <item name="buttonBarPositiveButtonStyle">@style/Gozar.Dialog.Button</item>
+        <item name="buttonBarNegativeButtonStyle">@style/Gozar.Dialog.Button</item>
+        <item name="buttonBarNeutralButtonStyle">@style/Gozar.Dialog.Button</item>
     </style>
 
     <style name="ThemeOverlay.Gozar.BottomSheet" parent="ThemeOverlay.Material3.BottomSheetDialog">

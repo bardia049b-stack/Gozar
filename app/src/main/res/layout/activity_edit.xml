@@ -33,6 +33,7 @@
             android:id="@+id/btnQr"
             style="@style/Widget.Gozar.Button.Text"
             android:layout_width="0dp"
+            android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="@string/menu_qr"
             app:icon="@drawable/ic_qr" />
@@ -41,6 +42,7 @@
             android:id="@+id/btnShare"
             style="@style/Widget.Gozar.Button.Text"
             android:layout_width="0dp"
+            android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="@string/menu_share"
             app:icon="@drawable/ic_share" />
@@ -49,6 +51,7 @@
             android:id="@+id/btnExport"
             style="@style/Widget.Gozar.Button.Text"
             android:layout_width="0dp"
+            android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="@string/menu_export"
             app:icon="@drawable/ic_save" />
@@ -57,6 +60,7 @@
             android:id="@+id/btnDelete"
             style="@style/Widget.Gozar.Button.Text"
             android:layout_width="0dp"
+            android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="@string/menu_delete"
             android:textColor="?attr/colorError"

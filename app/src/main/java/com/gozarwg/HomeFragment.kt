@@ -318,14 +318,6 @@ class HomeFragment : Fragment() {
         val profile = selected()
         val name = find<TextView>(R.id.tvCurrentName)
         val meta = find<TextView>(R.id.tvCurrentMeta)
-        val tile = find<ImageView>(R.id.profileTile)
-        val active = Vpn.profile != null && Vpn.profile?.id == profile?.id && (Vpn.up || Vpn.connecting)
-        tile.backgroundTintList = ColorStateList.valueOf(
-            color(if (active) R.color.kind_total_container else R.color.kind_server_container)
-        )
-        tile.imageTintList = ColorStateList.valueOf(
-            color(if (active) R.color.kind_total_on_container else R.color.kind_server_on_container)
-        )
         if (profile == null) {
             name.setText(R.string.empty_title)
             meta.setText(R.string.empty_desc)
