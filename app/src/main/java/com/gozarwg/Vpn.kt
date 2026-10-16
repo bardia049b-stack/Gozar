@@ -114,7 +114,7 @@ object Vpn {
                     teardown.await(900, TimeUnit.MILLISECONDS)
                 } catch (e: Exception) {
                 }
-                BlockService.stopAndWait(ctx, 900)
+                BlockService.stopAndWait(ctx, 1200)
                 val cfg = buildConfig(ctx, prof)
                 lastCfg = cfg
                 peerKey = cfg.peers.firstOrNull()?.publicKey

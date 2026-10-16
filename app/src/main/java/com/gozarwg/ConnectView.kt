@@ -242,16 +242,17 @@ class ConnectView @JvmOverloads constructor(
         line.color = ColorUtils.setAlphaComponent(onBase, 64)
         canvas.drawCircle(cx, cy, r * 0.80f, line)
 
-        if (glyph != null) {
+        val mark = glyph
+        if (mark != null) {
             val side = (r * 0.88f).toInt()
-            glyph.setTint(onBase)
-            glyph.setBounds(
+            mark.setTint(onBase)
+            mark.setBounds(
                 (cx - side / 2f).toInt(),
                 (cy - side / 2f).toInt(),
                 (cx + side / 2f).toInt(),
                 (cy + side / 2f).toInt()
             )
-            glyph.draw(canvas)
+            mark.draw(canvas)
         }
     }
 }
