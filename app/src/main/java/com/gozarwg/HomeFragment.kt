@@ -217,7 +217,7 @@ class HomeFragment : Fragment() {
             this.state = control.state
             exitCode = Vpn.ipInfo?.code.orEmpty()
         }
-        find<MaterialCardView>(R.id.connectionPanel).setCardBackgroundColor(color(when (state) {)
+        find<MaterialCardView>(R.id.connectionPanel).setCardBackgroundColor(color(when (state) {
             2 -> R.color.m3_ok_container
             1, 4 -> R.color.m3_primary_container
             3 -> R.color.m3_error_container
