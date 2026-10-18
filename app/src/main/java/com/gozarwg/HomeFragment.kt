@@ -332,13 +332,18 @@ class HomeFragment : Fragment() {
         if (!isAdded || view == null) return
         val primary = color(R.color.m3_on_surface)
         val secondary = color(R.color.m3_on_surface_variant)
-        intArrayOf(
-            R.id.tvDown, R.id.tvUp, R.id.tvTotal, R.id.tvHandshake, R.id.tvIp, R.id.tvCurrentName
-        ).forEach { id -> find<TextView>(id).setTextColor(primary) }
-        intArrayOf(
-            R.id.tvPing, R.id.tvFlag, R.id.tvProvider, R.id.tvCurrentMeta,
-            R.id.tvDownLabel, R.id.tvUpLabel, R.id.tvTotalLabel, R.id.tvHandshakeLabel
-        ).forEach { id -> find<TextView>(id).setTextColor(secondary) }
+        val metricNumber = color(R.color.metric_number)
+        val metricLabel = color(R.color.metric_label)
+        intArrayOf(R.id.tvIp, R.id.tvCurrentName).forEach { id -> find<TextView>(id).setTextColor(primary) }
+        intArrayOf(R.id.tvDown, R.id.tvUp, R.id.tvTotal, R.id.tvHandshake).forEach { id ->
+            find<TextView>(id).setTextColor(metricNumber)
+        }
+        intArrayOf(R.id.tvPing, R.id.tvFlag, R.id.tvProvider, R.id.tvCurrentMeta).forEach { id ->
+            find<TextView>(id).setTextColor(secondary)
+        }
+        intArrayOf(R.id.tvDownLabel, R.id.tvUpLabel, R.id.tvTotalLabel, R.id.tvHandshakeLabel).forEach { id ->
+            find<TextView>(id).setTextColor(metricLabel)
+        }
     }
 
     private fun fetchIp() {

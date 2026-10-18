@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Kept separate from theme attributes because RollingValueView paints its own digits. -->
+    <color name="metric_number">#F8F7FF</color>
+    <color name="metric_label">#D7D5E4</color>
+</resources>

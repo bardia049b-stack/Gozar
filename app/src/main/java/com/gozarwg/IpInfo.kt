@@ -9,7 +9,9 @@ data class IpInfo(
     val city: String,
     val country: String,
     val code: String,
-    val provider: String
+    val provider: String,
+    val latitude: Double? = null,
+    val longitude: Double? = null
 )
 
 object Ip {
@@ -43,13 +45,20 @@ object Ip {
                 j.optString("city"),
                 j.optString(countryKey),
                 j.optString(codeKey).uppercase(),
-                providerOf(j)
+                providerOf(j),
+                coordinate(j, "latitude"),
+                coordinate(j, "longitude")
             )
         } catch (e: Exception) {
             null
         } finally {
             conn?.disconnect()
         }
+    }
+
+    private fun coordinate(json: JSONObject, key: String): Double? {
+        val value = json.optDouble(key, Double.NaN)
+        return value.takeIf { it.isFinite() }
     }
 
     fun flag(code: String): String {

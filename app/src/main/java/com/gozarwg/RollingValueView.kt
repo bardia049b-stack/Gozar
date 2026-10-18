@@ -3,6 +3,7 @@ package com.gozarwg
 import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Canvas
+import android.graphics.Color
 import android.os.Build
 import android.util.AttributeSet
 import android.view.Gravity
@@ -63,7 +64,11 @@ class RollingValueView @JvmOverloads constructor(
         val baseline = verticalBaseline()
         val x = horizontalOffset(current)
         val shift = height.toFloat() * 0.72f
-        val alpha = paint.alpha
+        // AppCompat can leave TextView's draw paint with its earlier palette after a night-mode
+        // recreation. Reapply the current text colour before every custom canvas render.
+        val savedColor = paint.color
+        paint.color = currentTextColor
+        val alpha = Color.alpha(currentTextColor)
         canvas.save()
         canvas.clipRect(paddingLeft, paddingTop, width - paddingRight, height - paddingBottom)
         if (roll < 1f && previousNumber.isNotEmpty()) {
@@ -76,6 +81,7 @@ class RollingValueView @JvmOverloads constructor(
         }
         paint.alpha = alpha
         canvas.drawText(current.unit, x + paint.measureText(current.number), baseline, paint)
+        paint.color = savedColor
         canvas.restore()
     }
 

@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:background="@color/m3_surface">
 
-    <com.gozarwg.WorldRouteView
+    <org.osmdroid.views.MapView
         android:id="@+id/fullWorldRoute"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -24,4 +24,21 @@
         android:padding="12dp"
         android:src="@drawable/ic_back"
         app:tint="?attr/colorOnSurface" />
+
+    <!-- Required visible OpenStreetMap attribution. -->
+    <TextView
+        android:id="@+id/tvMapAttribution"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="10dp"
+        android:layout_marginBottom="10dp"
+        android:background="@drawable/map_attribution"
+        android:paddingStart="8dp"
+        android:paddingTop="4dp"
+        android:paddingEnd="8dp"
+        android:paddingBottom="4dp"
+        android:text="@string/osm_attribution"
+        android:textAppearance="@style/TextAppearance.Gozar.LabelSmall"
+        android:textColor="@color/m3_on_surface" />
 </FrameLayout>
