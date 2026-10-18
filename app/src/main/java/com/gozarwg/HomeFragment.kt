@@ -305,7 +305,6 @@ class HomeFragment : Fragment() {
         // badge. This avoids inconsistent emoji glyphs and the old flat flag strip.
         find<CountryFlagView>(R.id.ivFlag).apply {
             countryCode = info.code
-            ringColor = color(R.color.map_exit)
             visibility = View.VISIBLE
         }
         find<TextView>(R.id.tvIp).text = info.ip

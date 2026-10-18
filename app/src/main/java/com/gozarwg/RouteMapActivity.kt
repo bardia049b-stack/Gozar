@@ -6,7 +6,6 @@ import android.os.Looper
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.TextView
-import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import java.util.Locale
@@ -103,9 +102,7 @@ class RouteMapActivity : BaseActivity() {
         routeMap.setEndpoints(origin?.code, exit?.code, routeToken)
         routeMap.setTraffic(if (Vpn.up) Vpn.downSpeed else 0.0, if (Vpn.up) Vpn.upSpeed else 0.0)
         originFlag.countryCode = origin?.code
-        originFlag.ringColor = ContextCompat.getColor(this, R.color.map_origin)
         exitFlag.countryCode = exit?.code
-        exitFlag.ringColor = ContextCompat.getColor(this, R.color.map_exit)
 
         val originLabel = locationLabel(origin, getString(R.string.map_unknown))
         val exitLabel = locationLabel(exit, getString(R.string.map_locating))

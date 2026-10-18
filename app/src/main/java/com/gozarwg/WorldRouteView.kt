@@ -11,11 +11,12 @@ import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
 import androidx.core.content.ContextCompat
+import kotlin.math.PI
+import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.ln
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.sin
 
 /**
  * Offline, gesture-driven world route view adapted from ZedSecure's AGPL-3.0-or-later
@@ -37,6 +38,7 @@ class WorldRouteView @JvmOverloads constructor(
     )
 
     private data class Point(val x: Float, val y: Float, val code: String)
+    private class Packet(var phase: Float, var direction: Float)
 
     private val land = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
     private val outline = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeJoin = Paint.Join.ROUND }
@@ -48,7 +50,12 @@ class WorldRouteView @JvmOverloads constructor(
     }
     private val flagBitmapPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
     private val routePath = Path()
+    private val shownRoutePath = Path()
+    private val routeMeasure = android.graphics.PathMeasure()
     private val arrowPath = Path()
+    private val tipPosition = FloatArray(2)
+    private val tangent = FloatArray(2)
+    private val packetPosition = FloatArray(2)
     private val gridPath = Path()
     private val countries: List<Country> = readCountries()
     private val allLand = Path().apply { countries.forEach { addPath(it.path) } }
@@ -67,6 +74,13 @@ class WorldRouteView @JvmOverloads constructor(
     private var downloadBps = 0.0
     private var uploadBps = 0.0
     private var routeStartedAt = SystemClock.uptimeMillis()
+    private var geometryFromX = Float.NaN
+    private var geometryFromY = Float.NaN
+    private var geometryToX = Float.NaN
+    private var geometryToY = Float.NaN
+    private var packetTickAt = 0L
+    private val downloadPacket = Packet(1f, -1f)
+    private val uploadPacket = Packet(0f, 1f)
 
     private var scale = 1f
     private var offsetX = 0f
@@ -134,6 +148,11 @@ class WorldRouteView @JvmOverloads constructor(
         exit = nextExit
         if (changed) {
             routeStartedAt = SystemClock.uptimeMillis()
+            packetTickAt = 0L
+            downloadPacket.phase = 1f
+            downloadPacket.direction = -1f
+            uploadPacket.phase = 0f
+            uploadPacket.direction = 1f
             post { resetFrame() }
         } else {
             invalidate()
@@ -235,16 +254,16 @@ class WorldRouteView @JvmOverloads constructor(
         val now = SystemClock.uptimeMillis()
         val reveal = ((now - routeStartedAt).toFloat() / ROUTE_REVEAL_MS).coerceIn(0f, 1f)
         if (origin != null && exit != null && reveal > 0.01f) drawRoute(canvas, origin!!, exit!!, reveal, now, px)
-
-        origin?.let { drawHalo(canvas, it, originColor, now, px) }
-        exit?.let { drawHalo(canvas, it, exitColor, now, px) }
         canvas.restore()
 
-        origin?.let { drawMarker(canvas, it, originColor) }
-        exit?.let { drawMarker(canvas, it, exitColor) }
+        origin?.let { drawMarker(canvas, it) }
+        exit?.let { drawMarker(canvas, it) }
 
-        // Keep the low-cost route pulse alive only while a route is visible.
-        if (origin != null || exit != null) postInvalidateOnAnimation()
+        // Render only while revealing the route or moving real measured traffic. Avoiding an idle
+        // perpetual redraw keeps the packet motion responsive on lower-powered devices.
+        if (origin != null && exit != null && (reveal < 0.999f || max(downloadBps, uploadBps) > 1.0)) {
+            postInvalidateOnAnimation()
+        }
     }
 
     private fun drawRoute(
@@ -255,101 +274,130 @@ class WorldRouteView @JvmOverloads constructor(
         now: Long,
         px: (Float) -> Float
     ) {
-        val dx = to.x - from.x
-        val dy = to.y - from.y
-        val length = hypot(dx, dy)
-        if (length < 1f) return
-        val bow = length * 0.22f
-        val controlX = (from.x + to.x) / 2f - dy / length * bow
-        val controlY = (from.y + to.y) / 2f + dx / length * bow
-        routePath.reset()
-        routePath.moveTo(from.x, from.y)
-        routePath.quadTo(controlX, controlY, to.x, to.y)
+        ensureRouteGeometry(from, to)
+        if (routeMeasure.length < 1f) return
 
-        val measure = android.graphics.PathMeasure(routePath, false)
-        val shown = Path()
-        val shownLength = measure.length * reveal
-        measure.getSegment(0f, shownLength, shown, true)
+        shownRoutePath.reset()
+        val shownLength = routeMeasure.length * reveal
+        routeMeasure.getSegment(0f, shownLength, shownRoutePath, true)
 
         line.color = alpha(exitColor, 0.12f)
         line.strokeWidth = px(9f)
-        canvas.drawPath(shown, line)
+        canvas.drawPath(shownRoutePath, line)
         line.color = alpha(exitColor, 0.45f)
         line.strokeWidth = px(3.4f)
-        canvas.drawPath(shown, line)
+        canvas.drawPath(shownRoutePath, line)
         line.color = alpha(exitColor, 0.96f)
         line.strokeWidth = px(1.4f)
-        canvas.drawPath(shown, line)
+        canvas.drawPath(shownRoutePath, line)
 
-        val position = FloatArray(2)
-        val tangent = FloatArray(2)
-        measure.getPosTan(shownLength, position, tangent)
-        val tangentLength = hypot(tangent[0], tangent[1])
-        if (tangentLength > 0.0001f) {
-            val ux = tangent[0] / tangentLength
-            val uy = tangent[1] / tangentLength
-            val head = px(15f)
-            val wing = px(7.5f)
-            val baseX = position[0] - ux * head
-            val baseY = position[1] - uy * head
-            arrowPath.reset()
-            arrowPath.moveTo(position[0], position[1])
-            arrowPath.lineTo(baseX - uy * wing, baseY + ux * wing)
-            arrowPath.lineTo(baseX + uy * wing, baseY - ux * wing)
-            arrowPath.close()
-            line.color = alpha(exitColor, 0.28f)
-            line.strokeWidth = px(5f)
-            canvas.drawPath(arrowPath, line)
-            fill.color = exitColor
-            canvas.drawPath(arrowPath, fill)
+        if (routeMeasure.getPosTan(shownLength, tipPosition, tangent)) {
+            val tangentLength = hypot(tangent[0], tangent[1])
+            if (tangentLength > 0.0001f) {
+                val ux = tangent[0] / tangentLength
+                val uy = tangent[1] / tangentLength
+                val head = px(15f)
+                val wing = px(7.5f)
+                val baseX = tipPosition[0] - ux * head
+                val baseY = tipPosition[1] - uy * head
+                arrowPath.reset()
+                arrowPath.moveTo(tipPosition[0], tipPosition[1])
+                arrowPath.lineTo(baseX - uy * wing, baseY + ux * wing)
+                arrowPath.lineTo(baseX + uy * wing, baseY - ux * wing)
+                arrowPath.close()
+                line.color = alpha(exitColor, 0.28f)
+                line.strokeWidth = px(5f)
+                canvas.drawPath(arrowPath, line)
+                fill.color = exitColor
+                canvas.drawPath(arrowPath, fill)
+            }
         }
 
-        val activity = max(downloadBps, uploadBps)
-        if (reveal > 0.98f && activity > 1.0) {
-            // Higher real throughput increases travel velocity; idle connections do not get fake packets.
-            val period = (11_000.0 - ln(activity + 1.0) * 850.0).coerceIn(2_300.0, 10_500.0)
-            val phase = ((now % period.toLong()).toDouble() / period).toFloat()
-            val at = FloatArray(2)
-            measure.getPosTan(measure.length * phase, at, null)
-            fill.color = alpha(exitColor, 0.22f)
-            canvas.drawCircle(at[0], at[1], px(9f), fill)
-            fill.color = exitColor
-            canvas.drawCircle(at[0], at[1], px(3.2f), fill)
-
-            if (uploadBps > 1.0) {
-                val reverseAt = FloatArray(2)
-                measure.getPosTan(measure.length * (1f - phase), reverseAt, null)
-                fill.color = alpha(originColor, 0.26f)
-                canvas.drawCircle(reverseAt[0], reverseAt[1], px(7f), fill)
-                fill.color = originColor
-                canvas.drawCircle(reverseAt[0], reverseAt[1], px(2.5f), fill)
-            }
+        // Packet travel is integrated frame-to-frame instead of recalculating a modulo phase.
+        // Throughput changes therefore adjust velocity without teleporting; a cosine path gently
+        // slows at either endpoint before returning along the route.
+        if (reveal > 0.98f && max(downloadBps, uploadBps) > 1.0) {
+            advancePackets(now)
+            if (downloadBps > 1.0) drawPacket(canvas, packetFraction(downloadPacket), exitColor, px)
+            if (uploadBps > 1.0) drawPacket(canvas, packetFraction(uploadPacket), originColor, px)
+        } else {
+            packetTickAt = now
         }
     }
 
-    private fun drawHalo(canvas: Canvas, point: Point, color: Int, now: Long, px: (Float) -> Float) {
-        val breathe = ((sin(now.toDouble() / 350.0) + 1.0) / 2.0).toFloat()
-        fill.color = alpha(color, 0.10f + 0.10f * breathe)
-        canvas.drawCircle(point.x, point.y, px(26f + 8f * breathe), fill)
-        fill.color = alpha(color, 0.24f)
-        canvas.drawCircle(point.x, point.y, px(16f), fill)
+    private fun ensureRouteGeometry(from: Point, to: Point) {
+        if (from.x == geometryFromX && from.y == geometryFromY && to.x == geometryToX && to.y == geometryToY) return
+        geometryFromX = from.x
+        geometryFromY = from.y
+        geometryToX = to.x
+        geometryToY = to.y
+        val dx = to.x - from.x
+        val dy = to.y - from.y
+        val length = hypot(dx, dy)
+        routePath.reset()
+        if (length < 1f) {
+            routeMeasure.setPath(null, false)
+            return
+        }
+        val bow = length * 0.22f
+        val controlX = (from.x + to.x) / 2f - dy / length * bow
+        val controlY = (from.y + to.y) / 2f + dx / length * bow
+        routePath.moveTo(from.x, from.y)
+        routePath.quadTo(controlX, controlY, to.x, to.y)
+        routeMeasure.setPath(routePath, false)
+    }
+
+    private fun advancePackets(now: Long) {
+        val previous = packetTickAt
+        packetTickAt = now
+        if (previous == 0L) return
+        // Limit a resumed/paused frame to a small visual step rather than jumping across the map.
+        val seconds = ((now - previous).coerceIn(1L, 48L) / 1000.0).toFloat()
+        if (downloadBps > 1.0) advancePacket(downloadPacket, packetSpeed(downloadBps) * seconds)
+        if (uploadBps > 1.0) advancePacket(uploadPacket, packetSpeed(uploadBps) * seconds)
+    }
+
+    private fun packetSpeed(bytesPerSecond: Double): Float =
+        (0.07 + ln(bytesPerSecond + 1.0) * 0.020).coerceIn(0.10, 0.55).toFloat()
+
+    private fun advancePacket(packet: Packet, amount: Float) {
+        var phase = packet.phase + packet.direction * amount
+        var direction = packet.direction
+        while (phase > 1f || phase < 0f) {
+            if (phase > 1f) {
+                phase = 2f - phase
+                direction = -1f
+            } else {
+                phase = -phase
+                direction = 1f
+            }
+        }
+        packet.phase = phase
+        packet.direction = direction
+    }
+
+    /** Smooth zero-velocity turnaround at both endpoint flags. */
+    private fun packetFraction(packet: Packet): Float =
+        (0.5 - 0.5 * cos(packet.phase * PI)).toFloat()
+
+    private fun drawPacket(canvas: Canvas, fraction: Float, color: Int, px: (Float) -> Float) {
+        if (!routeMeasure.getPosTan(routeMeasure.length * fraction.coerceIn(0f, 1f), packetPosition, null)) return
+        fill.color = alpha(color, 0.22f)
+        canvas.drawCircle(packetPosition[0], packetPosition[1], px(9f), fill)
+        fill.color = color
+        canvas.drawCircle(packetPosition[0], packetPosition[1], px(3.2f), fill)
     }
 
     /** ZedSecure/flag-icons artwork is clipped only inside round endpoint markers—never country geometry. */
-    private fun drawMarker(canvas: Canvas, point: Point, ring: Int) {
+    private fun drawMarker(canvas: Canvas, point: Point) {
         val x = offsetX + point.x * scale
         val y = offsetY + point.y * scale
         val radius = markerRadius()
         if (x < -radius || y < -radius || x > width + radius || y > height + radius) return
 
-        fill.color = alpha(ring, 0.30f)
-        canvas.drawCircle(x, y, radius, fill)
-        outline.color = ring
-        outline.strokeWidth = dp(2f)
-        canvas.drawCircle(x, y, radius - dp(1f), outline)
-
+        // Show the actual circular flag edge-to-edge, without a coloured ring or halo.
         canvas.save()
-        val inner = radius - dp(3f)
+        val inner = radius
         val clip = Path().apply { addCircle(x, y, inner, Path.Direction.CW) }
         canvas.clipPath(clip)
         val flag = FlagAssets.bitmap(context, point.code)
