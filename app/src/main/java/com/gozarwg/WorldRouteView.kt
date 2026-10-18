@@ -145,11 +145,11 @@ class WorldRouteView @JvmOverloads constructor(
         val searching = state == ConnectControl.BUSY
         val strength = when {
             active -> 1f
-            searching -> 0.78f
-            else -> 0.36f
+            searching -> 0.94f
+            else -> 0.82f
         }
 
-        fill.color = alpha(if (active || searching) activeColor else originColor, if (active) 18 else 8)
+        fill.color = alpha(mapInk, 8)
         canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), fill)
 
         canvas.save()
@@ -157,10 +157,10 @@ class WorldRouteView @JvmOverloads constructor(
         canvas.scale(scale, scale)
         val px = 1f / scale
         drawGrid(canvas, mapInk, px)
-        fill.color = alpha(mapInk, (20f * strength).toInt())
+        fill.color = alpha(mapInk, (34f * strength).toInt())
         canvas.drawPath(map, fill)
-        stroke.color = alpha(mapInk, (65f * strength).toInt())
-        stroke.strokeWidth = 0.9f * px
+        stroke.color = alpha(mapInk, (138f * strength).toInt())
+        stroke.strokeWidth = 1.1f * px
         stroke.pathEffect = null
         canvas.drawPath(map, stroke)
 
@@ -177,8 +177,8 @@ class WorldRouteView @JvmOverloads constructor(
     }
 
     private fun drawGrid(canvas: Canvas, ink: Int, px: Float) {
-        stroke.color = alpha(ink, 14)
-        stroke.strokeWidth = 0.7f * px
+        stroke.color = alpha(ink, 28)
+        stroke.strokeWidth = 0.8f * px
         stroke.pathEffect = null
         var longitude = 0f
         while (longitude <= WORLD_WIDTH) {

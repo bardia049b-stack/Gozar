@@ -26,7 +26,6 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import com.google.android.material.card.MaterialCardView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
@@ -217,12 +216,6 @@ class HomeFragment : Fragment() {
             this.state = control.state
             exitCode = Vpn.ipInfo?.code.orEmpty()
         }
-        find<MaterialCardView>(R.id.connectionPanel).setCardBackgroundColor(color(when (state) {
-            2 -> R.color.m3_ok_container
-            1, 4 -> R.color.m3_primary_container
-            3 -> R.color.m3_error_container
-            else -> R.color.m3_surface_container_low
-        }))
         if (visualState != state) {
             visualState = state
             control.animate().cancel()
@@ -236,10 +229,14 @@ class HomeFragment : Fragment() {
                 .start()
         }
         val statusTone = when (state) {
-            2 -> R.color.m3_on_ok_container
-            1, 4 -> R.color.m3_on_primary_container
-            3 -> R.color.m3_on_error_container
+            1, 4 -> R.color.m3_primary
+            3 -> R.color.m3_error
             else -> R.color.m3_on_surface
+        }
+        val actionTone = when (state) {
+            1, 4 -> R.color.m3_primary
+            3 -> R.color.m3_error
+            else -> R.color.m3_on_surface_variant
         }
         control.contentDescription = getString(action)
         find<TextView>(R.id.tvStatus).apply {
@@ -253,13 +250,11 @@ class HomeFragment : Fragment() {
                 4 -> R.string.status_disconnecting
                 else -> R.string.tap_connect
             })
-            setTextColor(color(statusTone))
+            setTextColor(color(actionTone))
         }
         if (state == 2) {
             find<RollingValueView>(R.id.tvDown).setValue(fmtSpeed(Vpn.downSpeed))
             find<RollingValueView>(R.id.tvUp).setValue(fmtSpeed(Vpn.upSpeed))
-            turnBadge(R.id.downBadge, Vpn.downSpeed > 0.0)
-            turnBadge(R.id.upBadge, Vpn.upSpeed > 0.0)
             find<RollingValueView>(R.id.tvTotal).setValue(fmtBytes(Vpn.totalRx + Vpn.totalTx))
             find<RollingValueView>(R.id.tvPing).setValue(when {
                 Vpn.latencyChecking -> "…"
@@ -275,18 +270,9 @@ class HomeFragment : Fragment() {
             reveal(find<View>(R.id.statsRow))
             if (Vpn.ipInfo == null) fetchIp() else paintIp()
         } else {
-            turnBadge(R.id.downBadge, false)
-            turnBadge(R.id.upBadge, false)
             find<View>(R.id.statsRow).visibility = View.GONE
             find<View>(R.id.connectionInfo).visibility = View.GONE
         }
-    }
-
-    private fun turnBadge(id: Int, active: Boolean) {
-        val badge = find<View>(id)
-        val target = if (active) 45f else 0f
-        if (badge.rotation == target) return
-        badge.animate().rotation(target).setDuration(220L).setInterpolator(DecelerateInterpolator()).start()
     }
 
     private fun reveal(target: View) {
