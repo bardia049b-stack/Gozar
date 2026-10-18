@@ -33,6 +33,8 @@ object Vpn {
     @Volatile var handshakeOk = false
     @Volatile var attempt = 0
     @Volatile var handshakeAge = -1L
+    /** Last direct-network location sampled before a connection. Used only to place the route origin. */
+    @Volatile var originInfo: IpInfo? = null
     @Volatile var ipInfo: IpInfo? = null
     @Volatile var ipSession = 0L
     @Volatile var stopping = false

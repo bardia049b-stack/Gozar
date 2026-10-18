@@ -2,10 +2,11 @@ package com.gozarwg
 
 import android.content.Context
 import android.content.res.ColorStateList
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
+import android.widget.GridLayout
 import android.widget.ImageView
-import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import com.google.android.material.bottomsheet.BottomSheetDialog
@@ -20,7 +21,7 @@ class SheetAction(
 object Sheets {
 
     fun actions(context: Context, title: Int, actions: List<SheetAction>): BottomSheetDialog {
-        return open(context, title, actions.map { it })
+        return open(context, title, actions)
     }
 
     fun add(context: Context, onPick: (String) -> Unit): BottomSheetDialog {
@@ -33,54 +34,60 @@ object Sheets {
             R.drawable.ic_link to R.string.imp_link,
             R.drawable.ic_edit to R.string.imp_create
         )
-        val actions = items.mapIndexed { index, item ->
+        return open(context, R.string.add_title, items.mapIndexed { index, item ->
             SheetAction(item.first, item.second) { onPick(keys[index]) }
-        }
-        return open(context, R.string.add_title, actions)
+        })
     }
 
+    /** Uses labelled Material icons in a compact action grid rather than a sharp-cornered list. */
     private fun open(context: Context, title: Int, actions: List<SheetAction>): BottomSheetDialog {
         val dialog = BottomSheetDialog(context)
         val view = LayoutInflater.from(context).inflate(R.layout.sheet_actions, null)
         dialog.setContentView(view)
         view.findViewById<TextView>(R.id.tvSheetTitle).setText(title)
-        val group = view.findViewById<LinearLayout>(R.id.llActions)
-        actions.forEachIndexed { index, action ->
-            group.addView(row(context, group, action, index, actions.size) { dialog.dismiss() })
-        }
+        view.findViewById<View>(R.id.btnSheetClose).setOnClickListener { dialog.dismiss() }
+        val group = view.findViewById<GridLayout>(R.id.llActions)
+        group.columnCount = if (actions.size <= 4) actions.size.coerceAtLeast(1) else 3
+        actions.forEach { action -> group.addView(tile(context, group, action) { dialog.dismiss() }) }
         dialog.show()
         return dialog
     }
 
-    private fun row(
+    private fun tile(
         context: Context,
-        parent: LinearLayout,
+        parent: GridLayout,
         action: SheetAction,
-        index: Int,
-        total: Int,
         dismiss: () -> Unit
     ): View {
-        val row = LayoutInflater.from(context).inflate(R.layout.item_action, parent, false)
-        row.setBackgroundResource(shapeFor(index, total))
-        val icon = row.findViewById<ImageView>(R.id.actionIcon)
+        val tile = LayoutInflater.from(context).inflate(R.layout.item_action, parent, false)
+        val icon = tile.findViewById<ImageView>(R.id.actionIcon)
+        val label = tile.findViewById<TextView>(R.id.actionLabel)
         icon.setImageResource(action.icon)
-        if (action.tone != 0) {
-            icon.imageTintList = ColorStateList.valueOf(ContextCompat.getColor(context, action.tone))
+        if (action.tone == R.color.m3_error) {
+            icon.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(context, R.color.m3_error_container))
+            icon.imageTintList = ColorStateList.valueOf(ContextCompat.getColor(context, R.color.m3_on_error_container))
+            label.setTextColor(ContextCompat.getColor(context, R.color.m3_error))
+        } else if (action.tone != 0) {
+            icon.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(context, action.tone))
+            icon.imageTintList = ColorStateList.valueOf(ContextCompat.getColor(context, R.color.m3_on_primary))
+            label.setTextColor(ContextCompat.getColor(context, action.tone))
         }
-        row.findViewById<TextView>(R.id.actionLabel).setText(action.label)
-        row.setOnClickListener {
+        label.setText(action.label)
+        val params = GridLayout.LayoutParams(
+            GridLayout.spec(GridLayout.UNDEFINED),
+            GridLayout.spec(GridLayout.UNDEFINED, 1f)
+        ).apply {
+            width = 0
+            height = GridLayout.LayoutParams.WRAP_CONTENT
+            setGravity(Gravity.FILL_HORIZONTAL)
+            val margin = (4 * context.resources.displayMetrics.density + 0.5f).toInt()
+            setMargins(margin, 0, margin, 0)
+        }
+        tile.layoutParams = params
+        tile.setOnClickListener {
             dismiss()
             action.run()
         }
-        return row
-    }
-
-    private fun shapeFor(index: Int, total: Int): Int {
-        if (total <= 1) return R.drawable.menu_item_only
-        return when (index) {
-            0 -> R.drawable.menu_item_top
-            total - 1 -> R.drawable.menu_item_bottom
-            else -> R.drawable.menu_item_mid
-        }
+        return tile
     }
 }

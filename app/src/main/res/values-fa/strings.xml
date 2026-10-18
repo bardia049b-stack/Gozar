@@ -187,5 +187,7 @@
     <string name="legal_title">مجوز و کد منبع</string>
     <string name="source_code">کد منبع</string>
     <string name="route_map">مسیر تونل</string>
+    <string name="open_live_map">باز کردن نقشه زندهٔ مسیر</string>
+    <string name="live_map_content">نقشه زندهٔ مسیر تونل با پرچم کشورها</string>
     <string name="legal_notice">GozarWG نرم‌افزار آزاد تحت مجوز GNU Affero General Public License نسخه ۳ یا جدیدتر است.\n\nاین نسخه شامل کدهای سازگارشدهٔ رابط صفحهٔ خانه، انیمیشن نقشهٔ مسیر و شاخص‌های متحرک اتصال از ZedSecure، حق‌نشر © ۲۰۲۶ CluvexStudio، تحت AGPL-3.0-or-later است.\n\nکد منبع متناظر کامل، متن مجوز و اطلاعیه‌ها در مخزن GozarWG در دسترس هستند.</string>
 </resources>

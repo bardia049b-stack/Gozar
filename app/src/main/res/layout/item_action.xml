@@ -5,26 +5,30 @@
     android:layout_height="wrap_content"
     android:clickable="true"
     android:focusable="true"
-    android:foreground="?attr/selectableItemBackground"
-    android:gravity="center_vertical"
-    android:minHeight="56dp"
-    android:orientation="horizontal"
-    android:paddingStart="@dimen/sp_l"
-    android:paddingEnd="@dimen/sp_l">
+    android:foreground="?attr/selectableItemBackgroundBorderless"
+    android:gravity="center_horizontal"
+    android:orientation="vertical"
+    android:paddingTop="@dimen/sp_s"
+    android:paddingBottom="@dimen/sp_s">
 
     <ImageView
         android:id="@+id/actionIcon"
-        android:layout_width="24dp"
-        android:layout_height="24dp"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:background="@drawable/frame_burst"
+        android:backgroundTint="?attr/colorPrimaryContainer"
         android:contentDescription="@string/add"
-        app:tint="?attr/colorOnSurfaceVariant" />
+        android:padding="16dp"
+        app:tint="?attr/colorOnPrimaryContainer" />
 
     <TextView
         android:id="@+id/actionLabel"
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="@dimen/sp_l"
-        android:layout_weight="1"
-        android:textAppearance="@style/TextAppearance.Gozar.TitleMedium"
+        android:layout_marginTop="@dimen/sp_s"
+        android:ellipsize="end"
+        android:gravity="center"
+        android:maxLines="1"
+        android:textAppearance="@style/TextAppearance.Gozar.LabelMedium"
         android:textColor="?attr/colorOnSurface" />
 </LinearLayout>

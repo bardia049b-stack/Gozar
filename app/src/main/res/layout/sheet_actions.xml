@@ -14,28 +14,43 @@
         android:background="@drawable/pill"
         android:backgroundTint="?attr/colorOutlineVariant" />
 
-    <TextView
-        android:id="@+id/tvSheetTitle"
-        style="@style/Gozar.Sheet.Title"
-        android:layout_marginTop="@dimen/sp_s"
-        android:text="@string/add_title" />
-
     <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="@dimen/sp_s"
+        android:paddingEnd="@dimen/sp_l">
+
+        <ImageView
+            android:id="@+id/btnSheetClose"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/close"
+            android:padding="12dp"
+            android:src="@drawable/ic_close"
+            android:tint="?attr/colorOnSurface" />
+
+        <TextView
+            android:id="@+id/tvSheetTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/sp_s"
+            android:layout_weight="1"
+            android:textAppearance="@style/TextAppearance.Gozar.TitleLarge"
+            android:textColor="?attr/colorOnSurface" />
+    </LinearLayout>
+
+    <android.widget.GridLayout
         android:id="@+id/llActions"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="@dimen/sp_l"
-        android:layout_marginEnd="@dimen/sp_l"
-        android:background="@drawable/menu_group"
-        android:clipToOutline="true"
-        android:orientation="vertical"
-        android:paddingTop="@dimen/sp_xs"
-        android:paddingBottom="@dimen/sp_xs" />
-
-    <View
-        android:layout_width="32dp"
-        android:layout_height="4dp"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginTop="@dimen/sp_m"
-        android:background="@android:color/transparent" />
+        android:alignmentMode="alignMargins"
+        android:columnCount="4"
+        android:paddingStart="@dimen/sp_m"
+        android:paddingTop="@dimen/sp_s"
+        android:paddingEnd="@dimen/sp_m"
+        android:paddingBottom="@dimen/sp_s"
+        android:useDefaultMargins="false" />
 </LinearLayout>

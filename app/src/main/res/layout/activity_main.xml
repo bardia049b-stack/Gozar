@@ -37,37 +37,29 @@
                 android:layout_weight="1" />
 
             <ImageView
+                android:id="@+id/btnMap"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="@drawable/bg_map_button"
+                android:contentDescription="@string/open_live_map"
+                android:padding="12dp"
+                android:src="@drawable/ic_map"
+                android:visibility="gone"
+                app:tint="?attr/colorOnSurface" />
+
+            <ImageView
                 android:id="@+id/btnSettingsTop"
-                android:layout_width="@dimen/icon_action"
-                android:layout_height="@dimen/icon_action"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="4dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/settings"
-                android:padding="10dp"
+                android:padding="12dp"
                 android:src="@drawable/ic_settings"
                 app:tint="?attr/colorOnSurfaceVariant" />
         </LinearLayout>
 
-        <FrameLayout
-            android:id="@+id/mapPanel"
-            android:layout_width="match_parent"
-            android:layout_height="216dp"
-            android:layout_marginTop="@dimen/sp_m">
-
-            <com.gozarwg.WorldRouteView
-                android:id="@+id/worldRoute"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:importantForAccessibility="no" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/sp_s"
-                android:text="@string/route_map"
-                android:textAppearance="@style/TextAppearance.Gozar.LabelMedium"
-                android:textColor="?attr/colorOnSurface" />
-        </FrameLayout>
-
+        <!-- The primary action comes first. Connection details appear only after a session starts. -->
         <LinearLayout
             android:id="@+id/connectionPanel"
             android:layout_width="match_parent"
@@ -91,13 +83,15 @@
                 android:gravity="center"
                 android:text="@string/status_off"
                 android:textAppearance="@style/TextAppearance.Gozar.TitleLarge"
-                android:textColor="?attr/colorOnSurface" />
+                android:textColor="@color/m3_on_surface"
+                android:visibility="gone" />
 
             <com.gozarwg.ConnectionPulse
                 android:id="@+id/connectionPulse"
                 android:layout_width="156dp"
                 android:layout_height="10dp"
-                android:layout_marginTop="6dp" />
+                android:layout_marginTop="6dp"
+                android:visibility="gone" />
 
             <TextView
                 android:id="@+id/tvAction"
@@ -107,7 +101,8 @@
                 android:gravity="center"
                 android:text="@string/tap_connect"
                 android:textAppearance="@style/TextAppearance.Gozar.BodySmall"
-                android:textColor="?attr/colorOnSurfaceVariant" />
+                android:textColor="@color/m3_on_surface_variant"
+                android:visibility="gone" />
 
             <LinearLayout
                 android:id="@+id/connectionInfo"
@@ -140,7 +135,7 @@
                         android:layout_height="wrap_content"
                         android:includeFontPadding="false"
                         android:textAppearance="@style/TextAppearance.Gozar.LabelMedium"
-                        android:textColor="?attr/colorOnSurfaceVariant" />
+                        android:textColor="@color/m3_on_surface_variant" />
 
                     <TextView
                         android:id="@+id/tvIp"
@@ -150,7 +145,7 @@
                         android:includeFontPadding="false"
                         android:maxLines="1"
                         android:textAppearance="@style/TextAppearance.Gozar.TitleSmall"
-                        android:textColor="?attr/colorOnSurface"
+                        android:textColor="@color/m3_on_surface"
                         android:textDirection="ltr" />
 
                     <com.gozarwg.RollingValueView
@@ -162,7 +157,7 @@
                         android:maxLines="1"
                         android:text="—"
                         android:textAppearance="@style/TextAppearance.Gozar.LabelMedium"
-                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:textColor="@color/m3_on_surface_variant"
                         android:textDirection="ltr" />
                 </LinearLayout>
 
@@ -175,21 +170,24 @@
                     android:gravity="center"
                     android:maxLines="1"
                     android:textAppearance="@style/TextAppearance.Gozar.LabelMedium"
-                    android:textColor="?attr/colorOnSurfaceVariant" />
+                    android:textColor="@color/m3_on_surface_variant" />
             </LinearLayout>
         </LinearLayout>
 
+        <!-- The profile stays visible before connection, directly after the connect action. -->
         <LinearLayout
             android:id="@+id/profileCard"
             style="@style/Gozar.Row"
-            android:layout_marginTop="@dimen/sp_l">
+            android:layout_marginTop="@dimen/sp_m">
 
             <ImageView
                 android:id="@+id/profileTile"
-                style="@style/Gozar.Tile"
-                android:background="@drawable/frame_squircle"
+                android:layout_width="@dimen/tile_size"
+                android:layout_height="@dimen/tile_size"
+                android:background="@drawable/frame_burst"
                 android:backgroundTint="@color/tile_container"
                 android:contentDescription="@string/select_profile"
+                android:padding="12dp"
                 android:src="@drawable/ic_dns"
                 app:tint="@color/tile_on_container" />
 
@@ -249,17 +247,18 @@
                     android:maxLines="1"
                     android:text="0 B/s"
                     android:textAppearance="@style/TextAppearance.Gozar.TitleSmall"
-                    android:textColor="?attr/colorOnSurface"
+                    android:textColor="@color/m3_on_surface"
                     android:textDirection="ltr" />
 
                 <TextView
+                    android:id="@+id/tvDownLabel"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:gravity="center"
                     android:maxLines="1"
                     android:text="@string/download"
                     android:textAppearance="@style/TextAppearance.Gozar.LabelSmall"
-                    android:textColor="?attr/colorOnSurfaceVariant" />
+                    android:textColor="@color/m3_on_surface_variant" />
             </LinearLayout>
 
             <LinearLayout
@@ -287,17 +286,18 @@
                     android:maxLines="1"
                     android:text="0 B/s"
                     android:textAppearance="@style/TextAppearance.Gozar.TitleSmall"
-                    android:textColor="?attr/colorOnSurface"
+                    android:textColor="@color/m3_on_surface"
                     android:textDirection="ltr" />
 
                 <TextView
+                    android:id="@+id/tvUpLabel"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:gravity="center"
                     android:maxLines="1"
                     android:text="@string/upload"
                     android:textAppearance="@style/TextAppearance.Gozar.LabelSmall"
-                    android:textColor="?attr/colorOnSurfaceVariant" />
+                    android:textColor="@color/m3_on_surface_variant" />
             </LinearLayout>
 
             <LinearLayout
@@ -325,17 +325,18 @@
                     android:maxLines="1"
                     android:text="0 B"
                     android:textAppearance="@style/TextAppearance.Gozar.TitleSmall"
-                    android:textColor="?attr/colorOnSurface"
+                    android:textColor="@color/m3_on_surface"
                     android:textDirection="ltr" />
 
                 <TextView
+                    android:id="@+id/tvTotalLabel"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:gravity="center"
                     android:maxLines="1"
                     android:text="@string/total"
                     android:textAppearance="@style/TextAppearance.Gozar.LabelSmall"
-                    android:textColor="?attr/colorOnSurfaceVariant" />
+                    android:textColor="@color/m3_on_surface_variant" />
             </LinearLayout>
 
             <LinearLayout
@@ -363,17 +364,18 @@
                     android:maxLines="1"
                     android:text="@string/now"
                     android:textAppearance="@style/TextAppearance.Gozar.TitleSmall"
-                    android:textColor="?attr/colorOnSurface"
+                    android:textColor="@color/m3_on_surface"
                     android:textDirection="ltr" />
 
                 <TextView
+                    android:id="@+id/tvHandshakeLabel"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:gravity="center"
                     android:maxLines="1"
                     android:text="@string/hs_short"
                     android:textAppearance="@style/TextAppearance.Gozar.LabelSmall"
-                    android:textColor="?attr/colorOnSurfaceVariant" />
+                    android:textColor="@color/m3_on_surface_variant" />
             </LinearLayout>
         </LinearLayout>
     </LinearLayout>

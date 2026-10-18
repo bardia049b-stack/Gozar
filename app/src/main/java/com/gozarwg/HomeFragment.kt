@@ -37,6 +37,7 @@ class HomeFragment : Fragment() {
     private var pendingProfile: Profile? = null
     private var pendingExport: Profile? = null
     @Volatile private var fetchingIp = false
+    @Volatile private var fetchingOrigin = false
     private var visualState = -1
 
     private val vpnPerm = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -134,8 +135,12 @@ class HomeFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         find<View>(R.id.connectButton).setOnClickListener { toggle() }
         find<View>(R.id.btnSettingsTop).setOnClickListener { (activity as? MainActivity)?.showSettings() }
+        find<View>(R.id.btnMap).setOnClickListener {
+            startActivity(Intent(requireContext(), RouteMapActivity::class.java))
+        }
         find<View>(R.id.profileCard).setOnClickListener { showProfiles() }
-        find<WorldRouteView>(R.id.worldRoute).originCode = resources.configuration.locales[0].country
+        applyReadableTextColors()
+        fetchOrigin()
         paintStatus()
         paintProfiles()
     }
@@ -147,6 +152,7 @@ class HomeFragment : Fragment() {
             paintStatus()
             toast(getString(R.string.connection_failed) + ": " + message.take(80))
         }
+        if (!Vpn.up && !Vpn.connecting) fetchOrigin()
         paintStatus()
         paintProfiles()
         handler.removeCallbacks(ticker)
@@ -212,10 +218,13 @@ class HomeFragment : Fragment() {
             0
         }
         find<ConnectionPulse>(R.id.connectionPulse).state = control.state
-        find<WorldRouteView>(R.id.worldRoute).apply {
-            this.state = control.state
-            exitCode = Vpn.ipInfo?.code.orEmpty()
+        val showSessionDetails = state != 0
+        listOf(R.id.tvStatus, R.id.connectionPulse, R.id.tvAction).forEach { id ->
+            val target = find<View>(id)
+            if (showSessionDetails) reveal(target) else target.visibility = View.GONE
         }
+        find<View>(R.id.btnMap).visibility = if (state == 2) View.VISIBLE else View.GONE
+        applyReadableTextColors()
         if (visualState != state) {
             visualState = state
             control.animate().cancel()
@@ -298,11 +307,38 @@ class HomeFragment : Fragment() {
             text = if (iran) "" else Ip.flag(info.code)
         }
         find<TextView>(R.id.tvIp).text = info.ip
-        find<WorldRouteView>(R.id.worldRoute).exitCode = info.code
         find<TextView>(R.id.tvProvider).text = listOf(info.city, info.provider)
             .filter { it.isNotBlank() }
             .joinToString(" · ")
         reveal(find<View>(R.id.connectionInfo))
+    }
+
+    /** Samples the direct network only while disconnected, so the full-screen map can show a real
+     * origin country as well as the tunnel exit. A locale fallback is used when this is unavailable. */
+    private fun fetchOrigin() {
+        if (fetchingOrigin || Vpn.originInfo != null || Vpn.up || Vpn.connecting) return
+        fetchingOrigin = true
+        thread {
+            val info = Ip.fetch()
+            activity?.runOnUiThread {
+                fetchingOrigin = false
+                if (info != null && !Vpn.up && !Vpn.connecting) Vpn.originInfo = info
+            }
+        }
+    }
+
+    /** Explicit colours prevent custom animated TextViews from inheriting a stale light palette. */
+    private fun applyReadableTextColors() {
+        if (!isAdded || view == null) return
+        val primary = color(R.color.m3_on_surface)
+        val secondary = color(R.color.m3_on_surface_variant)
+        intArrayOf(
+            R.id.tvDown, R.id.tvUp, R.id.tvTotal, R.id.tvHandshake, R.id.tvIp, R.id.tvCurrentName
+        ).forEach { id -> find<TextView>(id).setTextColor(primary) }
+        intArrayOf(
+            R.id.tvPing, R.id.tvFlag, R.id.tvProvider, R.id.tvCurrentMeta,
+            R.id.tvDownLabel, R.id.tvUpLabel, R.id.tvTotalLabel, R.id.tvHandshakeLabel
+        ).forEach { id -> find<TextView>(id).setTextColor(secondary) }
     }
 
     private fun fetchIp() {
