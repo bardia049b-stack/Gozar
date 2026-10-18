@@ -37,6 +37,7 @@ class HomeFragment : Fragment() {
     private var pendingProfile: Profile? = null
     private var pendingExport: Profile? = null
     @Volatile private var fetchingIp = false
+    private var visualState = -1
 
     private val vpnPerm = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         val profile = pendingProfile
@@ -204,6 +205,18 @@ class HomeFragment : Fragment() {
             3 -> ConnectControl.ERROR
             else -> ConnectControl.OFF
         }
+        if (visualState != state) {
+            visualState = state
+            control.animate().cancel()
+            control.scaleX = if (state == 1 || state == 4) 0.94f else 0.98f
+            control.scaleY = if (state == 1 || state == 4) 0.94f else 0.98f
+            control.animate()
+                .scaleX(1f)
+                .scaleY(1f)
+                .setDuration(240L)
+                .setInterpolator(DecelerateInterpolator())
+                .start()
+        }
         val statusTone = when (state) {
             2 -> R.color.m3_ok
             1, 4 -> R.color.m3_primary
@@ -215,6 +228,12 @@ class HomeFragment : Fragment() {
             setText(status)
             setTextColor(color(statusTone))
         }
+        find<TextView>(R.id.tvAction).setText(when (state) {
+            2 -> R.string.tap_disconnect
+            1 -> R.string.tap_cancel
+            4 -> R.string.status_disconnecting
+            else -> R.string.tap_connect
+        })
         if (state == 2) {
             find<TextView>(R.id.tvDown).text = fmtSpeed(Vpn.downSpeed)
             find<TextView>(R.id.tvUp).text = fmtSpeed(Vpn.upSpeed)
