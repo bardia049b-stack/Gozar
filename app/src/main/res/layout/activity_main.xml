@@ -47,285 +47,70 @@
                 app:tint="?attr/colorOnSurfaceVariant" />
         </LinearLayout>
 
-        <FrameLayout
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="220dp"
             android:layout_marginTop="@dimen/sp_m"
-            android:background="@drawable/hero_card"
-            android:clipToOutline="true">
+            app:cardBackgroundColor="?attr/colorSurfaceContainerLow"
+            app:cardCornerRadius="32dp"
+            app:cardElevation="0dp"
+            app:strokeColor="?attr/colorOutlineVariant"
+            app:strokeWidth="1dp">
 
             <ImageView
                 android:id="@+id/heroMap"
                 android:layout_width="match_parent"
-                android:layout_height="300dp"
-                android:layout_gravity="center"
-                android:alpha="0.5"
-                android:contentDescription="@string/app_name"
-                android:scaleType="centerCrop"
+                android:layout_height="match_parent"
+                android:alpha="0.72"
+                android:contentDescription="@string/status_off"
+                android:padding="28dp"
+                android:scaleType="centerInside"
                 android:src="@drawable/iran_map"
-                app:tint="@color/m3_error" />
+                app:tint="@color/m3_primary" />
+        </com.google.android.material.card.MaterialCardView>
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_horizontal"
-                android:orientation="vertical"
-                android:paddingStart="@dimen/sp_xl"
-                android:paddingTop="@dimen/sp_xl"
-                android:paddingEnd="@dimen/sp_xl"
-                android:paddingBottom="@dimen/sp_xl">
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/pill_soft"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:paddingStart="@dimen/sp_m"
-                    android:paddingTop="6dp"
-                    android:paddingEnd="@dimen/sp_m"
-                    android:paddingBottom="6dp">
-
-                    <View
-                        android:id="@+id/statusDot"
-                        android:layout_width="10dp"
-                        android:layout_height="10dp"
-                        android:background="@drawable/dot"
-                        android:backgroundTint="?attr/colorOnSurfaceVariant" />
-
-                    <TextView
-                        android:id="@+id/tvStatus"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="@dimen/sp_s"
-                        android:text="@string/status_off"
-                        android:textAppearance="@style/TextAppearance.Gozar.LabelLarge"
-                        android:textColor="?attr/colorOnSurfaceVariant" />
-                </LinearLayout>
-
-                <com.gozarwg.ConnectView
-                    android:id="@+id/connectButton"
-                    android:layout_width="@dimen/connect_button"
-                    android:layout_height="@dimen/connect_button"
-                    android:layout_marginTop="@dimen/sp_l"
-                    android:contentDescription="@string/connect" />
-
-                <TextView
-                    android:id="@+id/tvTimer"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/sp_xl"
-                    android:text="00:00:00"
-                    android:textAppearance="@style/TextAppearance.Gozar.DisplaySmall"
-                    android:textColor="?attr/colorOnSurface"
-                    android:textDirection="ltr" />
-
-                <TextView
-                    android:id="@+id/tvAction"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/sp_xs"
-                    android:text="@string/tap_connect"
-                    android:textAppearance="@style/TextAppearance.Gozar.BodyMedium"
-                    android:textColor="?attr/colorOnSurfaceVariant" />
-
-                <LinearLayout
-                    android:id="@+id/ipRow"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/sp_l"
-                    android:background="@drawable/pill_outline"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:paddingStart="@dimen/sp_m"
-                    android:paddingTop="@dimen/sp_s"
-                    android:paddingEnd="@dimen/sp_m"
-                    android:paddingBottom="@dimen/sp_s"
-                    android:visibility="gone">
-
-                    <ImageView
-                        android:id="@+id/ivFlag"
-                        android:layout_width="22dp"
-                        android:layout_height="16dp"
-                        android:adjustViewBounds="true"
-                        android:contentDescription="@string/location"
-                        android:scaleType="fitCenter"
-                        android:src="@drawable/flag_ir"
-                        android:visibility="gone" />
-
-                    <TextView
-                        android:id="@+id/tvLocation"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="@dimen/sp_s"
-                        android:maxLines="1"
-                        android:ellipsize="end"
-                        android:textAppearance="@style/TextAppearance.Gozar.LabelLarge"
-                        android:textColor="?attr/colorOnSurfaceVariant" />
-
-                    <TextView
-                        android:id="@+id/tvIp"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="@dimen/sp_m"
-                        android:layout_weight="1"
-                        android:gravity="end"
-                        android:maxLines="1"
-                        android:singleLine="true"
-                        android:textAppearance="@style/TextAppearance.Gozar.LabelLarge"
-                        android:textColor="?attr/colorPrimary"
-                        android:textDirection="ltr"
-                        app:autoSizeMaxTextSize="14sp"
-                        app:autoSizeMinTextSize="9sp"
-                        app:autoSizeStepGranularity="1sp"
-                        app:autoSizeTextType="uniform" />
-                </LinearLayout>
-            </LinearLayout>
-        </FrameLayout>
-
-        <LinearLayout
-            android:id="@+id/statsRow"
+        <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/sp_l"
-            android:orientation="horizontal"
-            android:visibility="gone">
+            android:layout_height="64dp"
+            android:layout_marginTop="@dimen/sp_xl">
 
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:gravity="center_horizontal"
-                android:orientation="vertical">
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/connectButton"
+                style="@style/Widget.Gozar.ConnectButton"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:contentDescription="@string/connect"
+                android:text="@string/connect"
+                app:icon="@drawable/ic_power"
+                app:iconGravity="textStart"
+                app:iconTint="@color/m3_on_primary" />
 
-                <ImageView
-                    android:layout_width="@dimen/tile_big_size"
-                    android:layout_height="@dimen/tile_big_size"
-                    android:background="@drawable/frame_clover"
-                    android:backgroundTint="@color/tile_container"
-                    android:contentDescription="@string/download"
-                    android:padding="14dp"
-                    android:src="@drawable/ic_down"
-                    app:tint="@color/tile_on_container" />
-
-                <TextView
-                    android:id="@+id/tvDown"
-                    style="@style/Gozar.Stat.Value"
-                    android:layout_marginTop="@dimen/sp_s"
-                    android:text="0 B/s"
-                    android:textAppearance="@style/TextAppearance.Gozar.TitleMedium" />
-
-                <TextView
-                    style="@style/Gozar.Stat.Label"
-                    android:text="@string/download" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:gravity="center_horizontal"
-                android:orientation="vertical">
-
-                <ImageView
-                    android:layout_width="@dimen/tile_big_size"
-                    android:layout_height="@dimen/tile_big_size"
-                    android:background="@drawable/frame_burst"
-                    android:backgroundTint="@color/tile_container"
-                    android:contentDescription="@string/upload"
-                    android:padding="14dp"
-                    android:src="@drawable/ic_up"
-                    app:tint="@color/tile_on_container" />
-
-                <TextView
-                    android:id="@+id/tvUp"
-                    style="@style/Gozar.Stat.Value"
-                    android:layout_marginTop="@dimen/sp_s"
-                    android:text="0 B/s"
-                    android:textAppearance="@style/TextAppearance.Gozar.TitleMedium" />
-
-                <TextView
-                    style="@style/Gozar.Stat.Label"
-                    android:text="@string/upload" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:gravity="center_horizontal"
-                android:orientation="vertical">
-
-                <ImageView
-                    android:layout_width="@dimen/tile_big_size"
-                    android:layout_height="@dimen/tile_big_size"
-                    android:background="@drawable/frame_puff"
-                    android:backgroundTint="@color/tile_container"
-                    android:contentDescription="@string/total"
-                    android:padding="14dp"
-                    android:src="@drawable/ic_data"
-                    app:tint="@color/tile_on_container" />
-
-                <TextView
-                    android:id="@+id/tvTotal"
-                    style="@style/Gozar.Stat.Value"
-                    android:layout_marginTop="@dimen/sp_s"
-                    android:text="0 B"
-                    android:textAppearance="@style/TextAppearance.Gozar.TitleMedium" />
-
-                <TextView
-                    style="@style/Gozar.Stat.Label"
-                    android:text="@string/total" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:gravity="center_horizontal"
-                android:orientation="vertical">
-
-                <ImageView
-                    android:layout_width="@dimen/tile_big_size"
-                    android:layout_height="@dimen/tile_big_size"
-                    android:background="@drawable/frame_flower"
-                    android:backgroundTint="@color/tile_container"
-                    android:contentDescription="@string/handshake"
-                    android:padding="14dp"
-                    android:src="@drawable/ic_sync"
-                    app:tint="@color/tile_on_container" />
-
-                <TextView
-                    android:id="@+id/tvHandshake"
-                    style="@style/Gozar.Stat.Value"
-                    android:layout_marginTop="@dimen/sp_s"
-                    android:text="@string/now"
-                    android:textAppearance="@style/TextAppearance.Gozar.TitleMedium" />
-
-                <TextView
-                    style="@style/Gozar.Stat.Label"
-                    android:text="@string/hs_short" />
-            </LinearLayout>
-        </LinearLayout>
-
-        <TextView
-            style="@style/Gozar.Section"
-            android:text="@string/profile_section" />
+            <com.google.android.material.loadingindicator.LoadingIndicator
+                android:id="@+id/connectionLoading"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_gravity="center_vertical|start"
+                android:layout_marginStart="22dp"
+                android:clickable="false"
+                android:contentDescription="@string/status_connecting"
+                android:visibility="invisible"
+                app:indicatorColor="@color/m3_on_primary"
+                app:indicatorSize="32dp" />
+        </FrameLayout>
 
         <LinearLayout
             android:id="@+id/profileCard"
             style="@style/Gozar.Row"
-            android:layout_marginTop="0dp">
+            android:layout_marginTop="@dimen/sp_m">
 
             <ImageView
                 android:id="@+id/profileTile"
                 style="@style/Gozar.Tile"
-                android:layout_width="@dimen/tile_size"
-                android:layout_height="@dimen/tile_size"
                 android:background="@drawable/frame_squircle"
-                android:backgroundTint="@color/tile_container"
+                android:backgroundTint="?attr/colorSecondaryContainer"
+                android:contentDescription="@string/select_profile"
                 android:src="@drawable/ic_dns"
-                app:tint="@color/tile_on_container" />
+                app:tint="?attr/colorOnSecondaryContainer" />
 
             <LinearLayout style="@style/Gozar.Row.Text">
 
@@ -346,58 +131,6 @@
             <ImageView
                 style="@style/Gozar.Row.Chevron"
                 android:contentDescription="@string/select_profile" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/rowPerApp"
-            style="@style/Gozar.Row">
-
-            <ImageView
-                style="@style/Gozar.Tile"
-                android:background="@drawable/frame_hex"
-                android:backgroundTint="@color/tile_container"
-                android:contentDescription="@string/split"
-                android:src="@drawable/ic_apps"
-                app:tint="@color/tile_on_container" />
-
-            <LinearLayout style="@style/Gozar.Row.Text">
-
-                <TextView
-                    style="@style/Gozar.Row.Title"
-                    android:text="@string/split" />
-
-                <TextView
-                    android:id="@+id/tvPerAppValue"
-                    style="@style/Gozar.Row.Subtitle"
-                    android:maxLines="1" />
-            </LinearLayout>
-
-            <ImageView
-                style="@style/Gozar.Row.Chevron" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/btnAddProfile"
-            style="@style/Gozar.Row"
-            android:layout_marginTop="@dimen/sp_l"
-            android:background="@drawable/pill_outline">
-
-            <ImageView
-                style="@style/Gozar.Tile"
-                android:layout_width="@dimen/tile_size"
-                android:layout_height="@dimen/tile_size"
-                android:background="@drawable/frame_clover"
-                android:backgroundTint="@color/tile_container"
-                android:contentDescription="@string/add_profile"
-                android:padding="9dp"
-                android:src="@drawable/ic_plus"
-                app:tint="@color/tile_on_container" />
-
-            <TextView
-                style="@style/Gozar.Row.Title"
-                android:layout_marginStart="@dimen/sp_l"
-                android:text="@string/add_profile"
-                android:textColor="?attr/colorPrimary" />
         </LinearLayout>
 
     </LinearLayout>

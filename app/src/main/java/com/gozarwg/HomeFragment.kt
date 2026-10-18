@@ -7,7 +7,6 @@ import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
-import android.view.animation.DecelerateInterpolator
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -22,13 +21,14 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
-import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.loadingindicator.LoadingIndicator
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import kotlin.concurrent.thread
@@ -38,14 +38,13 @@ class HomeFragment : Fragment() {
     private val handler = Handler(Looper.getMainLooper())
     private var pendingProfile: Profile? = null
     private var pendingExport: Profile? = null
-    @Volatile private var fetchingIp = false
-    private var sheet: View? = null
 
     private val vpnPerm = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         val profile = pendingProfile
         pendingProfile = null
         if (result.resultCode == Activity.RESULT_OK && profile != null) {
             Vpn.connect(requireContext().applicationContext, profile)
+            paintStatus()
         } else if (result.resultCode != Activity.RESULT_OK) {
             toast(R.string.vpn_perm)
         }
@@ -121,29 +120,12 @@ class HomeFragment : Fragment() {
 
     private val ticker = object : Runnable {
         override fun run() {
-            if (!isVisible) {
-                handler.postDelayed(this, 1000)
-                return
-            }
-            if (Vpn.up) {
-                put(R.id.tvTimer, fmtTime((System.currentTimeMillis() - Vpn.since) / 1000))
-                if (Vpn.handshakeOk) {
-                    paintStats()
-                    fetchIp()
-                }
-            } else {
-                put(R.id.tvTimer, fmtTime(0))
-            }
-            paintStatus()
+            if (isVisible) paintStatus()
             handler.postDelayed(this, 1000)
         }
     }
 
     private fun <T : View> find(id: Int): T = view!!.findViewById(id)
-
-    private fun put(id: Int, text: String) {
-        find<TextView>(id).text = text
-    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         return inflater.inflate(R.layout.activity_main, container, false)
@@ -153,8 +135,6 @@ class HomeFragment : Fragment() {
         find<View>(R.id.connectButton).setOnClickListener { toggle() }
         find<View>(R.id.btnSettingsTop).setOnClickListener { (activity as? MainActivity)?.showSettings() }
         find<View>(R.id.profileCard).setOnClickListener { showProfiles() }
-        find<View>(R.id.rowPerApp).setOnClickListener { startActivity(Intent(requireContext(), AppsActivity::class.java)) }
-        find<View>(R.id.btnAddProfile).setOnClickListener { showAdd() }
         paintStatus()
         paintProfiles()
     }
@@ -187,7 +167,6 @@ class HomeFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         paintProfiles()
-        paintPerApp()
     }
 
     private fun toast(message: String) {
@@ -211,132 +190,50 @@ class HomeFragment : Fragment() {
     private fun paintStatus() {
         if (!isAdded || view == null) return
         val state = state()
-        val dot = find<View>(R.id.statusDot)
-        val connect = find<ConnectView>(R.id.connectButton)
-        connect.state = when (state) {
-            2 -> ConnectView.ON
-            1, 4 -> ConnectView.BUSY
-            3 -> ConnectView.ERROR
-            else -> ConnectView.OFF
+        val button = find<MaterialButton>(R.id.connectButton)
+        val loading = find<LoadingIndicator>(R.id.connectionLoading)
+        val label = when (state) {
+            2 -> R.string.disconnect
+            1 -> if (Vpn.attempt > 1) R.string.reconnecting else R.string.status_connecting
+            4 -> R.string.status_disconnecting
+            else -> R.string.connect
         }
         val tone = when (state) {
             2 -> R.color.m3_ok
-            1 -> R.color.m3_primary
             3 -> R.color.m3_error
-            else -> R.color.m3_on_surface_variant
+            else -> R.color.m3_primary
         }
-        dot.backgroundTintList = ColorStateList.valueOf(color(tone))
-        paint(R.id.tvStatus, tone, when (state) {
+        val onTone = when (state) {
+            2 -> R.color.m3_on_ok
+            3 -> R.color.m3_on_error
+            else -> R.color.m3_on_primary
+        }
+        button.setText(label)
+        button.contentDescription = getString(label)
+        button.backgroundTintList = ColorStateList.valueOf(color(tone))
+        button.setTextColor(color(onTone))
+        button.iconTint = ColorStateList.valueOf(color(onTone))
+        if (state == 1 || state == 4) {
+            button.icon = null
+            loading.show()
+        } else {
+            loading.hide()
+            button.setIconResource(if (state == 2) R.drawable.ic_power_off else R.drawable.ic_power)
+        }
+        val map = find<ImageView>(R.id.heroMap)
+        map.imageTintList = ColorStateList.valueOf(color(when (state) {
+            2 -> R.color.m3_ok
+            1, 4 -> R.color.m3_primary
+            3 -> R.color.m3_error
+            else -> R.color.m3_primary
+        }))
+        map.contentDescription = getString(when (state) {
             2 -> R.string.status_on
-            1 -> if (Vpn.attempt > 1) R.string.reconnecting else R.string.status_connecting
+            1 -> R.string.status_connecting
             4 -> R.string.status_disconnecting
             3 -> R.string.status_failed
-            else -> if (BlockService.running) R.string.lockdown_on else R.string.status_off
+            else -> R.string.status_off
         })
-        paint(
-            R.id.tvAction,
-            R.color.m3_on_surface_variant,
-            when (state) {
-                2 -> R.string.tap_disconnect
-                1 -> R.string.tap_cancel
-                4 -> R.string.status_disconnecting
-                else -> R.string.tap_connect
-            }
-        )
-        val map = find<ImageView>(R.id.heroMap)
-        map.imageTintList = ColorStateList.valueOf(
-            color(
-                when (state) {
-                    2 -> R.color.m3_ok
-                    1, 4 -> R.color.m3_warn
-                    3 -> R.color.m3_error
-                    else -> R.color.m3_primary
-                }
-            )
-        )
-        val stats = find<View>(R.id.statsRow)
-        if (state == 2) {
-            if (stats.visibility != View.VISIBLE) reveal(stats)
-            reveal(find<View>(R.id.ipRow), state == 2 && Vpn.ipInfo != null)
-            paintStats()
-        } else {
-            stats.visibility = View.GONE
-            find<View>(R.id.ipRow).visibility = View.GONE
-        }
-        paintPerApp()
-    }
-
-    private fun dp(value: Float): Int = (value * resources.displayMetrics.density).toInt()
-
-    private fun reveal(target: View, shown: Boolean = true) {
-        if (target.visibility == View.VISIBLE) return
-        if (!shown) {
-            target.visibility = View.GONE
-            return
-        }
-        target.alpha = 0f
-        target.translationY = dp(8f).toFloat()
-        target.visibility = View.VISIBLE
-        target.animate().alpha(1f).translationY(0f).setDuration(220L).setInterpolator(DecelerateInterpolator()).start()
-    }
-
-    private fun paint(id: Int, colorRes: Int, textRes: Int) {
-        val text = find<TextView>(id)
-        text.setText(textRes)
-        text.setTextColor(color(colorRes))
-    }
-
-    private fun paintStats() {
-        if (!isAdded || view == null) return
-        put(R.id.tvDown, fmtSpeed(Vpn.downSpeed))
-        put(R.id.tvUp, fmtSpeed(Vpn.upSpeed))
-        put(R.id.tvTotal, fmtBytes(Vpn.totalRx + Vpn.totalTx))
-        val age = Vpn.handshakeAgeSec()
-        put(R.id.tvHandshake, when {
-            age < 0 -> getString(R.string.now)
-            age < 60 -> if (age <= 1) getString(R.string.now) else String.format(getString(R.string.sec_ago), age)
-            else -> String.format(getString(R.string.min_ago), age / 60)
-        })
-        val info = Vpn.ipInfo ?: return
-        val place = listOf(info.city, info.country).filter { it.isNotBlank() }.joinToString(", ")
-        val ir = info.code.equals("IR", true)
-        val flag = if (ir) "" else Ip.flag(info.code)
-        put(R.id.tvLocation, if (flag.isBlank()) place else "$flag $place")
-        put(R.id.tvIp, info.ip)
-        val mark = find<ImageView>(R.id.ivFlag)
-        mark.visibility = if (ir) View.VISIBLE else View.GONE
-        (find<TextView>(R.id.tvLocation).layoutParams as LinearLayout.LayoutParams).marginStart =
-            if (ir || flag.isNotBlank()) dp(8f) else 0
-    }
-
-    private fun fetchIp() {
-        if (fetchingIp || Vpn.ipInfo != null) return
-        fetchingIp = true
-        thread {
-            val info = Ip.fetch()
-            activity?.runOnUiThread {
-                fetchingIp = false
-                if (view == null) return@runOnUiThread
-                if (info != null && Vpn.up) {
-                    Vpn.ipInfo = info
-                    Vpn.ipSession = System.currentTimeMillis()
-                    paintStats()
-                    reveal(find<View>(R.id.ipRow))
-                }
-            }
-        }
-    }
-
-    private fun paintPerApp() {
-        if (!isAdded || view == null) return
-        val mode = Store.splitMode(requireContext())
-        val count = Store.splitApps(requireContext()).size
-        val modeName = when (mode) {
-            1 -> getString(R.string.split_exclude)
-            2 -> getString(R.string.split_include)
-            else -> getString(R.string.split_off)
-        }
-        put(R.id.tvPerAppValue, String.format(getString(R.string.split_value), modeName, count))
     }
 
     private fun paintProfiles() {
@@ -383,6 +280,7 @@ class HomeFragment : Fragment() {
             vpnPerm.launch(intent)
         } else {
             Vpn.connect(requireContext().applicationContext, profile)
+            paintStatus()
         }
     }
 
