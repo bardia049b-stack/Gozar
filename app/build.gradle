@@ -24,8 +24,8 @@ android {
             enable true
             reset()
             include 'arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64'
-            // Per-ABI APKs avoid a single download that carries four native architectures.
-            universalApk false
+            // Keep smaller APKs for each ABI and also provide one convenience installer.
+            universalApk true
         }
     }
 
