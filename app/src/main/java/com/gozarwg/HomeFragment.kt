@@ -27,7 +27,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.loadingindicator.LoadingIndicator
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import kotlin.concurrent.thread
@@ -190,7 +189,7 @@ class HomeFragment : Fragment() {
     private fun paintStatus() {
         if (!isAdded || view == null) return
         val state = state()
-        val loading = find<LoadingIndicator>(R.id.connectButton)
+        val control = find<ConnectControl>(R.id.connectButton)
         val status = when (state) {
             2 -> R.string.status_on
             1 -> if (Vpn.attempt > 1) R.string.reconnecting else R.string.status_connecting
@@ -199,15 +198,11 @@ class HomeFragment : Fragment() {
             else -> R.string.status_off
         }
         val action = if (state == 2) R.string.disconnect else R.string.connect
-        val indicatorTone = when (state) {
-            2 -> R.color.m3_on_ok_container
-            3 -> R.color.m3_on_error_container
-            else -> R.color.m3_on_primary_container
-        }
-        val containerTone = when (state) {
-            2 -> R.color.m3_ok_container
-            3 -> R.color.m3_error_container
-            else -> R.color.m3_primary_container
+        control.state = when (state) {
+            2 -> ConnectControl.ON
+            1, 4 -> ConnectControl.BUSY
+            3 -> ConnectControl.ERROR
+            else -> ConnectControl.OFF
         }
         val statusTone = when (state) {
             2 -> R.color.m3_ok
@@ -215,9 +210,7 @@ class HomeFragment : Fragment() {
             3 -> R.color.m3_error
             else -> R.color.m3_on_surface
         }
-        loading.setIndicatorColor(color(indicatorTone))
-        loading.setContainerColor(color(containerTone))
-        loading.contentDescription = getString(action)
+        control.contentDescription = getString(action)
         find<TextView>(R.id.tvStatus).apply {
             setText(status)
             setTextColor(color(statusTone))
@@ -225,6 +218,13 @@ class HomeFragment : Fragment() {
         if (state == 2) {
             find<TextView>(R.id.tvDown).text = fmtSpeed(Vpn.downSpeed)
             find<TextView>(R.id.tvUp).text = fmtSpeed(Vpn.upSpeed)
+            find<TextView>(R.id.tvTotal).text = fmtBytes(Vpn.totalRx + Vpn.totalTx)
+            val age = Vpn.handshakeAgeSec()
+            find<TextView>(R.id.tvHandshake).text = when {
+                age < 0 -> getString(R.string.now)
+                age < 60 -> if (age <= 1) getString(R.string.now) else String.format(getString(R.string.sec_ago), age)
+                else -> String.format(getString(R.string.min_ago), age / 60)
+            }
             reveal(find<View>(R.id.statsRow))
             if (Vpn.ipInfo == null) fetchIp() else paintIp()
         } else {

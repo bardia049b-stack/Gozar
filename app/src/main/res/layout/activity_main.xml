@@ -48,21 +48,13 @@
                 app:tint="?attr/colorOnSurfaceVariant" />
         </LinearLayout>
 
-        <com.google.android.material.loadingindicator.LoadingIndicator
+        <com.gozarwg.ConnectControl
             android:id="@+id/connectButton"
-            style="@style/Widget.Material3.LoadingIndicator.Contained"
-            android:layout_width="112dp"
-            android:layout_height="112dp"
-            android:layout_marginTop="36dp"
-            android:clickable="true"
-            android:contentDescription="@string/connect"
-            android:focusable="true"
-            android:foreground="?attr/selectableItemBackgroundBorderless"
-            app:containerColor="@color/m3_primary_container"
-            app:containerHeight="112dp"
-            app:containerWidth="112dp"
-            app:indicatorColor="@color/m3_on_primary_container"
-            app:indicatorSize="72dp" />
+            android:layout_width="132dp"
+            android:layout_height="132dp"
+            android:layout_marginTop="28dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/connect" />
 
         <TextView
             android:id="@+id/tvStatus"
@@ -127,114 +119,160 @@
             android:orientation="horizontal"
             android:visibility="gone">
 
-            <com.google.android.material.card.MaterialCardView
+            <LinearLayout
                 android:layout_width="0dp"
-                android:layout_height="88dp"
+                android:layout_height="wrap_content"
                 android:layout_weight="1"
-                app:cardBackgroundColor="?attr/colorSurfaceContainerLow"
-                app:cardCornerRadius="24dp"
-                app:cardElevation="0dp"
-                app:strokeColor="?attr/colorOutlineVariant"
-                app:strokeWidth="1dp">
+                android:gravity="center_horizontal"
+                android:orientation="vertical">
 
-                <LinearLayout
+                <ImageView
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
+                    android:background="@drawable/frame_clover"
+                    android:backgroundTint="@color/tile_container"
+                    android:contentDescription="@string/download"
+                    android:padding="13dp"
+                    android:src="@drawable/ic_down"
+                    app:tint="@color/tile_on_container" />
+
+                <TextView
+                    android:id="@+id/tvDown"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:paddingStart="@dimen/sp_m"
-                    android:paddingEnd="@dimen/sp_m">
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/sp_s"
+                    android:gravity="center"
+                    android:maxLines="1"
+                    android:text="0 B/s"
+                    android:textAppearance="@style/TextAppearance.Gozar.TitleSmall"
+                    android:textColor="?attr/colorOnSurface"
+                    android:textDirection="ltr" />
 
-                    <ImageView
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        android:background="@drawable/tile"
-                        android:contentDescription="@string/download"
-                        android:padding="10dp"
-                        android:src="@drawable/ic_down"
-                        app:tint="?attr/colorOnSecondaryContainer" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:maxLines="1"
+                    android:text="@string/download"
+                    android:textAppearance="@style/TextAppearance.Gozar.LabelSmall"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
+            </LinearLayout>
 
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="@dimen/sp_s"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:id="@+id/tvDown"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:maxLines="1"
-                            android:text="0 B/s"
-                            android:textAppearance="@style/TextAppearance.Gozar.TitleSmall"
-                            android:textColor="?attr/colorOnSurface"
-                            android:textDirection="ltr" />
-
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:text="@string/download"
-                            android:textAppearance="@style/TextAppearance.Gozar.LabelSmall"
-                            android:textColor="?attr/colorOnSurfaceVariant" />
-                    </LinearLayout>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <com.google.android.material.card.MaterialCardView
+            <LinearLayout
                 android:layout_width="0dp"
-                android:layout_height="88dp"
-                android:layout_marginStart="@dimen/sp_m"
+                android:layout_height="wrap_content"
                 android:layout_weight="1"
-                app:cardBackgroundColor="?attr/colorSurfaceContainerLow"
-                app:cardCornerRadius="24dp"
-                app:cardElevation="0dp"
-                app:strokeColor="?attr/colorOutlineVariant"
-                app:strokeWidth="1dp">
+                android:gravity="center_horizontal"
+                android:orientation="vertical">
 
-                <LinearLayout
+                <ImageView
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
+                    android:background="@drawable/frame_burst"
+                    android:backgroundTint="@color/tile_container"
+                    android:contentDescription="@string/upload"
+                    android:padding="13dp"
+                    android:src="@drawable/ic_up"
+                    app:tint="@color/tile_on_container" />
+
+                <TextView
+                    android:id="@+id/tvUp"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:paddingStart="@dimen/sp_m"
-                    android:paddingEnd="@dimen/sp_m">
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/sp_s"
+                    android:gravity="center"
+                    android:maxLines="1"
+                    android:text="0 B/s"
+                    android:textAppearance="@style/TextAppearance.Gozar.TitleSmall"
+                    android:textColor="?attr/colorOnSurface"
+                    android:textDirection="ltr" />
 
-                    <ImageView
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        android:background="@drawable/tile"
-                        android:contentDescription="@string/upload"
-                        android:padding="10dp"
-                        android:src="@drawable/ic_up"
-                        app:tint="?attr/colorOnSecondaryContainer" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:maxLines="1"
+                    android:text="@string/upload"
+                    android:textAppearance="@style/TextAppearance.Gozar.LabelSmall"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
+            </LinearLayout>
 
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="@dimen/sp_s"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center_horizontal"
+                android:orientation="vertical">
 
-                        <TextView
-                            android:id="@+id/tvUp"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:maxLines="1"
-                            android:text="0 B/s"
-                            android:textAppearance="@style/TextAppearance.Gozar.TitleSmall"
-                            android:textColor="?attr/colorOnSurface"
-                            android:textDirection="ltr" />
+                <ImageView
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
+                    android:background="@drawable/frame_puff"
+                    android:backgroundTint="@color/tile_container"
+                    android:contentDescription="@string/total"
+                    android:padding="13dp"
+                    android:src="@drawable/ic_data"
+                    app:tint="@color/tile_on_container" />
 
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:text="@string/upload"
-                            android:textAppearance="@style/TextAppearance.Gozar.LabelSmall"
-                            android:textColor="?attr/colorOnSurfaceVariant" />
-                    </LinearLayout>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+                <TextView
+                    android:id="@+id/tvTotal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/sp_s"
+                    android:gravity="center"
+                    android:maxLines="1"
+                    android:text="0 B"
+                    android:textAppearance="@style/TextAppearance.Gozar.TitleSmall"
+                    android:textColor="?attr/colorOnSurface"
+                    android:textDirection="ltr" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:maxLines="1"
+                    android:text="@string/total"
+                    android:textAppearance="@style/TextAppearance.Gozar.LabelSmall"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center_horizontal"
+                android:orientation="vertical">
+
+                <ImageView
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
+                    android:background="@drawable/frame_flower"
+                    android:backgroundTint="@color/tile_container"
+                    android:contentDescription="@string/handshake"
+                    android:padding="13dp"
+                    android:src="@drawable/ic_sync"
+                    app:tint="@color/tile_on_container" />
+
+                <TextView
+                    android:id="@+id/tvHandshake"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/sp_s"
+                    android:gravity="center"
+                    android:maxLines="1"
+                    android:text="@string/now"
+                    android:textAppearance="@style/TextAppearance.Gozar.TitleSmall"
+                    android:textColor="?attr/colorOnSurface" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:maxLines="2"
+                    android:text="@string/hs_short"
+                    android:textAppearance="@style/TextAppearance.Gozar.LabelSmall"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
+            </LinearLayout>
         </LinearLayout>
 
         <LinearLayout
