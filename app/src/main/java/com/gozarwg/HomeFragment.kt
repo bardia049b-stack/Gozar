@@ -321,7 +321,7 @@ class HomeFragment : Fragment() {
         if (fetchingOrigin || Vpn.originInfo != null || Vpn.up || Vpn.connecting) return
         fetchingOrigin = true
         thread {
-            val info = Ip.fetch()
+            val info = Ip.fetchOrigin(requireContext().applicationContext)
             activity?.runOnUiThread {
                 fetchingOrigin = false
                 if (info != null && !Vpn.up && !Vpn.connecting) Vpn.originInfo = info
@@ -439,13 +439,18 @@ class HomeFragment : Fragment() {
                 dialog.dismiss()
                 paintProfiles()
                 if (Vpn.up || Vpn.connecting) {
-                    Vpn.disconnect()
-                    handler.postDelayed({
-                        Vpn.connect(requireContext().applicationContext, picked)
-                    }, 900)
+                    // Do not race a new origin lookup against the old tunnel. The callback runs
+                    // only after the old VPN service and routing state are fully released.
+                    val appContext = requireContext().applicationContext
+                    Vpn.disconnect { Vpn.connect(appContext, picked) }
                 }
             },
-            onMenu = { item, _ -> profileMenu(item) }
+            onMenu = { item, _ ->
+                // Do not leave the RecyclerView presenting a stale deleted row beneath the
+                // action sheet; the picker is reopened from Home with fresh storage data.
+                dialog.dismiss()
+                profileMenu(item)
+            }
         )
         val rv = content.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.rvProfiles)
         rv.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(requireContext())
@@ -551,8 +556,11 @@ class HomeFragment : Fragment() {
             .setNegativeButton(R.string.cancel, null)
             .setPositiveButton(R.string.menu_delete) { _, _ ->
                 if (Vpn.profile?.id == profile.id) Vpn.disconnect()
-                Profiles.delete(requireContext(), profile.id)
-                paintProfiles()
+                if (Profiles.delete(requireContext(), profile.id)) {
+                    paintProfiles()
+                } else {
+                    toast(R.string.delete_failed)
+                }
             }
             .show()
     }

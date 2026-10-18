@@ -27,6 +27,7 @@
     <string name="menu_share">اشتراک‌گذاری</string>
     <string name="menu_export">خروجی ‎.conf</string>
     <string name="menu_delete">حذف</string>
+    <string name="delete_failed">حذف کانفیگ انجام نشد</string>
     <string name="del_title">حذف کانفیگ</string>
     <string name="del_msg">«%s» حذف شود؟</string>
     <string name="yes">بله</string>
@@ -184,7 +185,7 @@
     <string name="ed_delete">حذف</string>
     <string name="hs_short">دست‌داد</string>
     <string name="version_license">نسخه %s · AGPL-3.0</string>
-    <string name="legal_title">مجوز و کد منبع</string>
+    <string name="legal_title">GozarWG</string>
     <string name="source_code">کد منبع</string>
     <string name="route_map">مسیر تونل</string>
     <string name="open_live_map">باز کردن نقشهٔ مسیر</string>
@@ -201,9 +202,6 @@
     <string name="map_session_checking">در حال بررسی تأخیر تونل…</string>
     <string name="map_session_ping">پینگ تونل · %d میلی‌ثانیه</string>
     <string name="map_not_connected">تونل دیگر متصل نیست</string>
-    <string name="legal_notice">GozarWG نرم‌افزار آزاد تحت مجوز GNU Affero General Public License نسخه ۳ یا جدیدتر است.
-
-این نسخه شامل کنترل صفحهٔ خانه، شاخص‌های متحرک اتصال و بوم آفلاین مسیر جهانِ سازگارشده از ZedSecure، حق‌نشر © ۲۰۲۶ CluvexStudio، تحت AGPL-3.0-or-later است. بوم مسیر با دادهٔ هندسی داخلی عرضه می‌شود و هیچ کاشی نقشهٔ آنلاین بارگیری نمی‌کند. نشان‌های گرد کشور از flag-icons تحت مجوز MIT گرفته شده‌اند.
-
-کد منبع متناظر کامل، متن مجوز و اطلاعیه‌ها در مخزن GozarWG در دسترس هستند.</string>
+    <string name="legal_notice">GozarWG
+AGPL-3.0-or-later</string>
 </resources>

@@ -134,7 +134,7 @@ object Vpn {
                 if (session != sess || userStop) return@thread
                 // This request is deliberately made before setState(UP), after teardown, so it
                 // cannot inherit a stale location or the exit of the configuration just replaced.
-                val directOrigin = Ip.fetch()
+                val directOrigin = Ip.fetchOrigin(ctx)
                 if (session != sess || userStop) return@thread
                 originInfo = directOrigin
                 notifyChange()
@@ -170,7 +170,11 @@ object Vpn {
         connect(ctx, p)
     }
 
-    fun disconnect() {
+    /**
+     * Stops the current tunnel. [after] runs only after its backend and VPN service are released,
+     * which makes configuration switches deterministic rather than relying on a timing delay.
+     */
+    fun disconnect(after: (() -> Unit)? = null) {
         val ctx = appCtx
         session++
         teardown = CountDownLatch(1)
@@ -200,6 +204,7 @@ object Vpn {
             ctx?.let { TunnelService.release(it) }
             teardown.countDown()
             notifyChange()
+            if (after != null) main.post { after.invoke() }
             return
         }
         connecting = true
@@ -217,6 +222,7 @@ object Vpn {
             ctx?.let { TunnelService.release(it) }
             teardown.countDown()
             notifyChange()
+            if (after != null) main.post { after.invoke() }
         }
     }
 

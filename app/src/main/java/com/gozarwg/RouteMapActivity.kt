@@ -95,7 +95,12 @@ class RouteMapActivity : BaseActivity() {
         val exit = Vpn.ipInfo
         if (Vpn.up && exit == null) fetchExit()
 
-        routeMap.setEndpoints(origin?.code, exit?.code)
+        val routeToken = listOf(
+            Vpn.profile?.id.orEmpty(), Vpn.since.toString(),
+            origin?.ip.orEmpty(), origin?.code.orEmpty(),
+            exit?.ip.orEmpty(), exit?.code.orEmpty()
+        ).joinToString("|")
+        routeMap.setEndpoints(origin?.code, exit?.code, routeToken)
         routeMap.setTraffic(if (Vpn.up) Vpn.downSpeed else 0.0, if (Vpn.up) Vpn.upSpeed else 0.0)
         originFlag.countryCode = origin?.code
         originFlag.ringColor = ContextCompat.getColor(this, R.color.map_origin)

@@ -63,6 +63,7 @@ class WorldRouteView @JvmOverloads constructor(
     private var exit: Point? = null
     private var originCode = ""
     private var exitCode = ""
+    private var routeToken = ""
     private var downloadBps = 0.0
     private var uploadBps = 0.0
     private var routeStartedAt = SystemClock.uptimeMillis()
@@ -116,13 +117,19 @@ class WorldRouteView @JvmOverloads constructor(
         buildGrid()
     }
 
-    /** Sets the two ISO country anchors and returns the camera to the route framing. */
-    fun setEndpoints(originCountry: String?, exitCountry: String?) {
+    /**
+     * Sets the country anchors and resets framing whenever either endpoint or the underlying
+     * connection token changes. A profile switch can retain the same country codes, so codes
+     * alone are not sufficient to decide whether a user-panned map is a new route.
+     */
+    fun setEndpoints(originCountry: String?, exitCountry: String?, connectionToken: String = "") {
         val nextOrigin = pointFor(originCountry)
         val nextExit = pointFor(exitCountry)
-        val changed = nextOrigin?.code != origin?.code || nextExit?.code != exit?.code
+        val changed = nextOrigin?.code != origin?.code || nextExit?.code != exit?.code ||
+            connectionToken != routeToken
         originCode = originCountry.orEmpty().trim().uppercase()
         exitCode = exitCountry.orEmpty().trim().uppercase()
+        routeToken = connectionToken
         origin = nextOrigin
         exit = nextExit
         if (changed) {

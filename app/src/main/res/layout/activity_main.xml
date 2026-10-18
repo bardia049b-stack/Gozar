@@ -231,7 +231,7 @@
                 <ImageView
                     android:layout_width="60dp"
                     android:layout_height="60dp"
-                    android:background="@drawable/frame_burst"
+                    android:background="@drawable/frame_puff"
                     android:backgroundTint="@color/tile_container"
                     android:contentDescription="@string/download"
                     android:padding="16dp"
@@ -272,12 +272,12 @@
                 <ImageView
                     android:layout_width="60dp"
                     android:layout_height="60dp"
-                    android:background="@drawable/frame_burst"
-                    android:backgroundTint="@color/tile_container"
+                    android:background="@drawable/frame_gem"
+                    android:backgroundTint="@color/m3_primary"
                     android:contentDescription="@string/upload"
                     android:padding="16dp"
                     android:src="@drawable/ic_up"
-                    app:tint="@color/tile_on_container" />
+                    app:tint="@color/m3_on_primary" />
 
                 <com.gozarwg.RollingValueView
                     android:id="@+id/tvUp"
@@ -313,12 +313,12 @@
                 <ImageView
                     android:layout_width="60dp"
                     android:layout_height="60dp"
-                    android:background="@drawable/frame_burst"
-                    android:backgroundTint="@color/tile_container"
+                    android:background="@drawable/frame_hex"
+                    android:backgroundTint="@color/m3_tertiary_container"
                     android:contentDescription="@string/total"
                     android:padding="16dp"
                     android:src="@drawable/ic_data"
-                    app:tint="@color/tile_on_container" />
+                    app:tint="@color/m3_on_tertiary_container" />
 
                 <com.gozarwg.RollingValueView
                     android:id="@+id/tvTotal"
@@ -354,12 +354,12 @@
                 <ImageView
                     android:layout_width="60dp"
                     android:layout_height="60dp"
-                    android:background="@drawable/frame_burst"
-                    android:backgroundTint="@color/tile_container"
+                    android:background="@drawable/frame_flower"
+                    android:backgroundTint="@color/m3_secondary_container"
                     android:contentDescription="@string/handshake"
                     android:padding="16dp"
                     android:src="@drawable/ic_sync"
-                    app:tint="@color/tile_on_container" />
+                    app:tint="@color/m3_on_secondary_container" />
 
                 <com.gozarwg.RollingValueView
                     android:id="@+id/tvHandshake"

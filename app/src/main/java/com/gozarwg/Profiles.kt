@@ -62,10 +62,14 @@ object Profiles {
         return true
     }
 
-    fun delete(c: Context, id: String) {
-        File(dir(c), "$id.conf").delete()
-        names(c).edit().remove(id).apply()
+    /** Deletes both the config and every persisted selection reference, returning a real outcome. */
+    fun delete(c: Context, id: String): Boolean {
+        val file = File(dir(c), "$id.conf")
+        if (file.exists() && !file.delete()) return false
+        names(c).edit().remove(id).commit()
         if (Store.selected(c) == id) Store.setSelected(c, "")
+        if (Store.lastProfile(c) == id) Store.setLastProfile(c, "")
+        return !file.exists()
     }
 
     private fun suggestName(text: String): String {
