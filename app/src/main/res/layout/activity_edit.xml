@@ -34,10 +34,10 @@
 
             <ImageView
                 style="@style/Gozar.Action.Icon"
-                android:background="@drawable/tile"
+                android:background="@drawable/frame_puff"
                 android:contentDescription="@string/ed_qr"
                 android:src="@drawable/ic_qr"
-                app:tint="?attr/colorOnSecondaryContainer" />
+                app:tint="@color/tile_on_container" />
 
             <TextView
                 style="@style/Gozar.Action.Label"
@@ -50,10 +50,10 @@
 
             <ImageView
                 style="@style/Gozar.Action.Icon"
-                android:background="@drawable/tile"
+                android:background="@drawable/frame_flower"
                 android:contentDescription="@string/ed_share"
                 android:src="@drawable/ic_share"
-                app:tint="?attr/colorOnSecondaryContainer" />
+                app:tint="@color/tile_on_container" />
 
             <TextView
                 style="@style/Gozar.Action.Label"
@@ -66,10 +66,10 @@
 
             <ImageView
                 style="@style/Gozar.Action.Icon"
-                android:background="@drawable/tile"
+                android:background="@drawable/frame_clover"
                 android:contentDescription="@string/ed_export"
                 android:src="@drawable/ic_save"
-                app:tint="?attr/colorOnSecondaryContainer" />
+                app:tint="@color/tile_on_container" />
 
             <TextView
                 style="@style/Gozar.Action.Label"
@@ -82,7 +82,7 @@
 
             <ImageView
                 style="@style/Gozar.Action.Icon"
-                android:background="@drawable/tile"
+                android:background="@drawable/frame_burst"
                 android:backgroundTint="?attr/colorErrorContainer"
                 android:contentDescription="@string/ed_delete"
                 android:src="@drawable/ic_delete"
@@ -273,11 +273,23 @@
                     style="@style/Gozar.Section"
                     android:text="@string/awg_sec" />
 
-                <com.google.android.material.card.MaterialCardView
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnAwgToggle"
+                    style="@style/Widget.Gozar.Button.Tonal"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    app:cardBackgroundColor="?attr/colorSurfaceContainerLow"
-                    app:cardCornerRadius="@dimen/card_radius"
+                    android:text="@string/edit_awg_values"
+                    app:icon="@drawable/ic_expand"
+                    app:iconGravity="textEnd" />
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/awgFields"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/sp_s"
+                    android:visibility="gone"
+                    app:cardBackgroundColor="?attr/colorSurfaceContainer"
+                    app:cardCornerRadius="24dp"
                     app:cardElevation="0dp"
                     app:contentPadding="@dimen/sp_l">
 

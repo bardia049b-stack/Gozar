@@ -96,6 +96,8 @@
     <string name="allowed_ips">IPهای مجاز</string>
     <string name="keepalive">پایداری اتصال (Keepalive)</string>
     <string name="generate">ساخت</string>
+    <string name="edit_awg_values">ویرایش مقادیر مبهم‌سازی</string>
+    <string name="hide_awg_values">بستن مقادیر مبهم‌سازی</string>
     <string name="random_awg">مقادیر تصادفی</string>
     <string name="raw">متن خام</string>
     <string name="form">فرم</string>

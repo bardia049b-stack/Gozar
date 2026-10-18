@@ -96,6 +96,8 @@
     <string name="allowed_ips">Allowed IPs</string>
     <string name="keepalive">Persistent keepalive</string>
     <string name="generate">Generate</string>
+    <string name="edit_awg_values">Edit obfuscation values</string>
+    <string name="hide_awg_values">Hide obfuscation values</string>
     <string name="random_awg">Random values</string>
     <string name="raw">Raw</string>
     <string name="form">Form</string>

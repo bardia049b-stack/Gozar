@@ -249,7 +249,12 @@ class HomeFragment : Fragment() {
     private fun paintIp() {
         if (!isAdded || view == null) return
         val info = Vpn.ipInfo ?: return
-        find<TextView>(R.id.tvFlag).text = Ip.flag(info.code)
+        val iran = info.code.equals("IR", true)
+        find<ImageView>(R.id.ivFlag).visibility = if (iran) View.VISIBLE else View.GONE
+        find<TextView>(R.id.tvFlag).apply {
+            visibility = if (iran) View.GONE else View.VISIBLE
+            text = if (iran) "" else Ip.flag(info.code)
+        }
         find<TextView>(R.id.tvIp).text = info.ip
         find<TextView>(R.id.tvProvider).text = listOf(info.country, info.city, info.provider)
             .filter { it.isNotBlank() }

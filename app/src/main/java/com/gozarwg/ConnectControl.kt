@@ -77,7 +77,7 @@ class ConnectControl @JvmOverloads constructor(
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        val wanted = (132f * density).toInt()
+        val wanted = (192f * density).toInt()
         val side = min(resolveSize(wanted, widthMeasureSpec), resolveSize(wanted, heightMeasureSpec))
         setMeasuredDimension(side, side)
     }

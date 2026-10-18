@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatDelegate
 import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import android.text.Editable
 import android.text.TextWatcher
@@ -24,6 +25,8 @@ class EditActivity : BaseActivity() {
     private lateinit var formBox: View
     private lateinit var segForm: TextView
     private lateinit var segRaw: TextView
+    private lateinit var awgFields: View
+    private lateinit var awgToggle: MaterialButton
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,11 +38,14 @@ class EditActivity : BaseActivity() {
         formBox = findViewById(R.id.formBox)
         segForm = findViewById(R.id.segForm)
         segRaw = findViewById(R.id.segRaw)
+        awgFields = findViewById(R.id.awgFields)
+        awgToggle = findViewById(R.id.btnAwgToggle)
 
         findViewById<MaterialToolbar>(R.id.toolbar).setNavigationOnClickListener { finish() }
         findViewById<View>(R.id.btnSaveTop).setOnClickListener { save() }
         segForm.setOnClickListener { setMode(false) }
         segRaw.setOnClickListener { setMode(true) }
+        awgToggle.setOnClickListener { setAwgExpanded(awgFields.visibility != View.VISIBLE) }
 
         findViewById<View>(R.id.btnGenPriv).setOnClickListener {
             val pair = Qr.newKeyPair()
@@ -84,6 +90,25 @@ class EditActivity : BaseActivity() {
             findViewById<TextView>(R.id.tvPub).text = pair.second
         }
         applyMode()
+        setAwgExpanded(false)
+    }
+
+    private fun setAwgExpanded(expanded: Boolean) {
+        awgToggle.setText(if (expanded) R.string.hide_awg_values else R.string.edit_awg_values)
+        awgToggle.setIconResource(if (expanded) R.drawable.ic_collapse else R.drawable.ic_expand)
+        if (!expanded) {
+            awgFields.visibility = View.GONE
+            return
+        }
+        awgFields.alpha = 0f
+        awgFields.translationY = 8f * resources.displayMetrics.density
+        awgFields.visibility = View.VISIBLE
+        awgFields.animate()
+            .alpha(1f)
+            .translationY(0f)
+            .setDuration(180L)
+            .setInterpolator(DecelerateInterpolator())
+            .start()
     }
 
     private fun field(id: Int): EditText = findViewById(id)
