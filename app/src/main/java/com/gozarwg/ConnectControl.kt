@@ -3,18 +3,26 @@ package com.gozarwg
 import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
+import android.graphics.Typeface
 import android.graphics.drawable.Drawable
 import android.os.Build
 import android.util.AttributeSet
+import android.view.MotionEvent
 import android.view.View
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
+import androidx.graphics.shapes.CornerRounding
+import androidx.graphics.shapes.Morph
+import androidx.graphics.shapes.RoundedPolygon
 import kotlin.math.PI
 import kotlin.math.cos
+import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
 
@@ -29,61 +37,89 @@ class ConnectControl @JvmOverloads constructor(
         const val BUSY = 1
         const val ON = 2
         const val ERROR = 3
-        private const val TAU = 2f * PI.toFloat()
     }
 
     var state = OFF
         set(value) {
             if (field == value) return
             field = value
-            updateColors()
+            updateTarget()
             sync()
             invalidate()
         }
 
+    var elapsedSeconds = 0
+        set(value) {
+            if (field == value) return
+            field = value
+            invalidate()
+        }
+
     private val density = resources.displayMetrics.density
-    private val ring = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        strokeCap = Paint.Cap.ROUND
-        strokeJoin = Paint.Join.ROUND
-    }
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val overlay = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val label = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        textAlign = Paint.Align.CENTER
+        typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+    }
     private val bounds = RectF()
-    private val wave = Path()
+    private val work = Path()
+    private val matrix = Matrix()
     private val power: Drawable? = AppCompatResources.getDrawable(context, R.drawable.ic_power)
-    private var stroke = 0
-    private var onStroke = 0
-    private var disc = 0
+    private val idle = regular(12, 0.19f)
+    private val live = flower(12, 0.78f, 0.12f)
+    private val fault = regular(6, 0.23f)
+    private val searching = listOf(
+        flower(12, 0.78f, 0.12f),
+        regular(9, 0.22f),
+        regular(5, 0.22f),
+        roundedSquare(),
+        flower(8, 0.83f, 0.15f)
+    )
+    private var from = idle
+    private var to = idle
+    private var progress = 1f
+    private var morph = Morph(idle, idle)
+    private var shapeStep = -1
     private var phase = 0f
     private var stamp = 0L
     private var running = false
+    private var primary = 0
+    private var onPrimary = 0
+    private var accent = 0
+    private var onAccent = 0
+    private var error = 0
+    private var onError = 0
+    private var morphAnimator: ValueAnimator? = null
 
     private val ticker = object : Runnable {
         override fun run() {
             if (!isAttachedToWindow || !running) return
             val now = System.nanoTime()
-            val elapsed = if (stamp == 0L) 16f else ((now - stamp) / 1_000_000f).coerceIn(1f, 40f)
+            val elapsed = if (stamp == 0L) 16f else ((now - stamp) / 1_000_000f).coerceIn(1f, 42f)
             stamp = now
-            phase = (phase + elapsed / 1120f) % 1f
+            phase = (phase + elapsed / if (state == BUSY) 3100f else 18000f) % 1f
+            if (state == BUSY) {
+                val next = (System.currentTimeMillis() / 720L).toInt() % searching.size
+                if (next != shapeStep) {
+                    shapeStep = next
+                    changeShape(searching[next])
+                }
+            }
             invalidate()
             postOnAnimation(this)
         }
     }
 
     init {
-        updateColors()
         isClickable = true
         isFocusable = true
-    }
-
-    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        val wanted = (192f * density).toInt()
-        val side = min(resolveSize(wanted, widthMeasureSpec), resolveSize(wanted, heightMeasureSpec))
-        setMeasuredDimension(side, side)
+        updateColors()
     }
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
+        updateColors()
         sync()
     }
 
@@ -91,6 +127,13 @@ class ConnectControl @JvmOverloads constructor(
         super.onDetachedFromWindow()
         running = false
         removeCallbacks(ticker)
+        morphAnimator?.cancel()
+    }
+
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        val wanted = (208f * density).toInt()
+        val side = min(resolveSize(wanted, widthMeasureSpec), resolveSize(wanted, heightMeasureSpec))
+        setMeasuredDimension(side, side)
     }
 
     override fun performClick(): Boolean {
@@ -98,28 +141,40 @@ class ConnectControl @JvmOverloads constructor(
         return true
     }
 
-    private fun updateColors() {
-        when (state) {
-            ON -> {
-                stroke = color(R.color.m3_ok)
-                onStroke = color(R.color.m3_on_ok)
-                disc = color(R.color.m3_ok_container)
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                isPressed = true
+                invalidate()
+                return true
             }
-            ERROR -> {
-                stroke = color(R.color.m3_error)
-                onStroke = color(R.color.m3_on_error)
-                disc = color(R.color.m3_error_container)
+            MotionEvent.ACTION_UP -> {
+                val clicked = isPressed
+                isPressed = false
+                invalidate()
+                if (clicked && event.x in 0f..width.toFloat() && event.y in 0f..height.toFloat()) performClick()
+                return true
             }
-            else -> {
-                stroke = color(R.color.m3_primary)
-                onStroke = color(R.color.m3_on_primary)
-                disc = color(R.color.m3_primary_container)
+            MotionEvent.ACTION_CANCEL -> {
+                isPressed = false
+                invalidate()
+                return true
             }
         }
+        return super.onTouchEvent(event)
+    }
+
+    private fun updateColors() {
+        primary = color(R.color.m3_primary)
+        onPrimary = color(R.color.m3_on_primary)
+        accent = color(R.color.m3_ok)
+        onAccent = color(R.color.m3_on_ok)
+        error = color(R.color.m3_error)
+        onError = color(R.color.m3_on_error)
     }
 
     private fun sync() {
-        val animate = state == BUSY && (Build.VERSION.SDK_INT < 26 || ValueAnimator.areAnimatorsEnabled())
+        val animate = (state == BUSY || state == ON) && (Build.VERSION.SDK_INT < 26 || ValueAnimator.areAnimatorsEnabled())
         if (animate && !running) {
             running = true
             stamp = 0L
@@ -127,7 +182,40 @@ class ConnectControl @JvmOverloads constructor(
         } else if (!animate && running) {
             running = false
             removeCallbacks(ticker)
-            phase = 0f
+        }
+    }
+
+    private fun updateTarget() {
+        val target = when (state) {
+            ON -> live
+            BUSY -> searching[(System.currentTimeMillis() / 720L).toInt() % searching.size]
+            ERROR -> fault
+            else -> idle
+        }
+        if (state != BUSY) shapeStep = -1
+        changeShape(target)
+    }
+
+    private fun changeShape(target: RoundedPolygon) {
+        if (target === to) return
+        from = if (progress >= 0.5f) to else from
+        to = target
+        morph = Morph(from, to)
+        progress = 0f
+        morphAnimator?.cancel()
+        if (Build.VERSION.SDK_INT >= 26 && !ValueAnimator.areAnimatorsEnabled()) {
+            progress = 1f
+            invalidate()
+            return
+        }
+        morphAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = 460L
+            interpolator = android.view.animation.OvershootInterpolator(0.72f)
+            addUpdateListener {
+                progress = it.animatedValue as Float
+                invalidate()
+            }
+            start()
         }
     }
 
@@ -138,63 +226,129 @@ class ConnectControl @JvmOverloads constructor(
         if (side <= 0f) return
         val cx = width / 2f
         val cy = height / 2f
-        val radius = side * 0.39f
-        val buttonRadius = side * 0.235f
-        val width = 3.5f * density
-        bounds.set(cx - radius, cy - radius, cx + radius, cy + radius)
+        val scale = side * 0.425f
+        work.rewind()
+        var first = true
+        morph.forEachCubic(progress.coerceIn(0f, 1f)) { cubic ->
+            if (first) {
+                work.moveTo(cubic.anchor0X, cubic.anchor0Y)
+                first = false
+            }
+            work.cubicTo(
+                cubic.control0X,
+                cubic.control0Y,
+                cubic.control1X,
+                cubic.control1Y,
+                cubic.anchor1X,
+                cubic.anchor1Y
+            )
+        }
+        work.close()
+        matrix.reset()
+        matrix.setScale(scale, scale)
+        work.transform(matrix)
+        work.computeBounds(bounds, true)
+        work.offset(cx - bounds.centerX(), cy - bounds.centerY())
 
-        ring.strokeWidth = width
-        ring.color = ColorUtils.setAlphaComponent(stroke, if (state == ON) 255 else 68)
-        canvas.drawArc(bounds, -150f, 300f, false, ring)
+        val start = when (state) {
+            ON -> accent
+            ERROR -> error
+            else -> primary
+        }
+        val end = when (state) {
+            BUSY -> accent
+            ON -> ColorUtils.blendARGB(accent, primary, 0.2f)
+            ERROR -> error
+            else -> ColorUtils.blendARGB(primary, accent, 0.38f)
+        }
+        fill.shader = android.graphics.LinearGradient(
+            cx - scale, cy - scale, cx + scale, cy + scale,
+            start, end, android.graphics.Shader.TileMode.CLAMP
+        )
+        canvas.save()
+        val rotation = when (state) {
+            BUSY -> phase * 165f
+            ON -> phase * 9f
+            else -> 0f
+        }
+        canvas.rotate(rotation, cx, cy)
+        canvas.drawPath(work, fill)
+        canvas.restore()
+        fill.shader = null
+
+        if (isPressed) {
+            overlay.color = ColorUtils.setAlphaComponent(Color.WHITE, 34)
+            canvas.drawPath(work, overlay)
+        }
 
         when (state) {
-            BUSY -> drawWave(canvas, cx, cy, radius)
-            ON -> {
-                ring.color = stroke
-                canvas.drawArc(bounds, -90f, 360f, false, ring)
-            }
-            ERROR -> {
-                ring.color = stroke
-                canvas.drawArc(bounds, -90f, 360f, false, ring)
-            }
-        }
-
-        fill.color = disc
-        canvas.drawCircle(cx, cy, buttonRadius, fill)
-        if (isPressed) {
-            fill.color = ColorUtils.setAlphaComponent(onStroke, 40)
-            canvas.drawCircle(cx, cy, buttonRadius, fill)
-        }
-        val icon = power
-        if (icon != null) {
-            val iconSize = (buttonRadius * 1.02f).toInt()
-            icon.setTint(onStroke)
-            icon.setBounds(
-                (cx - iconSize / 2f).toInt(),
-                (cy - iconSize / 2f).toInt(),
-                (cx + iconSize / 2f).toInt(),
-                (cy + iconSize / 2f).toInt()
-            )
-            icon.draw(canvas)
+            ON -> drawElapsed(canvas, cx, cy, side)
+            ERROR -> drawFault(canvas, cx, cy, side)
+            else -> drawPower(canvas, cx, cy, side, onPrimary)
         }
     }
 
-    private fun drawWave(canvas: Canvas, cx: Float, cy: Float, radius: Float) {
-        val start = -150f + phase * 360f
-        val span = 208f
-        val steps = 92
-        wave.reset()
-        for (i in 0..steps) {
-            val t = i / steps.toFloat()
-            val angle = Math.toRadians((start + span * t).toDouble()).toFloat()
-            val pulse = sin((t * 4f * TAU) + phase * TAU) * (2.4f * density)
-            val r = radius + pulse
-            val x = cx + cos(angle) * r
-            val y = cy + sin(angle) * r
-            if (i == 0) wave.moveTo(x, y) else wave.lineTo(x, y)
+    private fun drawPower(canvas: Canvas, cx: Float, cy: Float, side: Float, tint: Int) {
+        val icon = power ?: return
+        val iconSize = (side * 0.31f).toInt()
+        icon.setTint(tint)
+        icon.setBounds(
+            (cx - iconSize / 2f).toInt(),
+            (cy - iconSize / 2f).toInt(),
+            (cx + iconSize / 2f).toInt(),
+            (cy + iconSize / 2f).toInt()
+        )
+        icon.draw(canvas)
+    }
+
+    private fun drawElapsed(canvas: Canvas, cx: Float, cy: Float, side: Float) {
+        label.color = onAccent
+        label.textSize = max(14f * density, side * 0.142f)
+        val text = String.format("%02d:%02d", elapsedSeconds.coerceAtLeast(0) / 60, elapsedSeconds.coerceAtLeast(0) % 60)
+        val metrics = label.fontMetrics
+        canvas.drawText(text, cx, cy - (metrics.ascent + metrics.descent) / 2f, label)
+    }
+
+    private fun drawFault(canvas: Canvas, cx: Float, cy: Float, side: Float) {
+        label.color = onError
+        label.textSize = side * 0.28f
+        val metrics = label.fontMetrics
+        canvas.drawText("!", cx, cy - (metrics.ascent + metrics.descent) / 2f, label)
+    }
+
+    private fun regular(sides: Int, radius: Float): RoundedPolygon {
+        return RoundedPolygon(
+            numVertices = sides,
+            radius = 1f,
+            centerX = 0f,
+            centerY = 0f,
+            rounding = CornerRounding(radius, 0.82f)
+        )
+    }
+
+    private fun roundedSquare(): RoundedPolygon {
+        return RoundedPolygon(
+            numVertices = 4,
+            radius = 1f,
+            centerX = 0f,
+            centerY = 0f,
+            rounding = CornerRounding(0.42f, 0.92f)
+        )
+    }
+
+    private fun flower(points: Int, inner: Float, rounding: Float): RoundedPolygon {
+        val vertices = FloatArray(points * 4)
+        for (i in 0 until points * 2) {
+            val radius = if (i % 2 == 0) 1f else inner
+            val angle = -PI.toFloat() / 2f + i * PI.toFloat() / points
+            vertices[i * 2] = cos(angle) * radius
+            vertices[i * 2 + 1] = sin(angle) * radius
         }
-        ring.strokeWidth = 5f * density
-        ring.color = stroke
-        canvas.drawPath(wave, ring)
+        return RoundedPolygon(
+            vertices = vertices,
+            rounding = CornerRounding(rounding, 0.65f),
+            centerX = 0f,
+            centerY = 0f
+        )
     }
 }

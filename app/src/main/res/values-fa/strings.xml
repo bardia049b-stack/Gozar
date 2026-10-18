@@ -183,4 +183,8 @@
     <string name="ed_export">خروجی</string>
     <string name="ed_delete">حذف</string>
     <string name="hs_short">دست‌داد</string>
+    <string name="version_license">نسخه %s · AGPL-3.0</string>
+    <string name="legal_title">مجوز و کد منبع</string>
+    <string name="source_code">کد منبع</string>
+    <string name="legal_notice">GozarWG نرم‌افزار آزاد تحت مجوز GNU Affero General Public License نسخه ۳ یا جدیدتر است.\n\nاین نسخه شامل کدهای سازگارشدهٔ رابط صفحهٔ خانه از ZedSecure، حق‌نشر © ۲۰۲۶ CluvexStudio، تحت AGPL-3.0-or-later است.\n\nکد منبع متناظر کامل، متن مجوز و اطلاعیه‌ها در مخزن GozarWG در دسترس هستند.</string>
 </resources>

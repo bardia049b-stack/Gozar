@@ -1,0 +1,28 @@
+GozarWG notices
+===============
+
+Home interface adaptation
+-------------------------
+Portions of the home-screen interface, including the morphing connection-control state model, connection facts, server row and traffic presentation, are adapted from ZedSecure.
+
+Copyright (C) 2026 CluvexStudio
+Source: https://github.com/CluvexStudio/ZedSecure
+License: GNU Affero General Public License, version 3 or later.
+
+The adapted implementation in this repository is licensed under AGPL-3.0-or-later. The upstream product name is used here only for attribution and is not an endorsement.
+
+AndroidX Graphics Shapes and Collection
+---------------------------------------
+Copyright (C) The Android Open Source Project
+Sources: https://developer.android.com/jetpack/androidx/releases/graphics and https://developer.android.com/jetpack/androidx/releases/collection
+License: Apache License 2.0
+
+AmneziaWG Android
+-----------------
+Source: https://github.com/zaneschepke/amneziawg-android
+License: MIT
+
+ZXing
+-----
+Source: https://github.com/zxing/zxing
+License: Apache License 2.0

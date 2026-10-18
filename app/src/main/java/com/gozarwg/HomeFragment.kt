@@ -26,6 +26,7 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import com.google.android.material.card.MaterialCardView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
@@ -205,6 +206,18 @@ class HomeFragment : Fragment() {
             3 -> ConnectControl.ERROR
             else -> ConnectControl.OFF
         }
+        control.elapsedSeconds = if (state == 2 && Vpn.since > 0L) {
+            ((System.currentTimeMillis() - Vpn.since) / 1000L).toInt().coerceAtLeast(0)
+        } else {
+            0
+        }
+        find<ConnectionPulse>(R.id.connectionPulse).state = control.state
+        find<MaterialCardView>(R.id.connectionPanel).setCardBackgroundColor(color(when (state) {
+            2 -> R.color.m3_ok_container
+            1, 4 -> R.color.m3_primary_container
+            3 -> R.color.m3_error_container
+            else -> R.color.m3_surface_container_low
+        }))
         if (visualState != state) {
             visualState = state
             control.animate().cancel()
@@ -218,9 +231,9 @@ class HomeFragment : Fragment() {
                 .start()
         }
         val statusTone = when (state) {
-            2 -> R.color.m3_ok
-            1, 4 -> R.color.m3_primary
-            3 -> R.color.m3_error
+            2 -> R.color.m3_on_ok_container
+            1, 4 -> R.color.m3_on_primary_container
+            3 -> R.color.m3_on_error_container
             else -> R.color.m3_on_surface
         }
         control.contentDescription = getString(action)
@@ -228,12 +241,15 @@ class HomeFragment : Fragment() {
             setText(status)
             setTextColor(color(statusTone))
         }
-        find<TextView>(R.id.tvAction).setText(when (state) {
-            2 -> R.string.tap_disconnect
-            1 -> R.string.tap_cancel
-            4 -> R.string.status_disconnecting
-            else -> R.string.tap_connect
-        })
+        find<TextView>(R.id.tvAction).apply {
+            setText(when (state) {
+                2 -> R.string.tap_disconnect
+                1 -> R.string.tap_cancel
+                4 -> R.string.status_disconnecting
+                else -> R.string.tap_connect
+            })
+            setTextColor(color(statusTone))
+        }
         if (state == 2) {
             find<TextView>(R.id.tvDown).text = fmtSpeed(Vpn.downSpeed)
             find<TextView>(R.id.tvUp).text = fmtSpeed(Vpn.upSpeed)
@@ -275,7 +291,7 @@ class HomeFragment : Fragment() {
             text = if (iran) "" else Ip.flag(info.code)
         }
         find<TextView>(R.id.tvIp).text = info.ip
-        find<TextView>(R.id.tvProvider).text = listOf(info.country, info.city, info.provider)
+        find<TextView>(R.id.tvProvider).text = listOf(info.city, info.provider)
             .filter { it.isNotBlank() }
             .joinToString(" · ")
         reveal(find<View>(R.id.connectionInfo))

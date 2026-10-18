@@ -59,6 +59,7 @@ class SettingsFragment : Fragment() {
         find<View>(R.id.rowVpnSettings).setOnClickListener { openSystemVpn() }
         find<View>(R.id.rowGithub).setOnClickListener { openProject() }
         find<View>(R.id.rowCrash).setOnClickListener { shareCrashLog() }
+        find<View>(R.id.rowAbout).setOnClickListener { showLegalNotice() }
         find<View>(R.id.bannerSupport).setOnClickListener { openProject() }
 
         find<TextInputEditText>(R.id.etSettingsSearch).addTextChangedListener(object : TextWatcher {
@@ -171,7 +172,7 @@ class SettingsFragment : Fragment() {
         }
         val core = find<TextView>(R.id.tvCore)
         if (core.text.isNullOrBlank()) {
-            find<TextView>(R.id.tvAbout).text = getString(R.string.version, version)
+            find<TextView>(R.id.tvAbout).text = getString(R.string.version_license, version)
             core.setText(R.string.built_in)
             thread {
                 val value = try {
@@ -273,6 +274,15 @@ class SettingsFragment : Fragment() {
         } catch (e: Exception) {
             toast(R.string.import_failed)
         }
+    }
+
+    private fun showLegalNotice() {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.legal_title)
+            .setMessage(R.string.legal_notice)
+            .setNeutralButton(R.string.source_code) { _, _ -> openProject() }
+            .setPositiveButton(R.string.ok, null)
+            .show()
     }
 
     private fun shareCrashLog() {
