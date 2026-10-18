@@ -6,7 +6,6 @@ import android.content.ClipboardManager
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
-import android.content.res.ColorStateList
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -18,6 +17,7 @@ import android.os.Looper
 import android.provider.MediaStore
 import android.provider.OpenableColumns
 import android.view.LayoutInflater
+import android.view.animation.DecelerateInterpolator
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
@@ -26,7 +26,6 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.loadingindicator.LoadingIndicator
 import com.google.android.material.textfield.TextInputEditText
@@ -38,6 +37,7 @@ class HomeFragment : Fragment() {
     private val handler = Handler(Looper.getMainLooper())
     private var pendingProfile: Profile? = null
     private var pendingExport: Profile? = null
+    @Volatile private var fetchingIp = false
 
     private val vpnPerm = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         val profile = pendingProfile
@@ -190,50 +190,87 @@ class HomeFragment : Fragment() {
     private fun paintStatus() {
         if (!isAdded || view == null) return
         val state = state()
-        val button = find<MaterialButton>(R.id.connectButton)
-        val loading = find<LoadingIndicator>(R.id.connectionLoading)
-        val label = when (state) {
-            2 -> R.string.disconnect
-            1 -> if (Vpn.attempt > 1) R.string.reconnecting else R.string.status_connecting
-            4 -> R.string.status_disconnecting
-            else -> R.string.connect
-        }
-        val tone = when (state) {
-            2 -> R.color.m3_ok
-            3 -> R.color.m3_error
-            else -> R.color.m3_primary
-        }
-        val onTone = when (state) {
-            2 -> R.color.m3_on_ok
-            3 -> R.color.m3_on_error
-            else -> R.color.m3_on_primary
-        }
-        button.setText(label)
-        button.contentDescription = getString(label)
-        button.backgroundTintList = ColorStateList.valueOf(color(tone))
-        button.setTextColor(color(onTone))
-        button.iconTint = ColorStateList.valueOf(color(onTone))
-        if (state == 1 || state == 4) {
-            button.icon = null
-            loading.visibility = View.VISIBLE
-        } else {
-            loading.visibility = View.INVISIBLE
-            button.setIconResource(if (state == 2) R.drawable.ic_power_off else R.drawable.ic_power)
-        }
-        val map = find<ImageView>(R.id.heroMap)
-        map.imageTintList = ColorStateList.valueOf(color(when (state) {
-            2 -> R.color.m3_ok
-            1, 4 -> R.color.m3_primary
-            3 -> R.color.m3_error
-            else -> R.color.m3_primary
-        }))
-        map.contentDescription = getString(when (state) {
+        val loading = find<LoadingIndicator>(R.id.connectButton)
+        val status = when (state) {
             2 -> R.string.status_on
-            1 -> R.string.status_connecting
+            1 -> if (Vpn.attempt > 1) R.string.reconnecting else R.string.status_connecting
             4 -> R.string.status_disconnecting
             3 -> R.string.status_failed
             else -> R.string.status_off
-        })
+        }
+        val action = if (state == 2) R.string.disconnect else R.string.connect
+        val indicatorTone = when (state) {
+            2 -> R.color.m3_on_ok_container
+            3 -> R.color.m3_on_error_container
+            else -> R.color.m3_on_primary_container
+        }
+        val containerTone = when (state) {
+            2 -> R.color.m3_ok_container
+            3 -> R.color.m3_error_container
+            else -> R.color.m3_primary_container
+        }
+        val statusTone = when (state) {
+            2 -> R.color.m3_ok
+            1, 4 -> R.color.m3_primary
+            3 -> R.color.m3_error
+            else -> R.color.m3_on_surface
+        }
+        loading.setIndicatorColor(color(indicatorTone))
+        loading.setContainerColor(color(containerTone))
+        loading.contentDescription = getString(action)
+        find<TextView>(R.id.tvStatus).apply {
+            setText(status)
+            setTextColor(color(statusTone))
+        }
+        if (state == 2) {
+            find<TextView>(R.id.tvDown).text = fmtSpeed(Vpn.downSpeed)
+            find<TextView>(R.id.tvUp).text = fmtSpeed(Vpn.upSpeed)
+            reveal(find<View>(R.id.statsRow))
+            if (Vpn.ipInfo == null) fetchIp() else paintIp()
+        } else {
+            find<View>(R.id.statsRow).visibility = View.GONE
+            find<View>(R.id.connectionInfo).visibility = View.GONE
+        }
+    }
+
+    private fun reveal(target: View) {
+        if (target.visibility == View.VISIBLE) return
+        target.alpha = 0f
+        target.translationY = 8f * resources.displayMetrics.density
+        target.visibility = View.VISIBLE
+        target.animate()
+            .alpha(1f)
+            .translationY(0f)
+            .setDuration(220L)
+            .setInterpolator(DecelerateInterpolator())
+            .start()
+    }
+
+    private fun paintIp() {
+        if (!isAdded || view == null) return
+        val info = Vpn.ipInfo ?: return
+        find<TextView>(R.id.tvFlag).text = Ip.flag(info.code)
+        find<TextView>(R.id.tvIp).text = info.ip
+        find<TextView>(R.id.tvProvider).text = listOf(info.country, info.city, info.provider)
+            .filter { it.isNotBlank() }
+            .joinToString(" · ")
+        reveal(find<View>(R.id.connectionInfo))
+    }
+
+    private fun fetchIp() {
+        if (fetchingIp || Vpn.ipInfo != null) return
+        fetchingIp = true
+        thread {
+            val info = Ip.fetch()
+            activity?.runOnUiThread {
+                fetchingIp = false
+                if (info != null && state() == 2) {
+                    Vpn.ipInfo = info
+                    Vpn.ipSession = System.currentTimeMillis()
+                    paintIp()
+                }
+            }
+        }
     }
 
     private fun paintProfiles() {

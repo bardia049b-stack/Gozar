@@ -167,8 +167,18 @@
         <item name="android:layout_width">@dimen/tile_action</item>
         <item name="android:layout_height">@dimen/tile_action</item>
         <item name="android:padding">@dimen/tile_action_pad</item>
-        <item name="android:background">@drawable/frame_puff</item>
-        <item name="android:backgroundTint">@color/tile_container</item>
+        <item name="android:background">@drawable/tile</item>
+        <item name="android:backgroundTint">?attr/colorSecondaryContainer</item>
+    </style>
+
+    <style name="Gozar.Field.Compact" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="boxCornerRadiusTopStart">16dp</item>
+        <item name="boxCornerRadiusTopEnd">16dp</item>
+        <item name="boxCornerRadiusBottomStart">16dp</item>
+        <item name="boxCornerRadiusBottomEnd">16dp</item>
+        <item name="boxBackgroundColor">?attr/colorSurfaceContainerHigh</item>
+        <item name="boxStrokeWidth">1dp</item>
+        <item name="hintTextAppearance">@style/TextAppearance.Gozar.BodyMedium</item>
     </style>
 
     <style name="Gozar.Action.Label" parent="">

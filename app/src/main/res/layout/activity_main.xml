@@ -10,6 +10,7 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
         android:orientation="vertical"
         android:paddingStart="@dimen/screen_gutter"
         android:paddingTop="@dimen/sp_s"
@@ -47,66 +48,204 @@
                 app:tint="?attr/colorOnSurfaceVariant" />
         </LinearLayout>
 
-        <com.google.android.material.card.MaterialCardView
+        <com.google.android.material.loadingindicator.LoadingIndicator
+            android:id="@+id/connectButton"
+            style="@style/Widget.Material3.LoadingIndicator.Contained"
+            android:layout_width="112dp"
+            android:layout_height="112dp"
+            android:layout_marginTop="36dp"
+            android:clickable="true"
+            android:contentDescription="@string/connect"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackgroundBorderless"
+            app:containerColor="@color/m3_primary_container"
+            app:containerHeight="112dp"
+            app:containerWidth="112dp"
+            app:indicatorColor="@color/m3_on_primary_container"
+            app:indicatorSize="72dp" />
+
+        <TextView
+            android:id="@+id/tvStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/sp_l"
+            android:gravity="center"
+            android:text="@string/status_off"
+            android:textAppearance="@style/TextAppearance.Gozar.TitleMedium"
+            android:textColor="?attr/colorOnSurface" />
+
+        <LinearLayout
+            android:id="@+id/connectionInfo"
             android:layout_width="match_parent"
-            android:layout_height="220dp"
-            android:layout_marginTop="@dimen/sp_m"
-            app:cardBackgroundColor="?attr/colorSurfaceContainerLow"
-            app:cardCornerRadius="32dp"
-            app:cardElevation="0dp"
-            app:strokeColor="?attr/colorOutlineVariant"
-            app:strokeWidth="1dp">
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/sp_xl"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:visibility="gone">
 
-            <ImageView
-                android:id="@+id/heroMap"
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/tvFlag"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:includeFontPadding="false"
+                    android:textAppearance="@style/TextAppearance.Gozar.HeadlineMedium" />
+
+                <TextView
+                    android:id="@+id/tvIp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/sp_m"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:textAppearance="@style/TextAppearance.Gozar.HeadlineMedium"
+                    android:textColor="?attr/colorOnSurface"
+                    android:textDirection="ltr" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvProvider"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:alpha="0.72"
-                android:contentDescription="@string/status_off"
-                android:padding="28dp"
-                android:scaleType="centerInside"
-                android:src="@drawable/iran_map"
-                app:tint="@color/m3_primary" />
-        </com.google.android.material.card.MaterialCardView>
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/sp_s"
+                android:gravity="center"
+                android:maxLines="2"
+                android:textAppearance="@style/TextAppearance.Gozar.BodyMedium"
+                android:textColor="?attr/colorOnSurfaceVariant" />
+        </LinearLayout>
 
-        <FrameLayout
+        <LinearLayout
+            android:id="@+id/statsRow"
             android:layout_width="match_parent"
-            android:layout_height="64dp"
-            android:layout_marginTop="@dimen/sp_xl">
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/sp_xl"
+            android:orientation="horizontal"
+            android:visibility="gone">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/connectButton"
-                style="@style/Widget.Gozar.ConnectButton"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:contentDescription="@string/connect"
-                android:text="@string/connect"
-                app:icon="@drawable/ic_power"
-                app:iconGravity="textStart"
-                app:iconTint="@color/m3_on_primary" />
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="0dp"
+                android:layout_height="88dp"
+                android:layout_weight="1"
+                app:cardBackgroundColor="?attr/colorSurfaceContainerLow"
+                app:cardCornerRadius="24dp"
+                app:cardElevation="0dp"
+                app:strokeColor="?attr/colorOutlineVariant"
+                app:strokeWidth="1dp">
 
-            <com.google.android.material.loadingindicator.LoadingIndicator
-                android:id="@+id/connectionLoading"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:layout_gravity="center_vertical|start"
-                android:layout_marginStart="22dp"
-                android:clickable="false"
-                android:contentDescription="@string/status_connecting"
-                android:visibility="invisible"
-                app:indicatorColor="@color/m3_on_primary"
-                app:indicatorSize="32dp" />
-        </FrameLayout>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="@dimen/sp_m"
+                    android:paddingEnd="@dimen/sp_m">
+
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="@drawable/tile"
+                        android:contentDescription="@string/download"
+                        android:padding="10dp"
+                        android:src="@drawable/ic_down"
+                        app:tint="?attr/colorOnSecondaryContainer" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/sp_s"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/tvDown"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:maxLines="1"
+                            android:text="0 B/s"
+                            android:textAppearance="@style/TextAppearance.Gozar.TitleSmall"
+                            android:textColor="?attr/colorOnSurface"
+                            android:textDirection="ltr" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/download"
+                            android:textAppearance="@style/TextAppearance.Gozar.LabelSmall"
+                            android:textColor="?attr/colorOnSurfaceVariant" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="0dp"
+                android:layout_height="88dp"
+                android:layout_marginStart="@dimen/sp_m"
+                android:layout_weight="1"
+                app:cardBackgroundColor="?attr/colorSurfaceContainerLow"
+                app:cardCornerRadius="24dp"
+                app:cardElevation="0dp"
+                app:strokeColor="?attr/colorOutlineVariant"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="@dimen/sp_m"
+                    android:paddingEnd="@dimen/sp_m">
+
+                    <ImageView
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="@drawable/tile"
+                        android:contentDescription="@string/upload"
+                        android:padding="10dp"
+                        android:src="@drawable/ic_up"
+                        app:tint="?attr/colorOnSecondaryContainer" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/sp_s"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/tvUp"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:maxLines="1"
+                            android:text="0 B/s"
+                            android:textAppearance="@style/TextAppearance.Gozar.TitleSmall"
+                            android:textColor="?attr/colorOnSurface"
+                            android:textDirection="ltr" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/upload"
+                            android:textAppearance="@style/TextAppearance.Gozar.LabelSmall"
+                            android:textColor="?attr/colorOnSurfaceVariant" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
 
         <LinearLayout
             android:id="@+id/profileCard"
             style="@style/Gozar.Row"
-            android:layout_marginTop="@dimen/sp_m">
+            android:layout_marginTop="@dimen/sp_xl">
 
             <ImageView
                 android:id="@+id/profileTile"
                 style="@style/Gozar.Tile"
-                android:background="@drawable/frame_squircle"
+                android:background="@drawable/tile"
                 android:backgroundTint="?attr/colorSecondaryContainer"
                 android:contentDescription="@string/select_profile"
                 android:src="@drawable/ic_dns"

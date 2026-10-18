@@ -34,10 +34,10 @@
 
             <ImageView
                 style="@style/Gozar.Action.Icon"
-                android:background="@drawable/frame_puff"
+                android:background="@drawable/tile"
                 android:contentDescription="@string/ed_qr"
                 android:src="@drawable/ic_qr"
-                app:tint="@color/tile_on_container" />
+                app:tint="?attr/colorOnSecondaryContainer" />
 
             <TextView
                 style="@style/Gozar.Action.Label"
@@ -50,10 +50,10 @@
 
             <ImageView
                 style="@style/Gozar.Action.Icon"
-                android:background="@drawable/frame_flower"
+                android:background="@drawable/tile"
                 android:contentDescription="@string/ed_share"
                 android:src="@drawable/ic_share"
-                app:tint="@color/tile_on_container" />
+                app:tint="?attr/colorOnSecondaryContainer" />
 
             <TextView
                 style="@style/Gozar.Action.Label"
@@ -66,10 +66,10 @@
 
             <ImageView
                 style="@style/Gozar.Action.Icon"
-                android:background="@drawable/frame_clover"
+                android:background="@drawable/tile"
                 android:contentDescription="@string/ed_export"
                 android:src="@drawable/ic_save"
-                app:tint="@color/tile_on_container" />
+                app:tint="?attr/colorOnSecondaryContainer" />
 
             <TextView
                 style="@style/Gozar.Action.Label"
@@ -82,7 +82,7 @@
 
             <ImageView
                 style="@style/Gozar.Action.Icon"
-                android:background="@drawable/frame_burst"
+                android:background="@drawable/tile"
                 android:backgroundTint="?attr/colorErrorContainer"
                 android:contentDescription="@string/ed_delete"
                 android:src="@drawable/ic_delete"
@@ -140,7 +140,7 @@
             </LinearLayout>
 
             <com.google.android.material.textfield.TextInputLayout
-                style="@style/Gozar.Field"
+                style="@style/Gozar.Field.Compact"
                 android:layout_marginTop="@dimen/sp_l"
                 android:hint="@string/name">
 
@@ -176,7 +176,7 @@
                         android:orientation="vertical">
 
                         <com.google.android.material.textfield.TextInputLayout
-                            style="@style/Gozar.Field"
+                            style="@style/Gozar.Field.Compact"
                             android:hint="@string/private_key">
 
                             <com.google.android.material.textfield.TextInputEditText
@@ -206,7 +206,7 @@
                             app:icon="@drawable/ic_auto_awesome" />
 
                         <com.google.android.material.textfield.TextInputLayout
-                            style="@style/Gozar.Field"
+                            style="@style/Gozar.Field.Compact"
                             android:layout_marginTop="@dimen/sp_s"
                             android:hint="@string/address">
 
@@ -219,7 +219,7 @@
                         </com.google.android.material.textfield.TextInputLayout>
 
                         <com.google.android.material.textfield.TextInputLayout
-                            style="@style/Gozar.Field"
+                            style="@style/Gozar.Field.Compact"
                             android:layout_marginTop="@dimen/sp_m"
                             android:hint="@string/dns">
 
@@ -238,7 +238,7 @@
                             android:orientation="horizontal">
 
                             <com.google.android.material.textfield.TextInputLayout
-                                style="@style/Gozar.Field"
+                                style="@style/Gozar.Field.Compact"
                                 android:layout_width="0dp"
                                 android:layout_weight="1"
                                 android:hint="@string/mtu">
@@ -252,7 +252,7 @@
                             </com.google.android.material.textfield.TextInputLayout>
 
                             <com.google.android.material.textfield.TextInputLayout
-                                style="@style/Gozar.Field"
+                                style="@style/Gozar.Field.Compact"
                                 android:layout_width="0dp"
                                 android:layout_marginStart="@dimen/sp_m"
                                 android:layout_weight="1"
@@ -292,7 +292,7 @@
                             android:orientation="horizontal">
 
                             <com.google.android.material.textfield.TextInputLayout
-                                style="@style/Gozar.Field"
+                                style="@style/Gozar.Field.Compact"
                                 android:layout_width="0dp"
                                 android:layout_weight="1"
                                 android:hint="Jc">
@@ -306,7 +306,7 @@
                             </com.google.android.material.textfield.TextInputLayout>
 
                             <com.google.android.material.textfield.TextInputLayout
-                                style="@style/Gozar.Field"
+                                style="@style/Gozar.Field.Compact"
                                 android:layout_width="0dp"
                                 android:layout_marginStart="@dimen/sp_m"
                                 android:layout_weight="1"
@@ -321,7 +321,7 @@
                             </com.google.android.material.textfield.TextInputLayout>
 
                             <com.google.android.material.textfield.TextInputLayout
-                                style="@style/Gozar.Field"
+                                style="@style/Gozar.Field.Compact"
                                 android:layout_width="0dp"
                                 android:layout_marginStart="@dimen/sp_m"
                                 android:layout_weight="1"
@@ -343,7 +343,7 @@
                             android:orientation="horizontal">
 
                             <com.google.android.material.textfield.TextInputLayout
-                                style="@style/Gozar.Field"
+                                style="@style/Gozar.Field.Compact"
                                 android:layout_width="0dp"
                                 android:layout_weight="1"
                                 android:hint="S1">
@@ -357,7 +357,7 @@
                             </com.google.android.material.textfield.TextInputLayout>
 
                             <com.google.android.material.textfield.TextInputLayout
-                                style="@style/Gozar.Field"
+                                style="@style/Gozar.Field.Compact"
                                 android:layout_width="0dp"
                                 android:layout_marginStart="@dimen/sp_m"
                                 android:layout_weight="1"
@@ -372,7 +372,7 @@
                             </com.google.android.material.textfield.TextInputLayout>
 
                             <com.google.android.material.textfield.TextInputLayout
-                                style="@style/Gozar.Field"
+                                style="@style/Gozar.Field.Compact"
                                 android:layout_width="0dp"
                                 android:layout_marginStart="@dimen/sp_m"
                                 android:layout_weight="1"
@@ -387,7 +387,7 @@
                             </com.google.android.material.textfield.TextInputLayout>
 
                             <com.google.android.material.textfield.TextInputLayout
-                                style="@style/Gozar.Field"
+                                style="@style/Gozar.Field.Compact"
                                 android:layout_width="0dp"
                                 android:layout_marginStart="@dimen/sp_m"
                                 android:layout_weight="1"
@@ -409,7 +409,7 @@
                             android:orientation="horizontal">
 
                             <com.google.android.material.textfield.TextInputLayout
-                                style="@style/Gozar.Field"
+                                style="@style/Gozar.Field.Compact"
                                 android:layout_width="0dp"
                                 android:layout_weight="1"
                                 android:hint="H1">
@@ -423,7 +423,7 @@
                             </com.google.android.material.textfield.TextInputLayout>
 
                             <com.google.android.material.textfield.TextInputLayout
-                                style="@style/Gozar.Field"
+                                style="@style/Gozar.Field.Compact"
                                 android:layout_width="0dp"
                                 android:layout_marginStart="@dimen/sp_m"
                                 android:layout_weight="1"
@@ -438,7 +438,7 @@
                             </com.google.android.material.textfield.TextInputLayout>
 
                             <com.google.android.material.textfield.TextInputLayout
-                                style="@style/Gozar.Field"
+                                style="@style/Gozar.Field.Compact"
                                 android:layout_width="0dp"
                                 android:layout_marginStart="@dimen/sp_m"
                                 android:layout_weight="1"
@@ -453,7 +453,7 @@
                             </com.google.android.material.textfield.TextInputLayout>
 
                             <com.google.android.material.textfield.TextInputLayout
-                                style="@style/Gozar.Field"
+                                style="@style/Gozar.Field.Compact"
                                 android:layout_width="0dp"
                                 android:layout_marginStart="@dimen/sp_m"
                                 android:layout_weight="1"
@@ -475,7 +475,7 @@
                             android:orientation="horizontal">
 
                             <com.google.android.material.textfield.TextInputLayout
-                                style="@style/Gozar.Field"
+                                style="@style/Gozar.Field.Compact"
                                 android:layout_width="0dp"
                                 android:layout_weight="1"
                                 android:hint="I1">
@@ -489,7 +489,7 @@
                             </com.google.android.material.textfield.TextInputLayout>
 
                             <com.google.android.material.textfield.TextInputLayout
-                                style="@style/Gozar.Field"
+                                style="@style/Gozar.Field.Compact"
                                 android:layout_width="0dp"
                                 android:layout_marginStart="@dimen/sp_m"
                                 android:layout_weight="1"
@@ -504,7 +504,7 @@
                             </com.google.android.material.textfield.TextInputLayout>
 
                             <com.google.android.material.textfield.TextInputLayout
-                                style="@style/Gozar.Field"
+                                style="@style/Gozar.Field.Compact"
                                 android:layout_width="0dp"
                                 android:layout_marginStart="@dimen/sp_m"
                                 android:layout_weight="1"
@@ -526,7 +526,7 @@
                             android:orientation="horizontal">
 
                             <com.google.android.material.textfield.TextInputLayout
-                                style="@style/Gozar.Field"
+                                style="@style/Gozar.Field.Compact"
                                 android:layout_width="0dp"
                                 android:layout_weight="1"
                                 android:hint="I4">
@@ -540,7 +540,7 @@
                             </com.google.android.material.textfield.TextInputLayout>
 
                             <com.google.android.material.textfield.TextInputLayout
-                                style="@style/Gozar.Field"
+                                style="@style/Gozar.Field.Compact"
                                 android:layout_width="0dp"
                                 android:layout_marginStart="@dimen/sp_m"
                                 android:layout_weight="1"
@@ -563,10 +563,10 @@
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnRandomAwg"
-                            style="@style/Widget.Gozar.Button.Text"
-                            android:layout_width="wrap_content"
+                            style="@style/Widget.Gozar.Button.Tonal"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="@dimen/sp_xs"
+                            android:layout_marginTop="@dimen/sp_l"
                             android:text="@string/random_awg"
                             app:icon="@drawable/ic_auto_awesome" />
                     </LinearLayout>
@@ -590,7 +590,7 @@
                         android:orientation="vertical">
 
                         <com.google.android.material.textfield.TextInputLayout
-                            style="@style/Gozar.Field"
+                            style="@style/Gozar.Field.Compact"
                             android:hint="@string/peer_public">
 
                             <com.google.android.material.textfield.TextInputEditText
@@ -602,7 +602,7 @@
                         </com.google.android.material.textfield.TextInputLayout>
 
                         <com.google.android.material.textfield.TextInputLayout
-                            style="@style/Gozar.Field"
+                            style="@style/Gozar.Field.Compact"
                             android:layout_marginTop="@dimen/sp_m"
                             android:hint="@string/preshared">
 
@@ -623,7 +623,7 @@
                             app:icon="@drawable/ic_key" />
 
                         <com.google.android.material.textfield.TextInputLayout
-                            style="@style/Gozar.Field"
+                            style="@style/Gozar.Field.Compact"
                             android:layout_marginTop="@dimen/sp_s"
                             android:hint="@string/endpoint">
 
@@ -636,7 +636,7 @@
                         </com.google.android.material.textfield.TextInputLayout>
 
                         <com.google.android.material.textfield.TextInputLayout
-                            style="@style/Gozar.Field"
+                            style="@style/Gozar.Field.Compact"
                             android:layout_marginTop="@dimen/sp_m"
                             android:hint="@string/allowed_ips">
 
@@ -649,7 +649,7 @@
                         </com.google.android.material.textfield.TextInputLayout>
 
                         <com.google.android.material.textfield.TextInputLayout
-                            style="@style/Gozar.Field"
+                            style="@style/Gozar.Field.Compact"
                             android:layout_marginTop="@dimen/sp_m"
                             android:hint="@string/keepalive">
 
@@ -666,7 +666,7 @@
 
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/rawBox"
-                style="@style/Gozar.Field"
+                style="@style/Gozar.Field.Compact"
                 android:layout_marginTop="@dimen/sp_l"
                 android:visibility="gone">
 
