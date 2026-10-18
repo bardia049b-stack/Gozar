@@ -93,10 +93,11 @@
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
-                <View
-                    android:layout_width="12dp"
-                    android:layout_height="12dp"
-                    android:background="@drawable/map_dot_origin" />
+                <com.gozarwg.CountryFlagView
+                    android:id="@+id/ivMapOriginFlag"
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:contentDescription="@string/map_you" />
 
                 <LinearLayout
                     android:layout_width="0dp"
@@ -136,10 +137,11 @@
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
-                <View
-                    android:layout_width="12dp"
-                    android:layout_height="12dp"
-                    android:background="@drawable/map_dot_exit" />
+                <com.gozarwg.CountryFlagView
+                    android:id="@+id/ivMapExitFlag"
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:contentDescription="@string/map_exit" />
 
                 <LinearLayout
                     android:layout_width="0dp"

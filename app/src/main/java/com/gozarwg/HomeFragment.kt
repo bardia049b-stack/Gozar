@@ -265,21 +265,22 @@ class HomeFragment : Fragment() {
         if (state == 2) {
             find<RollingValueView>(R.id.tvDown).setValue(fmtSpeed(Vpn.downSpeed))
             find<RollingValueView>(R.id.tvUp).setValue(fmtSpeed(Vpn.upSpeed))
-            find<RollingValueView>(R.id.tvDownTotal).setValue(fmtBytes(Vpn.totalRx))
-            find<RollingValueView>(R.id.tvUpTotal).setValue(fmtBytes(Vpn.totalTx))
+            find<RollingValueView>(R.id.tvTotal).setValue(fmtBytes(Vpn.totalRx + Vpn.totalTx))
             find<RollingValueView>(R.id.tvPing).setValue(when {
                 Vpn.latencyChecking -> "…"
                 Vpn.latencyMs > 0 -> "${Vpn.latencyMs} ms"
                 else -> "—"
             })
+            val age = Vpn.handshakeAgeSec()
+            find<RollingValueView>(R.id.tvHandshake).setValue(when {
+                age < 0 -> getString(R.string.now)
+                age < 60 -> if (age <= 1) getString(R.string.now) else String.format(getString(R.string.sec_ago), age)
+                else -> String.format(getString(R.string.min_ago), age / 60)
+            })
+            reveal(find<View>(R.id.statsRow))
             if (Vpn.ipInfo == null) fetchIp() else paintIp()
         } else {
-            // Directional cards remain in place like the reference Home screen, but never show
-            // stale numbers from a previous tunnel session.
-            find<RollingValueView>(R.id.tvDown).setValue("0 B/s")
-            find<RollingValueView>(R.id.tvUp).setValue("0 B/s")
-            find<RollingValueView>(R.id.tvDownTotal).setValue("0 B")
-            find<RollingValueView>(R.id.tvUpTotal).setValue("0 B")
+            find<View>(R.id.statsRow).visibility = View.GONE
             find<View>(R.id.connectionInfo).visibility = View.GONE
         }
     }
@@ -300,11 +301,12 @@ class HomeFragment : Fragment() {
     private fun paintIp() {
         if (!isAdded || view == null) return
         val info = Vpn.ipInfo ?: return
-        val iran = info.code.equals("IR", true)
-        find<ImageView>(R.id.ivFlag).visibility = if (iran) View.VISIBLE else View.GONE
-        find<TextView>(R.id.tvFlag).apply {
-            visibility = if (iran) View.GONE else View.VISIBLE
-            text = if (iran) "" else Ip.flag(info.code)
+        // Use the bundled ZedSecure/flag-icons artwork for every country, clipped in a circular
+        // badge. This avoids inconsistent emoji glyphs and the old flat flag strip.
+        find<CountryFlagView>(R.id.ivFlag).apply {
+            countryCode = info.code
+            ringColor = color(R.color.map_exit)
+            visibility = View.VISIBLE
         }
         find<TextView>(R.id.tvIp).text = info.ip
         find<TextView>(R.id.tvProvider).text = listOf(info.city, info.provider)
@@ -335,16 +337,13 @@ class HomeFragment : Fragment() {
         val metricNumber = color(R.color.metric_number)
         val metricLabel = color(R.color.metric_label)
         intArrayOf(R.id.tvIp, R.id.tvCurrentName).forEach { id -> find<TextView>(id).setTextColor(primary) }
-        intArrayOf(R.id.tvDown, R.id.tvUp).forEach { id ->
+        intArrayOf(R.id.tvDown, R.id.tvUp, R.id.tvTotal, R.id.tvHandshake).forEach { id ->
             find<TextView>(id).setTextColor(metricNumber)
         }
-        intArrayOf(R.id.tvDownTotal, R.id.tvUpTotal).forEach { id ->
-            find<TextView>(id).setTextColor(metricLabel)
-        }
-        intArrayOf(R.id.tvPing, R.id.tvFlag, R.id.tvProvider, R.id.tvCurrentMeta).forEach { id ->
+        intArrayOf(R.id.tvPing, R.id.tvProvider, R.id.tvCurrentMeta).forEach { id ->
             find<TextView>(id).setTextColor(secondary)
         }
-        intArrayOf(R.id.tvDownLabel, R.id.tvUpLabel).forEach { id ->
+        intArrayOf(R.id.tvDownLabel, R.id.tvUpLabel, R.id.tvTotalLabel, R.id.tvHandshakeLabel).forEach { id ->
             find<TextView>(id).setTextColor(metricLabel)
         }
     }

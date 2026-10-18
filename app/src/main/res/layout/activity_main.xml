@@ -114,23 +114,12 @@
                         android:gravity="center_vertical"
                         android:orientation="horizontal">
 
-                        <ImageView
+                        <com.gozarwg.CountryFlagView
                             android:id="@+id/ivFlag"
-                            android:layout_width="22dp"
-                            android:layout_height="15dp"
-                            android:adjustViewBounds="true"
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
                             android:contentDescription="@string/location"
-                            android:scaleType="fitCenter"
-                            android:src="@drawable/flag_ir"
                             android:visibility="gone" />
-
-                        <TextView
-                            android:id="@+id/tvFlag"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:includeFontPadding="false"
-                            android:textAppearance="@style/TextAppearance.Gozar.LabelMedium"
-                            android:textColor="@color/m3_on_surface_variant" />
 
                         <TextView
                             android:id="@+id/tvIp"
@@ -184,7 +173,7 @@
                 app:tint="?attr/colorOnSurface" />
         </FrameLayout>
 
-        <!-- Pixel-style configuration row: server first, then the two directional traffic cards. -->
+        <!-- Restore the compact profile picker and four unboxed, directional statistics. -->
         <LinearLayout
             android:id="@+id/profileCard"
             style="@style/Gozar.Row"
@@ -192,9 +181,9 @@
 
             <ImageView
                 android:id="@+id/profileTile"
-                android:layout_width="44dp"
-                android:layout_height="44dp"
-                android:background="@drawable/frame_squircle"
+                android:layout_width="@dimen/tile_size"
+                android:layout_height="@dimen/tile_size"
+                android:background="@drawable/frame_burst"
                 android:backgroundTint="@color/tile_container"
                 android:contentDescription="@string/select_profile"
                 android:padding="12dp"
@@ -226,138 +215,174 @@
             android:id="@+id/statsRow"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="3dp"
+            android:layout_marginTop="@dimen/sp_l"
             android:baselineAligned="false"
-            android:orientation="horizontal">
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:visibility="gone">
 
             <LinearLayout
                 android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_marginEnd="2dp"
+                android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:background="@drawable/stat_download_card"
-                android:gravity="center_vertical"
-                android:minHeight="112dp"
-                android:orientation="horizontal"
-                android:paddingStart="14dp"
-                android:paddingTop="12dp"
-                android:paddingEnd="10dp"
-                android:paddingBottom="12dp">
+                android:gravity="center_horizontal"
+                android:orientation="vertical">
 
                 <ImageView
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:background="@drawable/frame_puff"
-                    android:backgroundTint="@color/stat_download_container"
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
+                    android:background="@drawable/frame_burst"
+                    android:backgroundTint="@color/tile_container"
                     android:contentDescription="@string/download"
-                    android:padding="9dp"
+                    android:padding="16dp"
                     android:src="@drawable/ic_down"
-                    app:tint="@color/stat_download_on_container" />
+                    app:tint="@color/tile_on_container" />
 
-                <LinearLayout
-                    android:layout_width="0dp"
+                <com.gozarwg.RollingValueView
+                    android:id="@+id/tvDown"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="10dp"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
+                    android:ellipsize="end"
+                    android:gravity="center"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:text="0 B/s"
+                    android:textAppearance="@style/TextAppearance.Gozar.TitleMedium"
+                    android:textColor="@color/metric_number"
+                    android:textDirection="ltr" />
 
-                    <TextView
-                        android:id="@+id/tvDownLabel"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:ellipsize="end"
-                        android:maxLines="1"
-                        android:text="@string/download"
-                        android:textAppearance="@style/TextAppearance.Gozar.LabelMedium"
-                        android:textColor="@color/metric_label" />
-
-                    <com.gozarwg.RollingValueView
-                        android:id="@+id/tvDown"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:includeFontPadding="false"
-                        android:maxLines="1"
-                        android:text="0 B/s"
-                        android:textAppearance="@style/TextAppearance.Gozar.TitleSmall"
-                        android:textColor="@color/metric_number"
-                        android:textDirection="ltr" />
-
-                    <com.gozarwg.RollingValueView
-                        android:id="@+id/tvDownTotal"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:includeFontPadding="false"
-                        android:maxLines="1"
-                        android:text="0 B"
-                        android:textAppearance="@style/TextAppearance.Gozar.LabelSmall"
-                        android:textColor="@color/metric_label"
-                        android:textDirection="ltr" />
-                </LinearLayout>
+                <TextView
+                    android:id="@+id/tvDownLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:maxLines="1"
+                    android:text="@string/download"
+                    android:textAppearance="@style/TextAppearance.Gozar.LabelSmall"
+                    android:textColor="@color/metric_label" />
             </LinearLayout>
 
             <LinearLayout
                 android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_marginStart="2dp"
+                android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:background="@drawable/stat_upload_card"
-                android:gravity="center_vertical"
-                android:minHeight="112dp"
-                android:orientation="horizontal"
-                android:paddingStart="14dp"
-                android:paddingTop="12dp"
-                android:paddingEnd="10dp"
-                android:paddingBottom="12dp">
+                android:gravity="center_horizontal"
+                android:orientation="vertical">
 
                 <ImageView
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:background="@drawable/frame_gem"
-                    android:backgroundTint="@color/stat_upload_container"
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
+                    android:background="@drawable/frame_burst"
+                    android:backgroundTint="@color/tile_container"
                     android:contentDescription="@string/upload"
-                    android:padding="9dp"
+                    android:padding="16dp"
                     android:src="@drawable/ic_up"
-                    app:tint="@color/stat_upload_on_container" />
+                    app:tint="@color/tile_on_container" />
 
-                <LinearLayout
-                    android:layout_width="0dp"
+                <com.gozarwg.RollingValueView
+                    android:id="@+id/tvUp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="10dp"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
+                    android:ellipsize="end"
+                    android:gravity="center"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:text="0 B/s"
+                    android:textAppearance="@style/TextAppearance.Gozar.TitleMedium"
+                    android:textColor="@color/metric_number"
+                    android:textDirection="ltr" />
 
-                    <TextView
-                        android:id="@+id/tvUpLabel"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:ellipsize="end"
-                        android:maxLines="1"
-                        android:text="@string/upload"
-                        android:textAppearance="@style/TextAppearance.Gozar.LabelMedium"
-                        android:textColor="@color/metric_label" />
+                <TextView
+                    android:id="@+id/tvUpLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:maxLines="1"
+                    android:text="@string/upload"
+                    android:textAppearance="@style/TextAppearance.Gozar.LabelSmall"
+                    android:textColor="@color/metric_label" />
+            </LinearLayout>
 
-                    <com.gozarwg.RollingValueView
-                        android:id="@+id/tvUp"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:includeFontPadding="false"
-                        android:maxLines="1"
-                        android:text="0 B/s"
-                        android:textAppearance="@style/TextAppearance.Gozar.TitleSmall"
-                        android:textColor="@color/metric_number"
-                        android:textDirection="ltr" />
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center_horizontal"
+                android:orientation="vertical">
 
-                    <com.gozarwg.RollingValueView
-                        android:id="@+id/tvUpTotal"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:includeFontPadding="false"
-                        android:maxLines="1"
-                        android:text="0 B"
-                        android:textAppearance="@style/TextAppearance.Gozar.LabelSmall"
-                        android:textColor="@color/metric_label"
-                        android:textDirection="ltr" />
-                </LinearLayout>
+                <ImageView
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
+                    android:background="@drawable/frame_burst"
+                    android:backgroundTint="@color/tile_container"
+                    android:contentDescription="@string/total"
+                    android:padding="16dp"
+                    android:src="@drawable/ic_data"
+                    app:tint="@color/tile_on_container" />
+
+                <com.gozarwg.RollingValueView
+                    android:id="@+id/tvTotal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:gravity="center"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:text="0 B"
+                    android:textAppearance="@style/TextAppearance.Gozar.TitleMedium"
+                    android:textColor="@color/metric_number"
+                    android:textDirection="ltr" />
+
+                <TextView
+                    android:id="@+id/tvTotalLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:maxLines="1"
+                    android:text="@string/total"
+                    android:textAppearance="@style/TextAppearance.Gozar.LabelSmall"
+                    android:textColor="@color/metric_label" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center_horizontal"
+                android:orientation="vertical">
+
+                <ImageView
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
+                    android:background="@drawable/frame_burst"
+                    android:backgroundTint="@color/tile_container"
+                    android:contentDescription="@string/handshake"
+                    android:padding="16dp"
+                    android:src="@drawable/ic_sync"
+                    app:tint="@color/tile_on_container" />
+
+                <com.gozarwg.RollingValueView
+                    android:id="@+id/tvHandshake"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:gravity="center"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:text="@string/now"
+                    android:textAppearance="@style/TextAppearance.Gozar.TitleMedium"
+                    android:textColor="@color/metric_number"
+                    android:textDirection="ltr" />
+
+                <TextView
+                    android:id="@+id/tvHandshakeLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:maxLines="1"
+                    android:text="@string/hs_short"
+                    android:textAppearance="@style/TextAppearance.Gozar.LabelSmall"
+                    android:textColor="@color/metric_label" />
             </LinearLayout>
         </LinearLayout>
     </LinearLayout>

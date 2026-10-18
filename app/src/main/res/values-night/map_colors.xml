@@ -6,8 +6,4 @@
     <color name="map_grid">#868198</color>
     <color name="map_origin">#D2BCFF</color>
     <color name="map_exit">#9CC7FF</color>
-    <color name="stat_download_container">#60316C</color>
-    <color name="stat_download_on_container">#F8D8FF</color>
-    <color name="stat_upload_container">#294D91</color>
-    <color name="stat_upload_on_container">#D9E2FF</color>
 </resources>

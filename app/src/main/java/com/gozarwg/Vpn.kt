@@ -107,6 +107,9 @@ object Vpn {
         latencyMs = -1
         latencyChecking = false
         latencyAt = 0L
+        // An origin belongs to a connection attempt, never to a previously selected profile.
+        // It is re-sampled by the worker below before this attempt brings up the tunnel.
+        originInfo = null
         ipInfo = null
         ipSession = 0L
         stopping = false
@@ -121,11 +124,20 @@ object Vpn {
         val sess = session
         thread {
             try {
+                // On a profile switch, wait for the previous tunnel to be completely down first.
+                // Only then may the location request represent the direct, pre-tunnel network.
                 try {
                     teardown.await(900, TimeUnit.MILLISECONDS)
                 } catch (e: Exception) {
                 }
                 BlockService.stopAndWait(ctx, 1200)
+                if (session != sess || userStop) return@thread
+                // This request is deliberately made before setState(UP), after teardown, so it
+                // cannot inherit a stale location or the exit of the configuration just replaced.
+                val directOrigin = Ip.fetch()
+                if (session != sess || userStop) return@thread
+                originInfo = directOrigin
+                notifyChange()
                 val cfg = buildConfig(ctx, prof)
                 lastCfg = cfg
                 peerKey = cfg.peers.firstOrNull()?.publicKey

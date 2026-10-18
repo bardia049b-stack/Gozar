@@ -16,6 +16,13 @@ The adapted implementation and bundled world geometry in this repository are lic
 AGPL-3.0-or-later. The upstream product name is used here only for required attribution and is not
 an endorsement. GozarWG does not display that product name in its regular interface.
 
+Country flag artwork
+--------------------
+The circular country badges use compact PNG derivatives of the country SVGs shipped with the
+ZedSecure source tree. Original SVG source: flag-icons, https://github.com/lipis/flag-icons
+Copyright (c) 2013 Panayiotis Lipiridis. License: MIT. The source SVGs are 4x3 country flags;
+only format conversion and circular clipping are applied here.
+
 AndroidX Graphics Shapes and Collection
 ---------------------------------------
 Copyright (C) The Android Open Source Project

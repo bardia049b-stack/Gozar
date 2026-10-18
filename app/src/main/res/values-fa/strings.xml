@@ -195,13 +195,15 @@
     <string name="map_unknown">موقعیت نامشخص</string>
     <string name="map_locating">در حال یافتن خروجی تونل…</string>
     <string name="map_route_badge">%1$s  ←  %2$s</string>
+    <string name="map_session_provider_live">%1$s · تونل فعال است</string>
+    <string name="map_session_provider_ping">%1$s · پینگ تونل %2$d میلی‌ثانیه</string>
     <string name="map_session_live">تونل فعال است</string>
     <string name="map_session_checking">در حال بررسی تأخیر تونل…</string>
     <string name="map_session_ping">پینگ تونل · %d میلی‌ثانیه</string>
     <string name="map_not_connected">تونل دیگر متصل نیست</string>
     <string name="legal_notice">GozarWG نرم‌افزار آزاد تحت مجوز GNU Affero General Public License نسخه ۳ یا جدیدتر است.
 
-این نسخه شامل کنترل صفحهٔ خانه، شاخص‌های متحرک اتصال و بوم آفلاین مسیر جهانِ سازگارشده از ZedSecure، حق‌نشر © ۲۰۲۶ CluvexStudio، تحت AGPL-3.0-or-later است. بوم مسیر با دادهٔ هندسی داخلی عرضه می‌شود و هیچ کاشی نقشهٔ آنلاین بارگیری نمی‌کند.
+این نسخه شامل کنترل صفحهٔ خانه، شاخص‌های متحرک اتصال و بوم آفلاین مسیر جهانِ سازگارشده از ZedSecure، حق‌نشر © ۲۰۲۶ CluvexStudio، تحت AGPL-3.0-or-later است. بوم مسیر با دادهٔ هندسی داخلی عرضه می‌شود و هیچ کاشی نقشهٔ آنلاین بارگیری نمی‌کند. نشان‌های گرد کشور از flag-icons تحت مجوز MIT گرفته شده‌اند.
 
 کد منبع متناظر کامل، متن مجوز و اطلاعیه‌ها در مخزن GozarWG در دسترس هستند.</string>
 </resources>

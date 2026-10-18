@@ -6,6 +6,7 @@ import android.os.Looper
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import java.util.Locale
@@ -24,6 +25,8 @@ class RouteMapActivity : BaseActivity() {
     private lateinit var exitValue: TextView
     private lateinit var routeBadge: TextView
     private lateinit var sessionValue: TextView
+    private lateinit var originFlag: CountryFlagView
+    private lateinit var exitFlag: CountryFlagView
 
     private val refresher = object : Runnable {
         override fun run() {
@@ -40,6 +43,8 @@ class RouteMapActivity : BaseActivity() {
         exitValue = findViewById(R.id.tvMapExit)
         routeBadge = findViewById(R.id.tvMapRouteBadge)
         sessionValue = findViewById(R.id.tvMapSession)
+        originFlag = findViewById(R.id.ivMapOriginFlag)
+        exitFlag = findViewById(R.id.ivMapExitFlag)
         findViewById<View>(R.id.btnMapBack).setOnClickListener { finish() }
         applyInsets()
     }
@@ -92,16 +97,24 @@ class RouteMapActivity : BaseActivity() {
 
         routeMap.setEndpoints(origin?.code, exit?.code)
         routeMap.setTraffic(if (Vpn.up) Vpn.downSpeed else 0.0, if (Vpn.up) Vpn.upSpeed else 0.0)
+        originFlag.countryCode = origin?.code
+        originFlag.ringColor = ContextCompat.getColor(this, R.color.map_origin)
+        exitFlag.countryCode = exit?.code
+        exitFlag.ringColor = ContextCompat.getColor(this, R.color.map_exit)
 
         val originLabel = locationLabel(origin, getString(R.string.map_unknown))
         val exitLabel = locationLabel(exit, getString(R.string.map_locating))
         originValue.text = originLabel
         exitValue.text = exitLabel
         routeBadge.text = getString(R.string.map_route_badge, shortLabel(originLabel), shortLabel(exitLabel))
+        val provider = exit?.provider?.takeIf { it.isNotBlank() }
         sessionValue.text = when {
             !Vpn.up -> getString(R.string.map_not_connected)
-            Vpn.latencyChecking -> getString(R.string.map_session_checking)
-            Vpn.latencyMs > 0 -> getString(R.string.map_session_ping, Vpn.latencyMs)
+            Vpn.latencyChecking -> provider?.let { getString(R.string.map_session_provider_live, it) }
+                ?: getString(R.string.map_session_checking)
+            Vpn.latencyMs > 0 -> provider?.let { getString(R.string.map_session_provider_ping, it, Vpn.latencyMs) }
+                ?: getString(R.string.map_session_ping, Vpn.latencyMs)
+            provider != null -> getString(R.string.map_session_provider_live, provider)
             Vpn.profile?.name?.isNotBlank() == true -> Vpn.profile!!.name
             else -> getString(R.string.map_session_live)
         }

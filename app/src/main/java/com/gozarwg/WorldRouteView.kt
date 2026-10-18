@@ -1,13 +1,9 @@
 package com.gozarwg
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.graphics.Canvas
-import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
-import android.graphics.RectF
 import android.os.SystemClock
 import android.util.AttributeSet
 import android.view.GestureDetector
@@ -15,8 +11,6 @@ import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
 import androidx.core.content.ContextCompat
-import kotlin.math.abs
-import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.ln
 import kotlin.math.max
@@ -50,14 +44,14 @@ class WorldRouteView @JvmOverloads constructor(
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
     private val flagPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG).apply {
         textAlign = Paint.Align.CENTER
-        typeface = android.graphics.Typeface.create("sans", android.graphics.Typeface.NORMAL)
+        typeface = android.graphics.Typeface.create("sans", android.graphics.Typeface.BOLD)
     }
+    private val flagBitmapPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
     private val routePath = Path()
     private val arrowPath = Path()
     private val gridPath = Path()
     private val countries: List<Country> = readCountries()
     private val allLand = Path().apply { countries.forEach { addPath(it.path) } }
-    private val iranFlag: Bitmap? by lazy { BitmapFactory.decodeResource(resources, R.drawable.flag_ir) }
 
     private val surfaceColor = ContextCompat.getColor(context, R.color.map_surface)
     private val landColor = ContextCompat.getColor(context, R.color.map_land)
@@ -334,7 +328,7 @@ class WorldRouteView @JvmOverloads constructor(
         canvas.drawCircle(point.x, point.y, px(16f), fill)
     }
 
-    /** Flag artwork is clipped only inside endpoint markers—never painted over country geometry. */
+    /** ZedSecure/flag-icons artwork is clipped only inside round endpoint markers—never country geometry. */
     private fun drawMarker(canvas: Canvas, point: Point, ring: Int) {
         val x = offsetX + point.x * scale
         val y = offsetY + point.y * scale
@@ -348,18 +342,24 @@ class WorldRouteView @JvmOverloads constructor(
         canvas.drawCircle(x, y, radius - dp(1f), outline)
 
         canvas.save()
-        val clip = Path().apply { addCircle(x, y, radius - dp(3f), Path.Direction.CW) }
+        val inner = radius - dp(3f)
+        val clip = Path().apply { addCircle(x, y, inner, Path.Direction.CW) }
         canvas.clipPath(clip)
-        if (point.code == "IR" && iranFlag != null) {
-            val d = radius * 1.65f
-            canvas.drawBitmap(iranFlag!!, null, RectF(x - d / 2f, y - d / 2f, x + d / 2f, y + d / 2f), fill)
+        val flag = FlagAssets.bitmap(context, point.code)
+        if (flag != null) {
+            FlagAssets.drawCropped(
+                canvas,
+                flag,
+                android.graphics.RectF(x - inner, y - inner, x + inner, y + inner),
+                flagBitmapPaint
+            )
         } else {
             fill.color = alpha(surfaceColor, 0.90f)
-            canvas.drawCircle(x, y, radius - dp(3f), fill)
-            flagPaint.color = Color.WHITE
-            flagPaint.textSize = radius * 1.08f
+            canvas.drawCircle(x, y, inner, fill)
+            flagPaint.color = ContextCompat.getColor(context, R.color.m3_on_surface)
+            flagPaint.textSize = radius * 0.76f
             val base = y - (flagPaint.ascent() + flagPaint.descent()) / 2f
-            canvas.drawText(Ip.flag(point.code), x, base, flagPaint)
+            canvas.drawText(point.code, x, base, flagPaint)
         }
         canvas.restore()
     }

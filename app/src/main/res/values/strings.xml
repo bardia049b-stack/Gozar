@@ -195,13 +195,15 @@
     <string name="map_unknown">Unknown location</string>
     <string name="map_locating">Locating tunnel exit…</string>
     <string name="map_route_badge">%1$s  →  %2$s</string>
+    <string name="map_session_provider_live">%1$s · Active tunnel</string>
+    <string name="map_session_provider_ping">%1$s · Tunnel ping %2$d ms</string>
     <string name="map_session_live">Active tunnel</string>
     <string name="map_session_checking">Checking tunnel latency…</string>
     <string name="map_session_ping">Tunnel ping · %d ms</string>
     <string name="map_not_connected">Tunnel is no longer connected</string>
     <string name="legal_notice">GozarWG is free software under the GNU Affero General Public License, version 3 or later.
 
-This version includes adapted home-screen control, rolling connection metrics, and an offline world-route canvas from ZedSecure, Copyright © 2026 CluvexStudio, also under AGPL-3.0-or-later. The route canvas ships with bundled geometry and does not load online map tiles.
+This version includes adapted home-screen control, rolling connection metrics, and an offline world-route canvas from ZedSecure, Copyright © 2026 CluvexStudio, also under AGPL-3.0-or-later. The route canvas ships with bundled geometry and does not load online map tiles. Circular country badge artwork is derived from flag-icons under the MIT License.
 
 The complete corresponding source, license text, and notices are available in the GozarWG repository.</string>
 </resources>
