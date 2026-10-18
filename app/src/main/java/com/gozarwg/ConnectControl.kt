@@ -11,6 +11,7 @@ import android.graphics.RectF
 import android.graphics.Typeface
 import android.graphics.drawable.Drawable
 import android.os.Build
+import android.os.SystemClock
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
@@ -100,7 +101,7 @@ class ConnectControl @JvmOverloads constructor(
             stamp = now
             phase = (phase + elapsed / if (state == BUSY) 3100f else 18000f) % 1f
             if (state == BUSY) {
-                val next = (System.currentTimeMillis() / 720L).toInt() % searching.size
+                val next = searchIndex()
                 if (next != shapeStep) {
                     shapeStep = next
                     changeShape(searching[next])
@@ -185,10 +186,12 @@ class ConnectControl @JvmOverloads constructor(
         }
     }
 
+    private fun searchIndex(): Int = ((SystemClock.elapsedRealtime() / 720L) % searching.size).toInt()
+
     private fun updateTarget() {
         val target = when (state) {
             ON -> live
-            BUSY -> searching[(System.currentTimeMillis() / 720L).toInt() % searching.size]
+            BUSY -> searching[searchIndex()]
             ERROR -> fault
             else -> idle
         }

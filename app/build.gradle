@@ -14,8 +14,8 @@ android {
         applicationId 'com.gozarwg'
         minSdk 24
         targetSdk 35
-        versionCode 25
-        versionName '2.1.0-fdroid'
+        versionCode 26
+        versionName '2.1.1-fdroid'
         resourceConfigurations += ['en', 'fa']
     }
 
