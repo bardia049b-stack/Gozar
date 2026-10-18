@@ -187,8 +187,21 @@
     <string name="legal_title">مجوز و کد منبع</string>
     <string name="source_code">کد منبع</string>
     <string name="route_map">مسیر تونل</string>
-    <string name="open_live_map">باز کردن نقشه زندهٔ مسیر</string>
-    <string name="live_map_content">نقشهٔ تمام‌صفحهٔ زندهٔ مسیر تونل</string>
-    <string name="osm_attribution">© مشارکت‌کنندگان OpenStreetMap</string>
-    <string name="legal_notice">GozarWG نرم‌افزار آزاد تحت مجوز GNU Affero General Public License نسخه ۳ یا جدیدتر است.\n\nاین نسخه شامل کدهای سازگارشدهٔ کنترل صفحهٔ خانه و شاخص‌های متحرک اتصال از ZedSecure، حق‌نشر © ۲۰۲۶ CluvexStudio، تحت AGPL-3.0-or-later است.\n\nنمای مسیر تمام‌صفحه از کاشی‌های OpenStreetMap با حق‌نشر © مشارکت‌کنندگان OpenStreetMap استفاده می‌کند.\n\nکد منبع متناظر کامل، متن مجوز و اطلاعیه‌ها در مخزن GozarWG در دسترس هستند.</string>
+    <string name="open_live_map">باز کردن نقشهٔ مسیر</string>
+    <string name="live_map_content">نقشهٔ آفلاین و تمام‌صفحهٔ مسیر تونل</string>
+    <string name="map_subtitle">نمای آفلاین مسیر تونل فعال شما</string>
+    <string name="map_you">شما</string>
+    <string name="map_exit">خروجی تونل</string>
+    <string name="map_unknown">موقعیت نامشخص</string>
+    <string name="map_locating">در حال یافتن خروجی تونل…</string>
+    <string name="map_route_badge">%1$s  ←  %2$s</string>
+    <string name="map_session_live">تونل فعال است</string>
+    <string name="map_session_checking">در حال بررسی تأخیر تونل…</string>
+    <string name="map_session_ping">پینگ تونل · %d میلی‌ثانیه</string>
+    <string name="map_not_connected">تونل دیگر متصل نیست</string>
+    <string name="legal_notice">GozarWG نرم‌افزار آزاد تحت مجوز GNU Affero General Public License نسخه ۳ یا جدیدتر است.
+
+این نسخه شامل کنترل صفحهٔ خانه، شاخص‌های متحرک اتصال و بوم آفلاین مسیر جهانِ سازگارشده از ZedSecure، حق‌نشر © ۲۰۲۶ CluvexStudio، تحت AGPL-3.0-or-later است. بوم مسیر با دادهٔ هندسی داخلی عرضه می‌شود و هیچ کاشی نقشهٔ آنلاین بارگیری نمی‌کند.
+
+کد منبع متناظر کامل، متن مجوز و اطلاعیه‌ها در مخزن GozarWG در دسترس هستند.</string>
 </resources>

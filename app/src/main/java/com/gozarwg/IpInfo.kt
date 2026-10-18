@@ -9,9 +9,7 @@ data class IpInfo(
     val city: String,
     val country: String,
     val code: String,
-    val provider: String,
-    val latitude: Double? = null,
-    val longitude: Double? = null
+    val provider: String
 )
 
 object Ip {
@@ -45,9 +43,7 @@ object Ip {
                 j.optString("city"),
                 j.optString(countryKey),
                 j.optString(codeKey).uppercase(),
-                providerOf(j),
-                coordinate(j, "latitude"),
-                coordinate(j, "longitude")
+                providerOf(j)
             )
         } catch (e: Exception) {
             null
@@ -56,17 +52,10 @@ object Ip {
         }
     }
 
-    private fun coordinate(json: JSONObject, key: String): Double? {
-        val value = json.optDouble(key, Double.NaN)
-        return value.takeIf { it.isFinite() }
-    }
-
     fun flag(code: String): String {
         if (code.length != 2) return ""
         val sb = StringBuilder()
-        for (ch in code.uppercase()) {
-            sb.appendCodePoint(0x1F1E6 + (ch - 'A'))
-        }
+        for (ch in code.uppercase()) sb.appendCodePoint(0x1F1E6 + (ch - 'A'))
         return sb.toString()
     }
 }

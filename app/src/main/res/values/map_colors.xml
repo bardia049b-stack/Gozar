@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Offline route canvas palette: land is intentionally neutral, never flag-filled. -->
+    <color name="map_surface">#FBF8FF</color>
+    <color name="map_land">#29283A</color>
+    <color name="map_grid">#4E4B65</color>
+    <color name="map_origin">#7D4FAC</color>
+    <color name="map_exit">#1769C2</color>
+    <color name="stat_download_container">#EFD1F3</color>
+    <color name="stat_download_on_container">#57125D</color>
+    <color name="stat_upload_container">#D7E2FF</color>
+    <color name="stat_upload_on_container">#113C83</color>
+</resources>

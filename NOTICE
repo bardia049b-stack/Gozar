@@ -1,15 +1,20 @@
 GozarWG notices
 ===============
 
-Home interface adaptation
--------------------------
-Portions of the home-screen interface, including the morphing connection-control state model, connection facts, server row, rolling metrics, latency presentation and traffic presentation, are adapted from ZedSecure.
+Home interface and offline route canvas adaptation
+--------------------------------------------------
+Portions of the home-screen interface, including the morphing connection-control state model,
+connection facts, server row, rolling metrics, latency presentation and traffic presentation, are
+adapted from ZedSecure. The offline world-route canvas and compact world geometry format are also
+adapted from ZedSecure's WorldMapCanvas and WorldMap implementations.
 
 Copyright (C) 2026 CluvexStudio
 Source: https://github.com/CluvexStudio/ZedSecure
 License: GNU Affero General Public License, version 3 or later.
 
-The adapted implementation in this repository is licensed under AGPL-3.0-or-later. The upstream product name is used here only for attribution and is not an endorsement.
+The adapted implementation and bundled world geometry in this repository are licensed under
+AGPL-3.0-or-later. The upstream product name is used here only for required attribution and is not
+an endorsement. GozarWG does not display that product name in its regular interface.
 
 AndroidX Graphics Shapes and Collection
 ---------------------------------------
@@ -26,9 +31,3 @@ ZXing
 -----
 Source: https://github.com/zxing/zxing
 License: Apache License 2.0
-
-OpenStreetMap route map
------------------------
-The full-screen connected-route view uses OpenStreetMap standard tiles through osmdroid.
-Map data and tiles: © OpenStreetMap contributors, available under the Open Database License (ODbL).
-osmdroid: Apache License 2.0, https://github.com/osmdroid/osmdroid

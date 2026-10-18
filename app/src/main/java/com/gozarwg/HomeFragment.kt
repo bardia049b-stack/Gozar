@@ -218,11 +218,12 @@ class HomeFragment : Fragment() {
             0
         }
         find<ConnectionPulse>(R.id.connectionPulse).state = control.state
-        val showSessionDetails = state != 0
-        listOf(R.id.tvStatus, R.id.connectionPulse, R.id.tvAction).forEach { id ->
-            val target = find<View>(id)
-            if (showSessionDetails) reveal(target) else target.visibility = View.GONE
-        }
+        // The Pixel-style hero keeps its status and instruction legible while idle. Only the
+        // progress pulse and connected-only map affordance appear after a real tunnel transition.
+        find<View>(R.id.tvStatus).visibility = View.VISIBLE
+        find<View>(R.id.tvAction).visibility = View.VISIBLE
+        val showPulse = state == 1 || state == 4
+        find<View>(R.id.connectionPulse).visibility = if (showPulse) View.VISIBLE else View.GONE
         find<View>(R.id.btnMap).visibility = if (state == 2) View.VISIBLE else View.GONE
         applyReadableTextColors()
         if (visualState != state) {
@@ -264,22 +265,21 @@ class HomeFragment : Fragment() {
         if (state == 2) {
             find<RollingValueView>(R.id.tvDown).setValue(fmtSpeed(Vpn.downSpeed))
             find<RollingValueView>(R.id.tvUp).setValue(fmtSpeed(Vpn.upSpeed))
-            find<RollingValueView>(R.id.tvTotal).setValue(fmtBytes(Vpn.totalRx + Vpn.totalTx))
+            find<RollingValueView>(R.id.tvDownTotal).setValue(fmtBytes(Vpn.totalRx))
+            find<RollingValueView>(R.id.tvUpTotal).setValue(fmtBytes(Vpn.totalTx))
             find<RollingValueView>(R.id.tvPing).setValue(when {
                 Vpn.latencyChecking -> "…"
                 Vpn.latencyMs > 0 -> "${Vpn.latencyMs} ms"
                 else -> "—"
             })
-            val age = Vpn.handshakeAgeSec()
-            find<RollingValueView>(R.id.tvHandshake).setValue(when {
-                age < 0 -> getString(R.string.now)
-                age < 60 -> if (age <= 1) getString(R.string.now) else String.format(getString(R.string.sec_ago), age)
-                else -> String.format(getString(R.string.min_ago), age / 60)
-            })
-            reveal(find<View>(R.id.statsRow))
             if (Vpn.ipInfo == null) fetchIp() else paintIp()
         } else {
-            find<View>(R.id.statsRow).visibility = View.GONE
+            // Directional cards remain in place like the reference Home screen, but never show
+            // stale numbers from a previous tunnel session.
+            find<RollingValueView>(R.id.tvDown).setValue("0 B/s")
+            find<RollingValueView>(R.id.tvUp).setValue("0 B/s")
+            find<RollingValueView>(R.id.tvDownTotal).setValue("0 B")
+            find<RollingValueView>(R.id.tvUpTotal).setValue("0 B")
             find<View>(R.id.connectionInfo).visibility = View.GONE
         }
     }
@@ -335,13 +335,16 @@ class HomeFragment : Fragment() {
         val metricNumber = color(R.color.metric_number)
         val metricLabel = color(R.color.metric_label)
         intArrayOf(R.id.tvIp, R.id.tvCurrentName).forEach { id -> find<TextView>(id).setTextColor(primary) }
-        intArrayOf(R.id.tvDown, R.id.tvUp, R.id.tvTotal, R.id.tvHandshake).forEach { id ->
+        intArrayOf(R.id.tvDown, R.id.tvUp).forEach { id ->
             find<TextView>(id).setTextColor(metricNumber)
+        }
+        intArrayOf(R.id.tvDownTotal, R.id.tvUpTotal).forEach { id ->
+            find<TextView>(id).setTextColor(metricLabel)
         }
         intArrayOf(R.id.tvPing, R.id.tvFlag, R.id.tvProvider, R.id.tvCurrentMeta).forEach { id ->
             find<TextView>(id).setTextColor(secondary)
         }
-        intArrayOf(R.id.tvDownLabel, R.id.tvUpLabel, R.id.tvTotalLabel, R.id.tvHandshakeLabel).forEach { id ->
+        intArrayOf(R.id.tvDownLabel, R.id.tvUpLabel).forEach { id ->
             find<TextView>(id).setTextColor(metricLabel)
         }
     }
