@@ -3,6 +3,7 @@ package com.gozarwg
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import org.amnezia.awg.backend.Backend
 import org.amnezia.awg.backend.GoBackend
 import org.amnezia.awg.backend.NoopTunnelActionHandler
@@ -11,6 +12,8 @@ import org.amnezia.awg.backend.Statistics
 import org.amnezia.awg.backend.Tunnel
 import org.amnezia.awg.config.Config
 import org.amnezia.awg.config.proxy.Socks5Proxy
+import java.net.HttpURLConnection
+import java.net.URL
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
@@ -22,6 +25,8 @@ object Vpn {
     @Volatile var since = 0L
     @Volatile var downSpeed = 0.0
     @Volatile var upSpeed = 0.0
+    @Volatile var latencyMs = -1
+    @Volatile var latencyChecking = false
     @Volatile var totalRx = 0L
     @Volatile var totalTx = 0L
     @Volatile var errorAt = 0L
@@ -43,6 +48,7 @@ object Vpn {
     private var mLastRx = -1L
     private var mLastTx = -1L
     private var mLastTime = 0L
+    @Volatile private var latencyAt = 0L
 
     var listener: ((Boolean) -> Unit)? = null
     var onError: ((String) -> Unit)? = null
@@ -96,6 +102,9 @@ object Vpn {
         errorAt = 0L
         handshakeOk = false
         handshakeAge = -1L
+        latencyMs = -1
+        latencyChecking = false
+        latencyAt = 0L
         ipInfo = null
         ipSession = 0L
         stopping = false
@@ -153,6 +162,9 @@ object Vpn {
         teardown = CountDownLatch(1)
         handshakeOk = false
         handshakeAge = -1L
+        latencyMs = -1
+        latencyChecking = false
+        latencyAt = 0L
         ipInfo = null
         ipSession = 0L
         downSpeed = 0.0
@@ -208,6 +220,9 @@ object Vpn {
         if (!up) {
             handshakeOk = false
             handshakeAge = -1L
+            latencyMs = -1
+            latencyChecking = false
+            latencyAt = 0L
             ipInfo = null
             ipSession = 0L
             downSpeed = 0.0
@@ -342,12 +357,46 @@ object Vpn {
                     val c = appCtx
                     val p = profile
                     if (c != null && p != null && Store.notify(c)) Notify.update(c, p.name, downSpeed, upSpeed)
+                    if (handshakeOk && listener != null) probeLatency()
                 }
             } catch (e: Exception) {
             }
             monitoring = false
             downSpeed = 0.0
             upSpeed = 0.0
+        }
+    }
+
+    private fun probeLatency() {
+        val c = appCtx ?: return
+        if (Store.proxy(c) || latencyChecking) return
+        val now = SystemClock.elapsedRealtime()
+        if (now - latencyAt < 15_000L) return
+        latencyChecking = true
+        latencyAt = now
+        val currentSession = session
+        notifyChange()
+        thread {
+            var measured = -1
+            var connection: HttpURLConnection? = null
+            try {
+                val started = SystemClock.elapsedRealtime()
+                connection = URL("https://www.gstatic.com/generate_204").openConnection() as HttpURLConnection
+                connection.connectTimeout = 4_000
+                connection.readTimeout = 4_000
+                connection.requestMethod = "HEAD"
+                connection.instanceFollowRedirects = false
+                connection.connect()
+                if (connection.responseCode in 200..499) {
+                    measured = (SystemClock.elapsedRealtime() - started).toInt().coerceAtLeast(1)
+                }
+            } catch (e: Exception) {
+            } finally {
+                connection?.disconnect()
+            }
+            if (session == currentSession && up) latencyMs = measured
+            latencyChecking = false
+            notifyChange()
         }
     }
 

@@ -3,7 +3,7 @@ GozarWG notices
 
 Home interface adaptation
 -------------------------
-Portions of the home-screen interface, including the morphing connection-control state model, connection facts, server row and traffic presentation, are adapted from ZedSecure.
+Portions of the home-screen interface, including the morphing connection-control state model, animated world-route map, connection facts, server row, rolling metrics, latency presentation and traffic presentation, are adapted from ZedSecure.
 
 Copyright (C) 2026 CluvexStudio
 Source: https://github.com/CluvexStudio/ZedSecure

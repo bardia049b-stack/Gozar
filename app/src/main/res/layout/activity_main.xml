@@ -67,11 +67,25 @@
                 android:paddingEnd="@dimen/sp_l"
                 android:paddingBottom="@dimen/sp_l">
 
-                <com.gozarwg.ConnectControl
-                    android:id="@+id/connectButton"
-                    android:layout_width="208dp"
-                    android:layout_height="208dp"
-                    android:contentDescription="@string/connect" />
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="236dp"
+                    android:clipChildren="false"
+                    android:clipToPadding="false">
+
+                    <com.gozarwg.WorldRouteView
+                        android:id="@+id/worldRoute"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:importantForAccessibility="no" />
+
+                    <com.gozarwg.ConnectControl
+                        android:id="@+id/connectButton"
+                        android:layout_width="208dp"
+                        android:layout_height="208dp"
+                        android:layout_gravity="center"
+                        android:contentDescription="@string/connect" />
+                </FrameLayout>
 
                 <TextView
                     android:id="@+id/tvStatus"
@@ -141,6 +155,18 @@
                             android:maxLines="1"
                             android:textAppearance="@style/TextAppearance.Gozar.TitleSmall"
                             android:textColor="?attr/colorOnSurface"
+                            android:textDirection="ltr" />
+
+                        <com.gozarwg.RollingValueView
+                            android:id="@+id/tvPing"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="@dimen/sp_s"
+                            android:includeFontPadding="false"
+                            android:maxLines="1"
+                            android:text="—"
+                            android:textAppearance="@style/TextAppearance.Gozar.LabelMedium"
+                            android:textColor="?attr/colorOnSurfaceVariant"
                             android:textDirection="ltr" />
                     </LinearLayout>
 
@@ -224,15 +250,26 @@
                         android:paddingStart="@dimen/sp_m"
                         android:paddingEnd="@dimen/sp_m">
 
-                        <ImageView
+                        <FrameLayout
                             android:layout_width="42dp"
                             android:layout_height="42dp"
-                            android:background="@drawable/frame_clover"
-                            android:backgroundTint="@color/tile_container"
-                            android:contentDescription="@string/download"
-                            android:padding="11dp"
-                            android:src="@drawable/ic_down"
-                            app:tint="@color/tile_on_container" />
+                            android:contentDescription="@string/download">
+
+                            <View
+                                android:id="@+id/downBadge"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:background="@drawable/frame_clover"
+                                android:backgroundTint="@color/tile_container" />
+
+                            <ImageView
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:contentDescription="@null"
+                                android:padding="11dp"
+                                android:src="@drawable/ic_down"
+                                app:tint="@color/tile_on_container" />
+                        </FrameLayout>
 
                         <LinearLayout
                             android:layout_width="0dp"
@@ -241,7 +278,7 @@
                             android:layout_weight="1"
                             android:orientation="vertical">
 
-                            <TextView
+                            <com.gozarwg.RollingValueView
                                 android:id="@+id/tvDown"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
@@ -283,15 +320,26 @@
                         android:paddingStart="@dimen/sp_m"
                         android:paddingEnd="@dimen/sp_m">
 
-                        <ImageView
+                        <FrameLayout
                             android:layout_width="42dp"
                             android:layout_height="42dp"
-                            android:background="@drawable/frame_burst"
-                            android:backgroundTint="@color/tile_container"
-                            android:contentDescription="@string/upload"
-                            android:padding="11dp"
-                            android:src="@drawable/ic_up"
-                            app:tint="@color/tile_on_container" />
+                            android:contentDescription="@string/upload">
+
+                            <View
+                                android:id="@+id/upBadge"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:background="@drawable/frame_burst"
+                                android:backgroundTint="@color/tile_container" />
+
+                            <ImageView
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:contentDescription="@null"
+                                android:padding="11dp"
+                                android:src="@drawable/ic_up"
+                                app:tint="@color/tile_on_container" />
+                        </FrameLayout>
 
                         <LinearLayout
                             android:layout_width="0dp"
@@ -300,7 +348,7 @@
                             android:layout_weight="1"
                             android:orientation="vertical">
 
-                            <TextView
+                            <com.gozarwg.RollingValueView
                                 android:id="@+id/tvUp"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
@@ -363,7 +411,7 @@
                             android:layout_weight="1"
                             android:orientation="vertical">
 
-                            <TextView
+                            <com.gozarwg.RollingValueView
                                 android:id="@+id/tvTotal"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
@@ -422,7 +470,7 @@
                             android:layout_weight="1"
                             android:orientation="vertical">
 
-                            <TextView
+                            <com.gozarwg.RollingValueView
                                 android:id="@+id/tvHandshake"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"

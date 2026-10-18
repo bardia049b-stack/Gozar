@@ -136,6 +136,7 @@ class HomeFragment : Fragment() {
         find<View>(R.id.connectButton).setOnClickListener { toggle() }
         find<View>(R.id.btnSettingsTop).setOnClickListener { (activity as? MainActivity)?.showSettings() }
         find<View>(R.id.profileCard).setOnClickListener { showProfiles() }
+        find<WorldRouteView>(R.id.worldRoute).originCode = resources.configuration.locales[0].country
         paintStatus()
         paintProfiles()
     }
@@ -212,7 +213,11 @@ class HomeFragment : Fragment() {
             0
         }
         find<ConnectionPulse>(R.id.connectionPulse).state = control.state
-        find<MaterialCardView>(R.id.connectionPanel).setCardBackgroundColor(color(when (state) {
+        find<WorldRouteView>(R.id.worldRoute).apply {
+            this.state = control.state
+            exitCode = Vpn.ipInfo?.code.orEmpty()
+        }
+        find<MaterialCardView>(R.id.connectionPanel).setCardBackgroundColor(color(when (state) {)
             2 -> R.color.m3_ok_container
             1, 4 -> R.color.m3_primary_container
             3 -> R.color.m3_error_container
@@ -251,21 +256,37 @@ class HomeFragment : Fragment() {
             setTextColor(color(statusTone))
         }
         if (state == 2) {
-            find<TextView>(R.id.tvDown).text = fmtSpeed(Vpn.downSpeed)
-            find<TextView>(R.id.tvUp).text = fmtSpeed(Vpn.upSpeed)
-            find<TextView>(R.id.tvTotal).text = fmtBytes(Vpn.totalRx + Vpn.totalTx)
+            find<RollingValueView>(R.id.tvDown).setValue(fmtSpeed(Vpn.downSpeed))
+            find<RollingValueView>(R.id.tvUp).setValue(fmtSpeed(Vpn.upSpeed))
+            turnBadge(R.id.downBadge, Vpn.downSpeed > 0.0)
+            turnBadge(R.id.upBadge, Vpn.upSpeed > 0.0)
+            find<RollingValueView>(R.id.tvTotal).setValue(fmtBytes(Vpn.totalRx + Vpn.totalTx))
+            find<RollingValueView>(R.id.tvPing).setValue(when {
+                Vpn.latencyChecking -> "…"
+                Vpn.latencyMs > 0 -> "${Vpn.latencyMs} ms"
+                else -> "—"
+            })
             val age = Vpn.handshakeAgeSec()
-            find<TextView>(R.id.tvHandshake).text = when {
+            find<RollingValueView>(R.id.tvHandshake).setValue(when {
                 age < 0 -> getString(R.string.now)
                 age < 60 -> if (age <= 1) getString(R.string.now) else String.format(getString(R.string.sec_ago), age)
                 else -> String.format(getString(R.string.min_ago), age / 60)
-            }
+            })
             reveal(find<View>(R.id.statsRow))
             if (Vpn.ipInfo == null) fetchIp() else paintIp()
         } else {
+            turnBadge(R.id.downBadge, false)
+            turnBadge(R.id.upBadge, false)
             find<View>(R.id.statsRow).visibility = View.GONE
             find<View>(R.id.connectionInfo).visibility = View.GONE
         }
+    }
+
+    private fun turnBadge(id: Int, active: Boolean) {
+        val badge = find<View>(id)
+        val target = if (active) 45f else 0f
+        if (badge.rotation == target) return
+        badge.animate().rotation(target).setDuration(220L).setInterpolator(DecelerateInterpolator()).start()
     }
 
     private fun reveal(target: View) {
@@ -291,6 +312,7 @@ class HomeFragment : Fragment() {
             text = if (iran) "" else Ip.flag(info.code)
         }
         find<TextView>(R.id.tvIp).text = info.ip
+        find<WorldRouteView>(R.id.worldRoute).exitCode = info.code
         find<TextView>(R.id.tvProvider).text = listOf(info.city, info.provider)
             .filter { it.isNotBlank() }
             .joinToString(" · ")
