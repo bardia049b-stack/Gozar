@@ -215,9 +215,9 @@ class HomeFragment : Fragment() {
         button.iconTint = ColorStateList.valueOf(color(onTone))
         if (state == 1 || state == 4) {
             button.icon = null
-            loading.show()
+            loading.visibility = View.VISIBLE
         } else {
-            loading.hide()
+            loading.visibility = View.INVISIBLE
             button.setIconResource(if (state == 2) R.drawable.ic_power_off else R.drawable.ic_power)
         }
         val map = find<ImageView>(R.id.heroMap)
