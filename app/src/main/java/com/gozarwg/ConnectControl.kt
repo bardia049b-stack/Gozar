@@ -38,12 +38,20 @@ class ConnectControl @JvmOverloads constructor(
         const val BUSY = 1
         const val ON = 2
         const val ERROR = 3
+        private const val BUSY_ROTATION_MS = 3_000f
+        private const val BUSY_SHAPE_HOLD_MS = 1_000L
+        private const val BUSY_MORPH_MS = 620L
     }
 
     var state = OFF
         set(value) {
             if (field == value) return
             field = value
+            if (value == BUSY) {
+                busyIndex = 0
+                busyNextAt = SystemClock.uptimeMillis() + BUSY_SHAPE_HOLD_MS
+                phase = 0f
+            }
             updateTarget()
             sync()
             invalidate()
@@ -81,7 +89,8 @@ class ConnectControl @JvmOverloads constructor(
     private var to = idle
     private var progress = 1f
     private var morph = Morph(idle, idle)
-    private var shapeStep = -1
+    private var busyIndex = 0
+    private var busyNextAt = 0L
     private var phase = 0f
     private var stamp = 0L
     private var running = false
@@ -99,12 +108,13 @@ class ConnectControl @JvmOverloads constructor(
             val now = System.nanoTime()
             val elapsed = if (stamp == 0L) 16f else ((now - stamp) / 1_000_000f).coerceIn(1f, 42f)
             stamp = now
-            phase = (phase + elapsed / if (state == BUSY) 3100f else 18000f) % 1f
+            phase = (phase + elapsed / if (state == BUSY) BUSY_ROTATION_MS else 18_000f) % 1f
             if (state == BUSY) {
-                val next = searchIndex()
-                if (next != shapeStep) {
-                    shapeStep = next
-                    changeShape(searching[next])
+                val clock = SystemClock.uptimeMillis()
+                if (clock >= busyNextAt) {
+                    busyIndex = (busyIndex + 1) % searching.size
+                    busyNextAt = clock + BUSY_SHAPE_HOLD_MS
+                    changeShape(searching[busyIndex])
                 }
             }
             invalidate()
@@ -186,22 +196,21 @@ class ConnectControl @JvmOverloads constructor(
         }
     }
 
-    private fun searchIndex(): Int = ((SystemClock.elapsedRealtime() / 720L) % searching.size).toInt()
-
     private fun updateTarget() {
         val target = when (state) {
             ON -> live
-            BUSY -> searching[searchIndex()]
+            BUSY -> searching[busyIndex]
             ERROR -> fault
             else -> idle
         }
-        if (state != BUSY) shapeStep = -1
         changeShape(target)
     }
 
     private fun changeShape(target: RoundedPolygon) {
         if (target === to) return
-        from = if (progress >= 0.5f) to else from
+        // Each busy form completes before the next begins, including the last → first loop.
+        // Using the last completed polygon as the source avoids a visible reset or snap.
+        from = if (progress >= 0.98f) to else from
         to = target
         morph = Morph(from, to)
         progress = 0f
@@ -212,8 +221,8 @@ class ConnectControl @JvmOverloads constructor(
             return
         }
         morphAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = 460L
-            interpolator = android.view.animation.OvershootInterpolator(0.72f)
+            duration = BUSY_MORPH_MS
+            interpolator = android.view.animation.AccelerateDecelerateInterpolator()
             addUpdateListener {
                 progress = it.animatedValue as Float
                 invalidate()
@@ -270,7 +279,8 @@ class ConnectControl @JvmOverloads constructor(
         )
         canvas.save()
         val rotation = when (state) {
-            BUSY -> phase * 165f
+            // 360° wraps seamlessly at zero; the earlier partial arc visibly snapped on repeat.
+            BUSY -> phase * 360f
             // Deliberately step once per second like a clock hand. The timer text stays upright
             // while the connected green shape makes a visible, continuous session heartbeat.
             ON -> ((SystemClock.elapsedRealtime() / 1_000L) % 60L) * 6f

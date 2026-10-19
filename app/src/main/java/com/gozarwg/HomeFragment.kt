@@ -36,7 +36,6 @@ class HomeFragment : Fragment() {
     private val handler = Handler(Looper.getMainLooper())
     private var pendingProfile: Profile? = null
     private var pendingExport: Profile? = null
-    @Volatile private var fetchingIp = false
     @Volatile private var fetchingOrigin = false
     private var visualState = -1
 
@@ -348,19 +347,9 @@ class HomeFragment : Fragment() {
     }
 
     private fun fetchIp() {
-        if (fetchingIp || Vpn.ipInfo != null) return
-        fetchingIp = true
-        thread {
-            val info = Ip.fetch()
-            activity?.runOnUiThread {
-                fetchingIp = false
-                if (info != null && state() == 2) {
-                    Vpn.ipInfo = info
-                    Vpn.ipSession = System.currentTimeMillis()
-                    paintIp()
-                }
-            }
-        }
+        // Home and the map share Vpn's one backoff-controlled lookup rather than independently
+        // polling geo-IP services every UI tick when a provider is unavailable.
+        Vpn.refreshExitInfo()
     }
 
     private fun paintProfiles() {

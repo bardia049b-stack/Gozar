@@ -9,7 +9,6 @@ import android.widget.TextView
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import java.util.Locale
-import kotlin.concurrent.thread
 
 /**
  * Full-screen offline tunnel route. Its world geometry is bundled with the application and is
@@ -18,7 +17,6 @@ import kotlin.concurrent.thread
 class RouteMapActivity : BaseActivity() {
 
     private val handler = Handler(Looper.getMainLooper())
-    @Volatile private var fetchingExit = false
     private lateinit var routeMap: WorldRouteView
     private lateinit var originValue: TextView
     private lateinit var exitValue: TextView
@@ -122,22 +120,8 @@ class RouteMapActivity : BaseActivity() {
         }
     }
 
-    /** IP metadata is live tunnel metadata, not map imagery. It is only requested after a tunnel is up. */
-    private fun fetchExit() {
-        if (fetchingExit) return
-        fetchingExit = true
-        thread {
-            val result = Ip.fetch()
-            runOnUiThread {
-                fetchingExit = false
-                if (Vpn.up && result != null) {
-                    Vpn.ipInfo = result
-                    Vpn.ipSession = System.currentTimeMillis()
-                    render()
-                }
-            }
-        }
-    }
+    /** IP metadata is live tunnel metadata, not map imagery; Vpn owns the shared lookup/backoff. */
+    private fun fetchExit() = Vpn.refreshExitInfo()
 
     private fun localeOrigin(): IpInfo? {
         val country = Locale.getDefault().country.uppercase()

@@ -50,7 +50,15 @@ object Vpn {
     private var mLastRx = -1L
     private var mLastTx = -1L
     private var mLastTime = 0L
+    private var sessionBaseRx = -1L
+    private var sessionBaseTx = -1L
     @Volatile private var latencyAt = 0L
+
+    // One shared, rate-limited exit lookup prevents Home and the map from repeatedly downloading
+    // several geo-IP responses when a provider is unreachable through a particular tunnel.
+    private var exitLookupSession = -1
+    private var exitLookupNextAt = 0L
+    private var exitLookupFailures = 0
 
     var listener: ((Boolean) -> Unit)? = null
     var onError: ((String) -> Unit)? = null
@@ -112,6 +120,7 @@ object Vpn {
         originInfo = null
         ipInfo = null
         ipSession = 0L
+        resetExitLookup()
         stopping = false
         attempt = 0
         restarting = false
@@ -185,6 +194,7 @@ object Vpn {
         latencyAt = 0L
         ipInfo = null
         ipSession = 0L
+        resetExitLookup()
         downSpeed = 0.0
         upSpeed = 0.0
         totalRx = 0L
@@ -245,6 +255,7 @@ object Vpn {
             latencyAt = 0L
             ipInfo = null
             ipSession = 0L
+            resetExitLookup()
             downSpeed = 0.0
             upSpeed = 0.0
             totalRx = 0L
@@ -325,7 +336,57 @@ object Vpn {
         handshakeOk = true
         attempt = 0
         connecting = false
+        // Resolve the exit once the tunnel is demonstrably usable rather than depending on a
+        // visible screen to start this work.
+        refreshExitInfo()
         notifyChange()
+    }
+
+    /** Starts (or schedules) one shared post-tunnel IP lookup with exponential failure backoff. */
+    fun refreshExitInfo() {
+        val context = appCtx ?: return
+        var requestSession = -1
+        val allowed = synchronized(this) {
+            val now = SystemClock.elapsedRealtime()
+            when {
+                !up || ipInfo != null -> false
+                exitLookupSession == session -> false
+                now < exitLookupNextAt -> false
+                else -> {
+                    requestSession = session
+                    exitLookupSession = requestSession
+                    true
+                }
+            }
+        }
+        if (!allowed) return
+        thread(name = "gozar-exit-ip") {
+            val result = Ip.fetch()
+            var changed = false
+            synchronized(this) {
+                if (exitLookupSession == requestSession) exitLookupSession = -1
+                if (session == requestSession && up) {
+                    if (result != null) {
+                        ipInfo = result
+                        ipSession = System.currentTimeMillis()
+                        exitLookupFailures = 0
+                        exitLookupNextAt = 0L
+                        changed = true
+                    } else {
+                        exitLookupFailures = (exitLookupFailures + 1).coerceAtMost(5)
+                        val exponent = (exitLookupFailures - 1).coerceIn(0, 4)
+                        exitLookupNextAt = SystemClock.elapsedRealtime() + (15_000L shl exponent)
+                    }
+                }
+            }
+            if (changed) notifyChange()
+        }
+    }
+
+    private fun resetExitLookup() = synchronized(this) {
+        exitLookupSession = -1
+        exitLookupNextAt = 0L
+        exitLookupFailures = 0
     }
 
     private fun startMonitor() {
@@ -334,6 +395,8 @@ object Vpn {
         mLastRx = -1L
         mLastTx = -1L
         mLastTime = 0L
+        sessionBaseRx = -1L
+        sessionBaseTx = -1L
         thread {
             try {
                 while (up) {
@@ -355,8 +418,12 @@ object Vpn {
                         handshakeAge = if (newest > 0) (System.currentTimeMillis() - newest) / 1000 else -1L
                     } catch (e: Exception) {
                     }
-                    totalRx = rx
-                    totalTx = tx
+                    // Backend counters can survive a service/profile restart. Establish a fresh
+                    // session baseline so Total reflects this connection rather than old traffic.
+                    if (sessionBaseRx < 0L || rx < sessionBaseRx) sessionBaseRx = rx
+                    if (sessionBaseTx < 0L || tx < sessionBaseTx) sessionBaseTx = tx
+                    totalRx = (rx - sessionBaseRx).coerceAtLeast(0L)
+                    totalTx = (tx - sessionBaseTx).coerceAtLeast(0L)
                     val now = android.os.SystemClock.elapsedRealtime()
                     if (mLastRx >= 0 && now - mLastTime >= 900) {
                         val dt = (now - mLastTime) / 1000.0
@@ -391,7 +458,7 @@ object Vpn {
         val c = appCtx ?: return
         if (Store.proxy(c) || latencyChecking) return
         val now = SystemClock.elapsedRealtime()
-        if (now - latencyAt < 15_000L) return
+        if (now - latencyAt < 45_000L) return
         latencyChecking = true
         latencyAt = now
         val currentSession = session
