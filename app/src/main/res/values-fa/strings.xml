@@ -202,6 +202,19 @@
     <string name="map_session_checking">در حال بررسی تأخیر تونل…</string>
     <string name="map_session_ping">پینگ تونل · %d میلی‌ثانیه</string>
     <string name="map_not_connected">تونل دیگر متصل نیست</string>
+    <string name="updates_section">به‌روزرسانی</string>
+    <string name="check_updates">بررسی به‌روزرسانی</string>
+    <string name="update_checking">در حال بررسی به‌روزرسانی…</string>
+    <string name="update_current">به‌روز است · %s</string>
+    <string name="update_current_short">برنامه به‌روز است</string>
+    <string name="update_available">نسخهٔ %s آماده است</string>
+    <string name="update_failed">بررسی به‌روزرسانی انجام نشد</string>
+    <string name="update_title">به‌روزرسانی آماده است</string>
+    <string name="update_message">GozarWG %s آمادهٔ دریافت است.</string>
+    <string name="update_open">باز کردن ریلیز</string>
+    <string name="update_notification_channel">به‌روزرسانی برنامه</string>
+    <string name="update_notification_title">به‌روزرسانی GozarWG آماده است</string>
+    <string name="update_notification_text">نسخهٔ %s آمادهٔ دریافت است</string>
     <string name="legal_notice">GozarWG
 AGPL-3.0-or-later</string>
 </resources>

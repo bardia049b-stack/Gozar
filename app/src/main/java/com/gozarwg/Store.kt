@@ -36,6 +36,18 @@ object Store {
     fun recents(c: Context) = p(c).getBoolean("recents", false)
     fun setRecents(c: Context, v: Boolean) = p(c).edit().putBoolean("recents", v).apply()
 
+    fun updateVersion(c: Context) = p(c).getString("update_version", "") ?: ""
+    fun updateUrl(c: Context) = p(c).getString("update_url", "") ?: ""
+    fun setUpdate(c: Context, version: String, url: String) = p(c).edit()
+        .putString("update_version", version)
+        .putString("update_url", url)
+        .apply()
+    fun clearUpdate(c: Context) = p(c).edit().remove("update_version").remove("update_url").apply()
+    fun notifiedUpdate(c: Context) = p(c).getString("update_notified", "") ?: ""
+    fun setNotifiedUpdate(c: Context, version: String) = p(c).edit().putString("update_notified", version).apply()
+    fun updateCheckedAt(c: Context) = p(c).getLong("update_checked_at", 0L)
+    fun setUpdateCheckedAt(c: Context, value: Long) = p(c).edit().putLong("update_checked_at", value).apply()
+
     fun wrap(base: Context): Context {
         val conf = Configuration(base.resources.configuration)
         val l = lang(base)

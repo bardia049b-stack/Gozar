@@ -6,14 +6,19 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.drawable.Icon
+import android.net.Uri
 import android.os.Build
 import android.os.SystemClock
+import androidx.core.content.ContextCompat
 
 object Notify {
     const val ID = 101
     const val ID_BLOCK = 102
+    const val ID_UPDATE = 103
     private const val CHANNEL = "tunnel"
+    private const val CHANNEL_UPDATE = "updates"
 
     @Volatile private var lastText = ""
     @Volatile private var lastAt = 0L
@@ -29,6 +34,19 @@ object Notify {
         ch.enableVibration(false)
         ch.setSound(null, null)
         m.createNotificationChannel(ch)
+    }
+
+    private fun updateChannel(c: Context) {
+        if (Build.VERSION.SDK_INT < 26) return
+        val manager = mgr(c)
+        if (manager.getNotificationChannel(CHANNEL_UPDATE) != null) return
+        manager.createNotificationChannel(
+            NotificationChannel(
+                CHANNEL_UPDATE,
+                c.getString(R.string.update_notification_channel),
+                NotificationManager.IMPORTANCE_DEFAULT
+            )
+        )
     }
 
     private fun piFlags(): Int {
@@ -106,6 +124,37 @@ object Notify {
         try {
             mgr(c).notify(ID, builder(c, name, text).build())
         } catch (e: Exception) {
+        }
+    }
+
+    /** Posts only once per published version; Android notification permission is always respected. */
+    fun updateAvailable(c: Context, version: String, url: String): Boolean {
+        if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(c, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            return false
+        }
+        return try {
+            updateChannel(c)
+            val open = PendingIntent.getActivity(
+                c,
+                3,
+                Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                piFlags()
+            )
+            val notification = if (Build.VERSION.SDK_INT >= 26) Notification.Builder(c, CHANNEL_UPDATE) else Notification.Builder(c)
+            notification
+                .setSmallIcon(R.drawable.ic_refresh)
+                .setContentTitle(c.getString(R.string.update_notification_title))
+                .setContentText(c.getString(R.string.update_notification_text, version))
+                .setContentIntent(open)
+                .setAutoCancel(true)
+                .setOnlyAlertOnce(true)
+                .setShowWhen(false)
+                .setCategory(Notification.CATEGORY_RECOMMENDATION)
+            if (Build.VERSION.SDK_INT < 26) notification.setPriority(Notification.PRIORITY_DEFAULT)
+            mgr(c).notify(ID_UPDATE, notification.build())
+            true
+        } catch (_: Exception) {
+            false
         }
     }
 

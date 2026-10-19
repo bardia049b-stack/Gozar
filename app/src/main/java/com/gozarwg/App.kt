@@ -9,5 +9,7 @@ class App : Application() {
         Crash.install(this)
         AppCompatDelegate.setDefaultNightMode(nightModeOf(Store.theme(this)))
         Vpn.warm(this)
+        UpdateChecker.schedule(this)
+        UpdateChecker.check(this)
     }
 }

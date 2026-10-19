@@ -202,6 +202,19 @@
     <string name="map_session_checking">Checking tunnel latency…</string>
     <string name="map_session_ping">Tunnel ping · %d ms</string>
     <string name="map_not_connected">Tunnel is no longer connected</string>
+    <string name="updates_section">Updates</string>
+    <string name="check_updates">Check for updates</string>
+    <string name="update_checking">Checking for updates…</string>
+    <string name="update_current">Up to date · %s</string>
+    <string name="update_current_short">You’re up to date</string>
+    <string name="update_available">Version %s is available</string>
+    <string name="update_failed">Couldn’t check for updates</string>
+    <string name="update_title">Update available</string>
+    <string name="update_message">GozarWG %s is ready to download.</string>
+    <string name="update_open">Open release</string>
+    <string name="update_notification_channel">App updates</string>
+    <string name="update_notification_title">GozarWG update available</string>
+    <string name="update_notification_text">Version %s is ready to download</string>
     <string name="legal_notice">GozarWG
 AGPL-3.0-or-later</string>
 </resources>

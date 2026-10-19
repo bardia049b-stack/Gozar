@@ -27,10 +27,11 @@ class SettingsFragment : Fragment() {
         R.id.rowKill, R.id.rowAuto, R.id.rowLan, R.id.rowNotif,
         R.id.rowProxy, R.id.rowPort,
         R.id.rowSplitMode, R.id.rowSplitApps,
-        R.id.rowVpnSettings, R.id.rowGithub, R.id.rowCrash, R.id.rowCore, R.id.rowAbout
+        R.id.rowUpdate, R.id.rowVpnSettings, R.id.rowGithub, R.id.rowCrash, R.id.rowCore, R.id.rowAbout
     )
 
     private var entered = false
+    private var updateChecking = false
 
     private fun <T : View> find(id: Int): T = view!!.findViewById(id)
 
@@ -56,6 +57,7 @@ class SettingsFragment : Fragment() {
         }
         find<View>(R.id.rowLang).setOnClickListener { pickLanguage() }
         find<View>(R.id.rowTheme).setOnClickListener { pickTheme() }
+        find<View>(R.id.rowUpdate).setOnClickListener { checkUpdates() }
         find<View>(R.id.rowVpnSettings).setOnClickListener { openSystemVpn() }
         find<View>(R.id.rowGithub).setOnClickListener { openProject() }
         find<View>(R.id.rowCrash).setOnClickListener { shareCrashLog() }
@@ -187,7 +189,42 @@ class SettingsFragment : Fragment() {
                 }
             }
         }
+        val available = Store.updateVersion(context)
+        find<TextView>(R.id.tvUpdate).text = when {
+            updateChecking -> getString(R.string.update_checking)
+            available.isNotBlank() -> getString(R.string.update_available, available)
+            else -> getString(R.string.update_current, version)
+        }
         find<View>(R.id.rowCrash).visibility = if (Crash.log(context) != null) View.VISIBLE else View.GONE
+    }
+
+    private fun checkUpdates() {
+        if (updateChecking) return
+        updateChecking = true
+        find<TextView>(R.id.tvUpdate).setText(R.string.update_checking)
+        UpdateChecker.check(requireContext(), notify = false) updateResult@{ result ->
+            if (!isAdded || view == null) return@updateResult
+            updateChecking = false
+            when (result) {
+                is UpdateChecker.Result.Available -> {
+                    paint()
+                    MaterialAlertDialogBuilder(requireContext())
+                        .setTitle(R.string.update_title)
+                        .setMessage(getString(R.string.update_message, result.version))
+                        .setNegativeButton(R.string.cancel, null)
+                        .setPositiveButton(R.string.update_open) { _, _ -> openUrl(result.url) }
+                        .show()
+                }
+                UpdateChecker.Result.Current -> {
+                    paint()
+                    toast(getString(R.string.update_current_short))
+                }
+                UpdateChecker.Result.Failed -> {
+                    paint()
+                    toast(getString(R.string.update_failed))
+                }
+            }
+        }
     }
 
     private fun editPort() {
@@ -268,10 +305,12 @@ class SettingsFragment : Fragment() {
         }
     }
 
-    private fun openProject() {
+    private fun openProject() = openUrl("https://github.com/bardia049b-stack/GozarWG")
+
+    private fun openUrl(url: String) {
         try {
-            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/bardia049b-stack/GozarWG")))
-        } catch (e: Exception) {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+        } catch (_: Exception) {
             toast(R.string.import_failed)
         }
     }

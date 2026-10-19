@@ -271,7 +271,9 @@ class ConnectControl @JvmOverloads constructor(
         canvas.save()
         val rotation = when (state) {
             BUSY -> phase * 165f
-            ON -> phase * 9f
+            // Deliberately step once per second like a clock hand. The timer text stays upright
+            // while the connected green shape makes a visible, continuous session heartbeat.
+            ON -> ((SystemClock.elapsedRealtime() / 1_000L) % 60L) * 6f
             else -> 0f
         }
         canvas.rotate(rotation, cx, cy)

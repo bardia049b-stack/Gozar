@@ -368,6 +368,34 @@
 
         <TextView
             style="@style/Gozar.Section"
+            android:text="@string/updates_section" />
+
+        <LinearLayout
+            android:id="@+id/rowUpdate"
+            style="@style/Gozar.Row">
+
+            <ImageView
+                style="@style/Gozar.Tile"
+                android:background="@drawable/frame_circle"
+                android:backgroundTint="@color/tile_container"
+                android:contentDescription="@string/check_updates"
+                android:src="@drawable/ic_refresh"
+                app:tint="@color/tile_on_container" />
+
+            <LinearLayout style="@style/Gozar.Row.Text">
+                <TextView
+                    style="@style/Gozar.Row.Title"
+                    android:text="@string/check_updates" />
+                <TextView
+                    android:id="@+id/tvUpdate"
+                    style="@style/Gozar.Row.Subtitle" />
+            </LinearLayout>
+            <ImageView
+                style="@style/Gozar.Row.Chevron" />
+        </LinearLayout>
+
+        <TextView
+            style="@style/Gozar.Section"
             android:text="@string/about_section" />
 
         <LinearLayout
