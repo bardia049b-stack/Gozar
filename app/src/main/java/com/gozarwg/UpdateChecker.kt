@@ -51,7 +51,7 @@ object UpdateChecker {
             checking = true
         }
         thread(name = "gozar-update-check") {
-            val result = latest()
+            val result = latest(appContext)
             val shouldNotify: Boolean
             val pending: List<(Result) -> Unit>
             synchronized(lock) {
@@ -78,7 +78,7 @@ object UpdateChecker {
         }
     }
 
-    private fun latest(): Result {
+    private fun latest(context: Context): Result {
         var connection: HttpURLConnection? = null
         return try {
             connection = URL(LATEST_RELEASE).openConnection() as HttpURLConnection
@@ -92,8 +92,13 @@ object UpdateChecker {
             val json = JSONObject(connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() })
             val version = json.optString("tag_name").trim().removePrefix("v")
             val url = json.optString("html_url").trim()
-            if (version.isBlank() || url.isBlank()) Result.Failed
-            else if (isNewer(version, BuildConfig.VERSION_NAME)) Result.Available(version, url)
+            val installed = try {
+                context.packageManager.getPackageInfo(context.packageName, 0).versionName.orEmpty()
+            } catch (_: Exception) {
+                ""
+            }
+            if (version.isBlank() || url.isBlank() || installed.isBlank()) Result.Failed
+            else if (isNewer(version, installed)) Result.Available(version, url)
             else Result.Current
         } catch (_: Exception) {
             Result.Failed
