@@ -444,6 +444,11 @@ class HomeFragment : Fragment() {
         rv.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(requireContext())
         rv.adapter = adapter
         adapter.submit(list, profile?.id ?: "")
+        val density = resources.displayMetrics.density
+        val listHeight = (list.size * 76f * density).toInt()
+            .coerceAtLeast((140f * density).toInt())
+            .coerceAtMost((resources.displayMetrics.heightPixels * 0.52f).toInt())
+        rv.layoutParams = rv.layoutParams.apply { height = listHeight }
         content.findViewById<View>(R.id.btnSheetAdd).setOnClickListener {
             dialog.dismiss()
             showAdd()
