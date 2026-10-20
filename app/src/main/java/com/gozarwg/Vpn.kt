@@ -79,8 +79,11 @@ object Vpn {
 
     fun context(): Context? = appCtx
 
+    /** A local SOCKS endpoint is not an Android system VPN, so it cannot enforce app routing. */
+    private fun usesProxy(c: Context): Boolean = Store.proxy(c) && Store.splitMode(c) == 0
+
     private fun backendFor(c: Context): Backend {
-        val wantProxy = Store.proxy(c)
+        val wantProxy = usesProxy(c)
         val b = backend
         if (b != null && backendProxy == wantProxy) return b
         val created: Backend = if (wantProxy) {
@@ -152,7 +155,7 @@ object Vpn {
                 peerKey = cfg.peers.firstOrNull()?.publicKey
                 val t = Tun(prof.id) { s -> onState(s) }
                 tun = t
-                if (!Store.proxy(ctx)) TunnelService.ensure(ctx, 8000)
+                if (!usesProxy(ctx)) TunnelService.ensure(ctx, 8000)
                 backendFor(ctx).setState(t, Tunnel.State.UP, cfg)
                 if (session == sess) {
                     connecting = false
@@ -168,6 +171,13 @@ object Vpn {
                 main.post { onError?.invoke(msg) }
             }
         }
+    }
+
+    /** Rebuilds the active system VPN when per-app routing or proxy mode has changed. */
+    fun reconfigureRouting(c: Context) {
+        val activeProfile = profile ?: return
+        if (!up && !connecting) return
+        disconnect { connect(c.applicationContext, activeProfile) }
     }
 
     fun restore(c: Context) {
@@ -456,7 +466,7 @@ object Vpn {
 
     private fun probeLatency() {
         val c = appCtx ?: return
-        if (Store.proxy(c) || latencyChecking) return
+        if (usesProxy(c) || latencyChecking) return
         val now = SystemClock.elapsedRealtime()
         if (now - latencyAt < 45_000L) return
         latencyChecking = true
@@ -493,22 +503,58 @@ object Vpn {
     }
 
     private fun buildConfig(c: Context, prof: Profile): Config {
+        val proxyActive = usesProxy(c)
         var text = prof.text
-        if (Store.lan(c) && !Store.proxy(c)) text = Lan.apply(text)
-        val mode = Store.splitMode(c)
-        val apps = Store.splitApps(c)
-        if (mode != 0 && apps.isNotEmpty()) {
-            val key = if (mode == 1) "ExcludedApplications" else "IncludedApplications"
-            text = addInterfaceLine(text, "$key = ${apps.joinToString(", ")}")
-        }
+        if (Store.lan(c) && !proxyActive) text = Lan.apply(text)
+        text = applySplitRouting(c, text)
         val cfg = Config.parse(text.byteInputStream(Charsets.UTF_8))
-        if (!Store.proxy(c)) return cfg
+        if (!proxyActive) return cfg
         val builder = Config.Builder()
             .setInterface(cfg.getInterface())
             .addPeers(cfg.peers)
             .setDnsSettings(cfg.dnsSettings)
             .addProxy(Socks5Proxy("127.0.0.1:" + Store.proxyPort(c), null, null))
         return builder.build()
+    }
+
+    /**
+     * Configurations can be imported with their own Android app-routing lines. Strip those first,
+     * then write exactly one current policy so include/exclude rules never accumulate or conflict.
+     */
+    private fun applySplitRouting(c: Context, source: String): String {
+        val cleaned = removeSplitRouting(source)
+        val mode = Store.splitMode(c)
+        if (mode == 0) return cleaned
+        val installed = Store.splitApps(c)
+            .filter { packageName ->
+                try {
+                    c.packageManager.getApplicationInfo(packageName, 0)
+                    true
+                } catch (_: Exception) {
+                    false
+                }
+            }
+            .sorted()
+            .toMutableSet()
+        val key = if (mode == 1) "ExcludedApplications" else "IncludedApplications"
+        if (mode == 2) {
+            // Allow the control process too: its exit check and DNS must see the same VPN route.
+            // The backend protects its own WireGuard transport sockets from looping into the VPN.
+            installed.add(c.packageName)
+        }
+        return if (installed.isEmpty()) cleaned else addInterfaceLine(cleaned, "$key = ${installed.joinToString(", ")}")
+    }
+
+    private fun removeSplitRouting(text: String): String {
+        var inInterface = false
+        return text.lineSequence()
+            .filterNot { raw ->
+                val line = raw.trim()
+                if (line.startsWith("[")) inInterface = line.equals("[Interface]", ignoreCase = true)
+                inInterface && (line.startsWith("IncludedApplications", ignoreCase = true) ||
+                    line.startsWith("ExcludedApplications", ignoreCase = true))
+            }
+            .joinToString("\n")
     }
 
     private fun addInterfaceLine(text: String, line: String): String {

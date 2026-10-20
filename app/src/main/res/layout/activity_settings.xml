@@ -78,7 +78,7 @@
                 android:backgroundTint="?attr/colorSurfaceContainerHighest"
                 android:contentDescription="@string/support"
                 android:padding="11dp"
-                android:src="@drawable/ic_heart"
+                android:src="@drawable/ic_volunteer"
                 app:tint="?attr/colorPrimary" />
 
             <LinearLayout
@@ -113,7 +113,7 @@
                 android:background="@drawable/frame_flower"
                 android:backgroundTint="@color/tile_container"
                 android:contentDescription="@string/language"
-                android:src="@drawable/ic_translate"
+                android:src="@drawable/ic_language"
                 app:tint="@color/tile_on_container" />
 
             <LinearLayout style="@style/Gozar.Row.Text">
@@ -137,7 +137,7 @@
                 android:background="@drawable/frame_puff"
                 android:backgroundTint="@color/tile_container"
                 android:contentDescription="@string/theme"
-                android:src="@drawable/ic_palette"
+                android:src="@drawable/ic_contrast"
                 app:tint="@color/tile_on_container" />
 
             <LinearLayout style="@style/Gozar.Row.Text">
@@ -165,7 +165,7 @@
                 android:background="@drawable/frame_hex"
                 android:backgroundTint="@color/tile_container"
                 android:contentDescription="@string/kill_switch"
-                android:src="@drawable/ic_shield"
+                android:src="@drawable/ic_vpn_lock"
                 app:tint="@color/tile_on_container" />
 
             <LinearLayout style="@style/Gozar.Row.Text">
@@ -191,7 +191,7 @@
                 android:background="@drawable/frame_burst"
                 android:backgroundTint="@color/tile_container"
                 android:contentDescription="@string/auto_connect"
-                android:src="@drawable/ic_rocket"
+                android:src="@drawable/ic_auto"
                 app:tint="@color/tile_on_container" />
 
             <LinearLayout style="@style/Gozar.Row.Text">
@@ -217,7 +217,7 @@
                 android:background="@drawable/frame_squircle"
                 android:backgroundTint="@color/tile_container"
                 android:contentDescription="@string/lan"
-                android:src="@drawable/ic_lan"
+                android:src="@drawable/ic_devices"
                 app:tint="@color/tile_on_container" />
 
             <LinearLayout style="@style/Gozar.Row.Text">
@@ -273,7 +273,7 @@
                 android:background="@drawable/frame_clover"
                 android:backgroundTint="@color/tile_container"
                 android:contentDescription="@string/proxy_mode"
-                android:src="@drawable/ic_hub"
+                android:src="@drawable/ic_router_alt"
                 app:tint="@color/tile_on_container" />
 
             <LinearLayout style="@style/Gozar.Row.Text">
@@ -327,7 +327,7 @@
                 android:background="@drawable/frame_hex"
                 android:backgroundTint="@color/tile_container"
                 android:contentDescription="@string/split_mode"
-                android:src="@drawable/ic_tune"
+                android:src="@drawable/ic_rule"
                 app:tint="@color/tile_on_container" />
 
             <LinearLayout style="@style/Gozar.Row.Text">
@@ -379,7 +379,7 @@
                 android:background="@drawable/frame_circle"
                 android:backgroundTint="@color/tile_container"
                 android:contentDescription="@string/check_updates"
-                android:src="@drawable/ic_refresh"
+                android:src="@drawable/ic_system_update"
                 app:tint="@color/tile_on_container" />
 
             <LinearLayout style="@style/Gozar.Row.Text">
@@ -407,7 +407,7 @@
                 android:background="@drawable/frame_puff"
                 android:backgroundTint="@color/tile_container"
                 android:contentDescription="@string/vpn_settings"
-                android:src="@drawable/ic_gpp"
+                android:src="@drawable/ic_settings"
                 app:tint="@color/tile_on_container" />
 
             <LinearLayout style="@style/Gozar.Row.Text">
@@ -431,7 +431,7 @@
                 android:background="@drawable/frame_burst"
                 android:backgroundTint="@color/tile_container"
                 android:contentDescription="@string/support"
-                android:src="@drawable/ic_star"
+                android:src="@drawable/ic_open_app"
                 app:tint="@color/tile_on_container" />
 
             <LinearLayout style="@style/Gozar.Row.Text">
@@ -455,7 +455,7 @@
                 android:background="@drawable/frame_flower"
                 android:backgroundTint="@color/tile_container"
                 android:contentDescription="@string/crash_title"
-                android:src="@drawable/ic_error"
+                android:src="@drawable/ic_bug"
                 app:tint="@color/tile_on_container" />
 
             <LinearLayout style="@style/Gozar.Row.Text">

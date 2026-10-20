@@ -19,7 +19,7 @@ object Store {
     fun setLan(c: Context, v: Boolean) = p(c).edit().putBoolean("lan", v).apply()
     fun proxy(c: Context) = p(c).getBoolean("proxy", false)
     fun setProxy(c: Context, v: Boolean) = p(c).edit().putBoolean("proxy", v).apply()
-    fun proxyPort(c: Context) = p(c).getInt("proxy_port", 10808)
+    fun proxyPort(c: Context) = p(c).getInt("proxy_port", 1819)
     fun setProxyPort(c: Context, v: Int) = p(c).edit().putInt("proxy_port", v).apply()
     fun splitMode(c: Context) = p(c).getInt("split_mode", 0)
     fun setSplitMode(c: Context, v: Int) = p(c).edit().putInt("split_mode", v).apply()

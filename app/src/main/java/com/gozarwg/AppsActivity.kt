@@ -18,6 +18,7 @@ class AppsActivity : BaseActivity() {
     private lateinit var adapter: AppAdapter
     private lateinit var empty: TextView
     private val selected = mutableSetOf<String>()
+    private var selectionChanged = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -30,6 +31,7 @@ class AppsActivity : BaseActivity() {
             onToggle = { pkg, checked ->
                 if (checked) selected.add(pkg) else selected.remove(pkg)
                 Store.setSplitApps(this, selected.toSet())
+                selectionChanged = true
                 count()
             }
         )
@@ -46,6 +48,17 @@ class AppsActivity : BaseActivity() {
         })
         count()
         load()
+    }
+
+
+    override fun onStop() {
+        super.onStop()
+        if (!selectionChanged) return
+        // Android cannot apply an allowed-app list to a local SOCKS endpoint. Switching to
+        // app routing therefore uses the regular system-VPN backend and restarts it once.
+        if (Store.splitMode(this) != 0 && Store.proxy(this)) Store.setProxy(this, false)
+        Vpn.reconfigureRouting(this)
+        selectionChanged = false
     }
 
     private fun count() {

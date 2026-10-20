@@ -64,6 +64,8 @@
     <string name="split_off">خاموش</string>
     <string name="split_exclude">همه برنامه‌ها به‌جز انتخاب‌شده‌ها</string>
     <string name="split_include">فقط برنامه‌های انتخاب‌شده</string>
+    <string name="proxy_disabled_for_split">حالت پروکسی خاموش شد، چون تونل‌بندی برنامه‌ها به VPN سیستمی نیاز دارد.</string>
+    <string name="split_disabled_for_proxy">تونل‌بندی برنامه‌ها خاموش شد، چون حالت پروکسی VPN سیستمی نیست.</string>
     <string name="split_value">%1$s · %2$d برنامه</string>
     <string name="st_app">برنامه</string>
     <string name="language">زبان</string>

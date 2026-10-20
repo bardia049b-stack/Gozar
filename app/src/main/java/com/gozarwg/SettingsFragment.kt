@@ -32,6 +32,7 @@ class SettingsFragment : Fragment() {
 
     private var entered = false
     private var updateChecking = false
+    private var syncingProxy = false
 
     private fun <T : View> find(id: Int): T = view!!.findViewById(id)
 
@@ -40,14 +41,12 @@ class SettingsFragment : Fragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        normalizeRoutingMode(requireContext())
         bind(R.id.rowKill, R.id.swKill, Store.kill(requireContext())) { Store.setKill(requireContext(), it) }
         bind(R.id.rowAuto, R.id.swAuto, Store.auto(requireContext())) { Store.setAuto(requireContext(), it) }
         bind(R.id.rowLan, R.id.swLan, Store.lan(requireContext())) { Store.setLan(requireContext(), it) }
         bind(R.id.rowNotif, R.id.swNotif, Store.notify(requireContext())) { Store.setNotify(requireContext(), it) }
-        bind(R.id.rowProxy, R.id.swProxy, Store.proxy(requireContext())) { value ->
-            Store.setProxy(requireContext(), value)
-            toast(getString(R.string.proxy_note, "127.0.0.1:" + Store.proxyPort(requireContext())))
-        }
+        bindProxy()
 
         find<View>(R.id.btnBack).setOnClickListener { (activity as? MainActivity)?.showHome() }
         find<View>(R.id.rowPort).setOnClickListener { editPort() }
@@ -95,6 +94,8 @@ class SettingsFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
+        if (context != null) normalizeRoutingMode(requireContext())
+        syncProxyToggle()
         paint()
     }
 
@@ -137,6 +138,43 @@ class SettingsFragment : Fragment() {
 
     private fun toast(message: String) {
         activity?.runOnUiThread { Toast.makeText(context, message, Toast.LENGTH_SHORT).show() }
+    }
+
+    private fun bindProxy() {
+        val toggle = find<MaterialSwitch>(R.id.swProxy)
+        toggle.isChecked = Store.proxy(requireContext())
+        toggle.setOnCheckedChangeListener { _, checked ->
+            if (syncingProxy) return@setOnCheckedChangeListener
+            val context = requireContext()
+            if (checked && Store.splitMode(context) != 0) {
+                Store.setSplitMode(context, 0)
+                toast(R.string.split_disabled_for_proxy)
+            }
+            Store.setProxy(context, checked)
+            if (checked) toast(getString(R.string.proxy_note, "127.0.0.1:" + Store.proxyPort(context)))
+            Vpn.reconfigureRouting(context)
+            paint()
+        }
+        find<View>(R.id.rowProxy).setOnClickListener { toggle.isChecked = !toggle.isChecked }
+    }
+
+    /** Local SOCKS proxy mode has no Android VPN allow-list; keep it mutually exclusive with split routing. */
+    private fun normalizeRoutingMode(context: android.content.Context) {
+        if (Store.proxy(context) && Store.splitMode(context) != 0) Store.setProxy(context, false)
+    }
+
+    private fun disableProxyForSplit(context: android.content.Context, announce: Boolean) {
+        if (!Store.proxy(context)) return
+        Store.setProxy(context, false)
+        syncProxyToggle()
+        if (announce) toast(R.string.proxy_disabled_for_split)
+    }
+
+    private fun syncProxyToggle() {
+        if (view == null || context == null) return
+        syncingProxy = true
+        find<MaterialSwitch>(R.id.swProxy).isChecked = Store.proxy(requireContext())
+        syncingProxy = false
     }
 
     private fun bind(row: Int, switchId: Int, initial: Boolean, save: (Boolean) -> Unit) {
@@ -241,7 +279,9 @@ class SettingsFragment : Fragment() {
                 if (port == null || port !in 1024..65535) {
                     box.error = getString(R.string.invalid_port)
                 } else {
-                    Store.setProxyPort(requireContext(), port)
+                    val context = requireContext()
+                    Store.setProxyPort(context, port)
+                    Vpn.reconfigureRouting(context)
                     paint()
                 }
             }
@@ -257,8 +297,11 @@ class SettingsFragment : Fragment() {
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.split_mode)
             .setSingleChoiceItems(items, Store.splitMode(requireContext())) { dialog, which ->
-                Store.setSplitMode(requireContext(), which)
+                val context = requireContext()
+                if (which != 0) disableProxyForSplit(context, announce = true)
+                Store.setSplitMode(context, which)
                 dialog.dismiss()
+                Vpn.reconfigureRouting(context)
                 paint()
             }
             .show()

@@ -64,6 +64,8 @@
     <string name="split_off">Off</string>
     <string name="split_exclude">All apps except selected</string>
     <string name="split_include">Only selected apps</string>
+    <string name="proxy_disabled_for_split">Proxy mode was turned off because app split tunneling requires the system VPN.</string>
+    <string name="split_disabled_for_proxy">App split tunneling was turned off because proxy mode is not a system VPN.</string>
     <string name="split_value">%1$s · %2$d apps</string>
     <string name="st_app">App</string>
     <string name="language">Language</string>
