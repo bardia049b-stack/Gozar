@@ -51,16 +51,18 @@
         android:layout_marginTop="@dimen/sp_s"
         android:layout_marginEnd="@dimen/sp_l"
         android:background="@drawable/pill_outline"
-        android:minHeight="56dp">
+        android:clipChildren="true"
+        android:clipToPadding="true"
+        android:minHeight="64dp">
 
         <ImageView
             style="@style/Gozar.Tile"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
+            android:layout_width="34dp"
+            android:layout_height="34dp"
             android:background="@drawable/frame_clover"
             android:backgroundTint="@color/tile_container"
             android:contentDescription="@string/add_profile"
-            android:padding="8dp"
+            android:padding="7dp"
             android:src="@drawable/ic_plus"
             app:tint="@color/tile_on_container" />
 

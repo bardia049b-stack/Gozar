@@ -113,7 +113,7 @@
                 android:background="@drawable/frame_flower"
                 android:backgroundTint="@color/tile_container"
                 android:contentDescription="@string/language"
-                android:src="@drawable/ic_language"
+                android:src="@drawable/ic_translate"
                 app:tint="@color/tile_on_container" />
 
             <LinearLayout style="@style/Gozar.Row.Text">
@@ -134,10 +134,10 @@
 
             <ImageView
                 style="@style/Gozar.Tile"
-                android:background="@drawable/frame_puff"
+                android:background="@drawable/frame_flower"
                 android:backgroundTint="@color/tile_container"
                 android:contentDescription="@string/theme"
-                android:src="@drawable/ic_contrast"
+                android:src="@drawable/ic_palette"
                 app:tint="@color/tile_on_container" />
 
             <LinearLayout style="@style/Gozar.Row.Text">
