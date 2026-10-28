@@ -68,6 +68,10 @@ object FoxLink {
                 exitIp = try {
                     FoxH2.probe(chosen, pass.token)
                 } catch (e: Exception) {
+                    val reason = e.message ?: ""
+                    if (reason.contains("refused") || reason.contains("allowance") || reason.contains("region") || reason.contains("access")) {
+                        throw FoxError(reason)
+                    }
                     ""
                 }
                 connected = true

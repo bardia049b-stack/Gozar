@@ -226,7 +226,12 @@ class FoxFragment : Fragment() {
         stats.visibility = if (live) View.VISIBLE else View.GONE
         if (live) {
             val place = FoxLink.location
-            statLocation.text = if (place == null) "—" else listOf(place.country, place.city).filter { it.isNotEmpty() }.joinToString(" · ")
+            statLocation.text = when {
+                place == null -> "—"
+                place.city.isEmpty() || place.city.equals(place.country, true) ->
+                    if (place.recommended) getString(R.string.fox_recommended) else place.country
+                else -> place.country + " · " + place.city
+            }
             statExit.text = FoxLink.exitIp.ifEmpty { "—" }
             statSpeed.text = "↓ " + fmtSpeed(FoxLink.downRate) + "  ↑ " + fmtSpeed(FoxLink.upRate)
             statSession.text = fmtTime(FoxLink.elapsed())

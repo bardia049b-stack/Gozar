@@ -341,14 +341,16 @@ object FoxH2 {
 
     private fun headers(authority: String, pass: String): ByteArray {
         val out = ByteArrayOutputStream()
-        out.write(0x02)
-        literal(out, "CONNECT")
-        out.write(0x01)
-        literal(out, authority)
-        out.write(0x00)
-        literal(out, "proxy-authorization")
-        literal(out, "Bearer $pass")
+        pair(out, ":method", "CONNECT")
+        pair(out, ":authority", authority)
+        pair(out, "proxy-authorization", "Bearer $pass")
         return out.toByteArray()
+    }
+
+    private fun pair(out: ByteArrayOutputStream, name: String, value: String) {
+        out.write(0x00)
+        literal(out, name)
+        literal(out, value)
     }
 
     private fun literal(out: ByteArrayOutputStream, value: String) {
