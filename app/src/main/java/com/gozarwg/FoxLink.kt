@@ -66,14 +66,14 @@ object FoxLink {
                     throw FoxError("The local proxy did not start")
                 }
                 exitIp = try {
-                    FoxH2.probe(chosen, pass.token)
+                    FoxTunnel.probe(chosen, pass.token)
                 } catch (e: Exception) {
                     val reason = e.message ?: ""
                     if (reason.contains("rejected the pass") || reason.contains("pass was refused")) {
                         pass = FoxApi.pass(Fox.validAccess(app))
                         FoxStore.saveUsage(app, pass)
-                        FoxH2.probe(chosen, pass.token)
-                    } else if (reason.contains("allowance") || reason.contains("region") || reason.contains("access") || reason.contains("reset the tunnel") || reason.contains("closed the connection")) {
+                        FoxTunnel.probe(chosen, pass.token)
+                    } else if (reason.contains("allowance") || reason.contains("region") || reason.contains("access") || reason.contains("rejected") || reason.contains("closed the connection")) {
                         throw FoxError(reason)
                     } else {
                         ""

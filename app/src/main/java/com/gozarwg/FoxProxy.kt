@@ -175,7 +175,7 @@ class FoxProxy(
         val access = pass() ?: return null
         val location = FoxLink.location ?: return null
         return try {
-            FoxH2.open(location, host, port, access)
+            FoxTunnel.open(location, host, port, access)
         } catch (e: Exception) {
             FoxLink.fault(e.message ?: "tunnel failed")
             null
