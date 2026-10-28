@@ -36,13 +36,18 @@ object FoxShield {
     private val init = Pattern.compile("init\\((\\[[^\\]]*\\]),\\s*\"([^\"]+)\",\\s*\"([^\"]+)\"")
     private const val ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
-    fun solve(jar: FoxJar): Boolean {
-        val page = fetch(jar, SITE + "/", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8") ?: return false
+    fun solve(jar: FoxJar, origin: String = SITE): Boolean {
+        if (origin != SITE && solveHost(jar, origin)) return true
+        return solveHost(jar, SITE)
+    }
+
+    private fun solveHost(jar: FoxJar, host: String): Boolean {
+        val page = fetch(jar, host + "/", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8") ?: return false
         if (!page.contains("/_fs-ch-")) return true
         val matcher = prefix.matcher(page)
         if (!matcher.find()) return false
         val path = matcher.group()
-        val script = fetch(jar, SITE + path + "/script.js?reload=true", "*/*") ?: return false
+        val script = fetch(jar, host + path + "/script.js?reload=true", "*/*") ?: return false
         val call = init.matcher(script)
         var last: Any? = null
         var found: java.util.regex.MatchResult? = null
@@ -58,10 +63,10 @@ object FoxShield {
             val answers = JSONArray()
             for (i in 0 until tasks.length()) {
                 val task = tasks.optJSONObject(i) ?: continue
-                answers.put(answer(jar, SITE + path, token, task) ?: return false)
+                answers.put(answer(jar, host, host + path, token, task) ?: return false)
             }
             val body = JSONObject().put("token", token).put("data", answers).toString()
-            val reply = send(jar, SITE + path + "/fst-post-back", "POST", body, mapOf("Origin" to SITE, "Accept" to "application/json")) ?: return false
+            val reply = send(jar, host + path + "/fst-post-back", "POST", body, mapOf("Origin" to host, "Accept" to "application/json")) ?: return false
             if (reply.code != 200) return false
             val back = try {
                 JSONObject(reply.body)
@@ -78,7 +83,7 @@ object FoxShield {
         return false
     }
 
-    private fun answer(jar: FoxJar, path: String, token: String, task: JSONObject): JSONObject? {
+    private fun answer(jar: FoxJar, host: String, path: String, token: String, task: JSONObject): JSONObject? {
         return when (task.optString("ty")) {
             "pow" -> {
                 val data = task.optJSONObject("data") ?: return null
@@ -98,7 +103,7 @@ object FoxShield {
                     path + "/pat?token=" + java.net.URLEncoder.encode(token, "UTF-8"),
                     "POST",
                     "",
-                    mapOf("Accept" to "text/plain", "Content-Type" to "application/json", "Origin" to SITE)
+                    mapOf("Accept" to "text/plain", "Content-Type" to "application/json", "Origin" to host)
                 )
                 var auth = ""
                 if (reply != null && reply.code == 200 && reply.body.isNotEmpty()) {

@@ -35,7 +35,13 @@ object FoxNet {
         var round = 0
         while (reply.code == 406 && round < 4) {
             round++
-            if (!FoxShield.solve(jar)) break
+            val origin = try {
+                val parsed = URL(url)
+                parsed.protocol + "://" + parsed.host
+            } catch (_: Exception) {
+                "https://accounts.firefox.com"
+            }
+            if (!FoxShield.solve(jar, origin)) break
             reply = once(url, method, body, headers, timeout)
         }
         return reply
