@@ -9,11 +9,16 @@ import android.content.pm.ServiceInfo
 import android.net.ProxyInfo
 import android.net.VpnService
 import android.os.Build
+import android.os.ParcelFileDescriptor
 import androidx.core.app.NotificationCompat
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.io.IOException
 
 class FoxVpnService : VpnService() {
 
-    private var tunnel: android.os.ParcelFileDescriptor? = null
+    private var descriptor: ParcelFileDescriptor? = null
+    private var stack: FoxStack? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -27,31 +32,75 @@ class FoxVpnService : VpnService() {
         }
         foreground()
         if (Vpn.up || Vpn.connecting) Vpn.disconnect()
-        FoxLink.start(this)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            try {
-                val builder = Builder()
-                    .setSession("GozarWG Firefox")
-                    .addAddress("10.111.0.2", 32)
-                    .setMtu(1400)
-                    .setHttpProxy(ProxyInfo.buildDirectProxy("127.0.0.1", FoxLink.WEB_PORT))
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) builder.setMetered(false)
-                builder.addDisallowedApplication(packageName)
-                tunnel = builder.establish()
-            } catch (e: Exception) {
-                tunnel = null
-            }
-        }
+        open()
         return START_STICKY
+    }
+
+    private fun open() {
+        if (descriptor != null) return
+        val builder = Builder()
+            .setSession(getString(R.string.fox_title))
+            .addAddress(LOCAL_ADDRESS, 32)
+            .addDnsServer(DNS_ADDRESS)
+            .addRoute("0.0.0.0", 0)
+            .setMtu(FoxStack.MTU)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            builder.setMetered(false)
+            builder.setHttpProxy(ProxyInfo.buildDirectProxy("127.0.0.1", FoxLink.WEB_PORT))
+        }
+        try {
+            builder.addDisallowedApplication(packageName)
+        } catch (e: Exception) {
+        }
+        val fd = try {
+            builder.establish()
+        } catch (e: Exception) {
+            FoxLog.add("vpn", "cannot open the tunnel device: " + (e.message ?: "unknown"))
+            null
+        }
+        if (fd == null) {
+            FoxLink.fault(getString(R.string.fox_no_device))
+            return
+        }
+        descriptor = fd
+        val app = applicationContext
+        val engine = FoxStack(
+            FileInputStream(fd.fileDescriptor),
+            FileOutputStream(fd.fileDescriptor),
+            addressOf(LOCAL_ADDRESS),
+            FoxResolver(FoxLink.WEB_PORT),
+            { host, port ->
+                val location = FoxLink.location ?: throw IOException("not connected yet")
+                val token = FoxStore.pass(app)
+                if (token.isEmpty()) throw IOException("no pass")
+                FoxTunnel.open(location, host, port, token)
+            },
+            { inbound, size -> FoxLink.count(inbound, size) }
+        )
+        engine.start()
+        stack = engine
+        FoxLog.add("vpn", "device open, routes and dns are live")
+        FoxLink.start(this)
+    }
+
+    override fun onRevoke() {
+        FoxLog.add("vpn", "another vpn took over")
+        stopSelf()
+        super.onRevoke()
     }
 
     override fun onDestroy() {
         alive = false
         try {
-            tunnel?.close()
-        } catch (_: Exception) {
+            stack?.stop()
+        } catch (e: Exception) {
         }
-        tunnel = null
+        stack = null
+        try {
+            descriptor?.close()
+        } catch (e: Exception) {
+        }
+        descriptor = null
         FoxLink.stop()
         super.onDestroy()
     }
@@ -91,6 +140,8 @@ class FoxVpnService : VpnService() {
     }
 
     companion object {
+        const val LOCAL_ADDRESS = "10.111.0.2"
+        const val DNS_ADDRESS = "10.111.0.53"
         private const val CHANNEL = "fox_vpn"
         private const val NOTIFY = 7412
         private const val STOP = "com.gozarwg.FOX_STOP"
@@ -98,6 +149,14 @@ class FoxVpnService : VpnService() {
         @Volatile private var alive = false
 
         fun isAlive(): Boolean = alive
+
+        fun addressOf(text: String): Int {
+            val parts = text.split(".")
+            if (parts.size != 4) return 0
+            var value = 0
+            for (part in parts) value = (value shl 8) or (part.toIntOrNull()?.and(0xFF) ?: 0)
+            return value
+        }
 
         fun start(c: Context) {
             val intent = Intent(c, FoxVpnService::class.java)
@@ -107,7 +166,7 @@ class FoxVpnService : VpnService() {
         fun stop(c: Context) {
             try {
                 c.stopService(Intent(c, FoxVpnService::class.java))
-            } catch (_: Exception) {
+            } catch (e: Exception) {
             }
         }
     }

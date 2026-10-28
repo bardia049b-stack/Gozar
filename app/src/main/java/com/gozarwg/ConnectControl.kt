@@ -100,6 +100,7 @@ class ConnectControl @JvmOverloads constructor(
     private var onAccent = 0
     private var error = 0
     private var onError = 0
+    private var tuned: IntArray? = null
     private var morphAnimator: ValueAnimator? = null
 
     private val ticker = object : Runnable {
@@ -175,13 +176,20 @@ class ConnectControl @JvmOverloads constructor(
         return super.onTouchEvent(event)
     }
 
+    fun tune(primaryFill: Int, primaryInk: Int, accentFill: Int, accentInk: Int, faultFill: Int, faultInk: Int) {
+        tuned = intArrayOf(primaryFill, primaryInk, accentFill, accentInk, faultFill, faultInk)
+        updateColors()
+        invalidate()
+    }
+
     private fun updateColors() {
-        primary = color(R.color.m3_primary)
-        onPrimary = color(R.color.m3_on_primary)
-        accent = color(R.color.m3_ok)
-        onAccent = color(R.color.m3_on_ok)
-        error = color(R.color.m3_error)
-        onError = color(R.color.m3_on_error)
+        val own = tuned
+        primary = own?.get(0) ?: color(R.color.m3_primary)
+        onPrimary = own?.get(1) ?: color(R.color.m3_on_primary)
+        accent = own?.get(2) ?: color(R.color.m3_ok)
+        onAccent = own?.get(3) ?: color(R.color.m3_on_ok)
+        error = own?.get(4) ?: color(R.color.m3_error)
+        onError = own?.get(5) ?: color(R.color.m3_on_error)
     }
 
     private fun sync() {

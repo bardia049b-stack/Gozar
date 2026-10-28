@@ -28,8 +28,7 @@
                 android:adjustViewBounds="true"
                 android:contentDescription="@string/app_name"
                 android:scaleType="fitStart"
-                android:src="@drawable/logo"
-                app:tint="?attr/colorOnSurface" />
+                android:src="@drawable/amnezia_mark" />
 
             <View
                 android:layout_width="0dp"

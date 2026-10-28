@@ -13,9 +13,9 @@ import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.checkbox.MaterialCheckBox
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 
 class FoxFragment : Fragment() {
 
@@ -24,7 +24,7 @@ class FoxFragment : Fragment() {
     private lateinit var quotaText: TextView
     private lateinit var quotaBar: ProgressBar
     private lateinit var reset: TextView
-    private lateinit var primary: MaterialButton
+    private lateinit var connect: ConnectControl
     private lateinit var errorView: TextView
     private lateinit var stats: LinearLayout
     private lateinit var statLocation: TextView
@@ -34,11 +34,30 @@ class FoxFragment : Fragment() {
     private lateinit var measureButton: MaterialButton
     private lateinit var hint: TextView
     private lateinit var serverBox: LinearLayout
-    private var codeShown = false
+    private lateinit var serverHead: View
+    private lateinit var serverBody: View
+    private lateinit var chevron: View
+    private lateinit var selectedLabel: TextView
+    private lateinit var signInCard: View
+    private lateinit var signInTitle: TextView
+    private lateinit var emailBox: TextInputLayout
+    private lateinit var emailInput: TextInputEditText
+    private lateinit var passwordBox: TextInputLayout
+    private lateinit var passwordInput: TextInputEditText
+    private lateinit var signButtons: View
+    private lateinit var codeBox: View
+    private lateinit var codeFrame: TextInputLayout
+    private lateinit var codeInput: TextInputEditText
+    private lateinit var codeHint: TextView
+    private lateinit var verifyButton: MaterialButton
+    private lateinit var resendButton: MaterialButton
+    private var expanded = false
+    private var measured = false
     private var rowSignature = ""
 
     private val permission = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == Activity.RESULT_OK) FoxVpnService.start(requireContext()) else showHint(getString(R.string.fox_perm_denied))
+        if (result.resultCode == Activity.RESULT_OK) FoxVpnService.start(requireContext())
+        else showHint(getString(R.string.fox_perm_denied))
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, saved: Bundle?): View {
@@ -48,7 +67,7 @@ class FoxFragment : Fragment() {
         quotaText = view.findViewById(R.id.foxQuotaText)
         quotaBar = view.findViewById(R.id.foxQuotaBar)
         reset = view.findViewById(R.id.foxReset)
-        primary = view.findViewById(R.id.foxPrimary)
+        connect = view.findViewById(R.id.foxConnect)
         errorView = view.findViewById(R.id.foxError)
         stats = view.findViewById(R.id.foxStats)
         statLocation = view.findViewById(R.id.foxStatLocation)
@@ -58,11 +77,45 @@ class FoxFragment : Fragment() {
         measureButton = view.findViewById(R.id.foxMeasure)
         hint = view.findViewById(R.id.foxHint)
         serverBox = view.findViewById(R.id.foxServers)
+        serverHead = view.findViewById(R.id.foxServerHead)
+        serverBody = view.findViewById(R.id.foxServerBody)
+        chevron = view.findViewById(R.id.foxChevron)
+        selectedLabel = view.findViewById(R.id.foxSelected)
+        signInCard = view.findViewById(R.id.foxSignIn)
+        signInTitle = view.findViewById(R.id.foxSignInTitle)
+        emailBox = view.findViewById(R.id.foxEmailBox)
+        emailInput = view.findViewById(R.id.foxEmailInput)
+        passwordBox = view.findViewById(R.id.foxPasswordBox)
+        passwordInput = view.findViewById(R.id.foxPasswordInput)
+        signButtons = view.findViewById(R.id.foxSignButtons)
+        codeBox = view.findViewById(R.id.foxCodeBox)
+        codeFrame = view.findViewById(R.id.foxCodeFrame)
+        codeInput = view.findViewById(R.id.foxCodeInput)
+        codeHint = view.findViewById(R.id.foxCodeHint)
+        verifyButton = view.findViewById(R.id.foxVerifyButton)
+        resendButton = view.findViewById(R.id.foxResendButton)
+
+        connect.tune(
+            requireContext().getColor(R.color.fox_cream),
+            requireContext().getColor(R.color.fox_red_dark),
+            requireContext().getColor(R.color.fox_peach),
+            requireContext().getColor(R.color.fox_red_dark),
+            requireContext().getColor(R.color.fox_orange),
+            requireContext().getColor(R.color.fox_red_dark)
+        )
 
         view.findViewById<View>(R.id.foxAccountButton).setOnClickListener { accountMenu() }
-        primary.setOnClickListener { primaryAction() }
-        measureButton.setOnClickListener { Fox.measure(requireContext()) }
+        connect.setOnClickListener { primaryAction() }
+        measureButton.setOnClickListener {
+            measured = true
+            Fox.measure(requireContext())
+        }
         view.findViewById<View>(R.id.foxLogs).setOnClickListener { showLogs() }
+        serverHead.setOnClickListener { expand(!expanded) }
+        view.findViewById<View>(R.id.foxSignInButton).setOnClickListener { submitAccount(false) }
+        view.findViewById<View>(R.id.foxSignUpButton).setOnClickListener { submitAccount(true) }
+        verifyButton.setOnClickListener { submitCode() }
+        resendButton.setOnClickListener { Fox.resend(requireContext()) }
         return view
     }
 
@@ -70,9 +123,23 @@ class FoxFragment : Fragment() {
         super.onViewCreated(view, saved)
         Fox.onChange = { if (isAdded) render() }
         FoxLink.onChange = { if (isAdded) render() }
+        val stored = FoxStore.email(requireContext())
+        if (stored.isNotEmpty() && emailInput.text.isNullOrEmpty()) emailInput.setText(stored)
         Fox.load(requireContext())
         Fox.loadServers(requireContext())
         render()
+    }
+
+    private fun maybeMeasure() {
+        if (measured || Fox.busy) return
+        if (Fox.servers.isEmpty()) return
+        measured = true
+        if (!Fox.hasDelays()) Fox.measure(requireContext())
+    }
+
+    private fun hideKeyboard(view: View) {
+        val manager = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
+        manager?.hideSoftInputFromWindow(view.windowToken, 0)
     }
 
     override fun onDestroyView() {
@@ -81,10 +148,19 @@ class FoxFragment : Fragment() {
         super.onDestroyView()
     }
 
+    private fun expand(open: Boolean) {
+        expanded = open
+        serverBody.visibility = if (open) View.VISIBLE else View.GONE
+        chevron.animate().rotation(if (open) 180f else 0f).setDuration(180).start()
+        if (open) renderServers(requireContext())
+    }
+
     private fun primaryAction() {
         val c = requireContext()
         when {
-            !Fox.signedIn(c) -> showAuth()
+            !Fox.signedIn(c) -> {
+                showSignIn()
+            }
             FoxLink.connected || FoxLink.connecting -> FoxVpnService.stop(c)
             else -> {
                 val ask = VpnService.prepare(c)
@@ -93,10 +169,50 @@ class FoxFragment : Fragment() {
         }
     }
 
+    private fun showSignIn() {
+        signInCard.visibility = View.VISIBLE
+        signInCard.announceForAccessibility(getString(R.string.fox_auth_title))
+        signInCard.requestFocus()
+    }
+
+    private fun submitAccount(create: Boolean) {
+        val address = emailInput.text?.toString()?.trim().orEmpty()
+        val secret = passwordInput.text?.toString().orEmpty()
+        emailBox.error = null
+        passwordBox.error = null
+        if (!address.contains("@")) {
+            emailBox.error = getString(R.string.fox_email_bad)
+            return
+        }
+        if (secret.length < 8) {
+            passwordBox.error = getString(R.string.fox_password_bad)
+            return
+        }
+        hideKeyboard(passwordInput)
+        passwordInput.setText("")
+        if (create) Fox.signUp(requireContext(), address, secret) else Fox.signIn(requireContext(), address, secret)
+    }
+
+    private fun submitCode() {
+        val c = requireContext()
+        if (Fox.isLinkStep()) {
+            Fox.confirmLink(c)
+            return
+        }
+        val code = codeInput.text?.toString()?.trim().orEmpty()
+        if (code.isEmpty()) {
+            codeFrame.error = getString(R.string.fox_code)
+            return
+        }
+        codeFrame.error = null
+        codeInput.setText("")
+        Fox.submitCode(c, code)
+    }
+
     private fun accountMenu() {
         val c = requireContext()
         if (!Fox.signedIn(c)) {
-            showAuth()
+            showSignIn()
             return
         }
         MaterialAlertDialogBuilder(c)
@@ -110,74 +226,6 @@ class FoxFragment : Fragment() {
             .show()
     }
 
-    private fun showAuth() {
-        val c = requireContext()
-        val view = layoutInflater.inflate(R.layout.dialog_fox_auth, null)
-        val mail = view.findViewById<TextInputEditText>(R.id.foxEmail)
-        val password = view.findViewById<TextInputEditText>(R.id.foxPassword)
-        val create = view.findViewById<MaterialCheckBox>(R.id.foxCreate)
-        val dialog = MaterialAlertDialogBuilder(c)
-            .setTitle(R.string.fox_auth_title)
-            .setView(view)
-            .setNegativeButton(R.string.cancel, null)
-            .setPositiveButton(R.string.fox_continue, null)
-            .create()
-        dialog.setOnShowListener {
-            dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val address = mail.text?.toString()?.trim().orEmpty()
-                val secret = password.text?.toString().orEmpty()
-                if (!address.contains("@") || secret.length < 8) {
-                    if (!address.contains("@")) mail.error = getString(R.string.fox_email_bad)
-                    else password.error = getString(R.string.fox_password_bad)
-                    return@setOnClickListener
-                }
-                dialog.dismiss()
-                if (create.isChecked) Fox.signUp(requireContext(), address, secret)
-                else Fox.signIn(requireContext(), address, secret)
-            }
-        }
-        dialog.show()
-    }
-
-    private fun showCode() {
-        if (codeShown || !isAdded) return
-        codeShown = true
-        val c = requireContext()
-        val link = Fox.isLinkStep()
-        val view = layoutInflater.inflate(R.layout.dialog_fox_code, null)
-        val input = view.findViewById<TextInputEditText>(R.id.foxCode)
-        val hintView = view.findViewById<TextView>(R.id.foxCodeHint)
-        if (link) {
-            input.visibility = View.GONE
-            (input.parent?.parent as? View)?.visibility = View.GONE
-            hintView.text = getString(R.string.fox_link_hint)
-        }
-        val dialog = MaterialAlertDialogBuilder(c)
-            .setTitle(if (link) R.string.fox_link_title else R.string.fox_code_title)
-            .setView(view)
-            .setNegativeButton(R.string.cancel, null)
-            .setNeutralButton(R.string.fox_send_again, null)
-            .setPositiveButton(if (link) R.string.fox_confirm else R.string.fox_continue, null)
-            .create()
-        dialog.setOnShowListener {
-            dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                if (link) {
-                    dialog.dismiss()
-                    Fox.confirmLink(requireContext())
-                    return@setOnClickListener
-                }
-                val code = input.text?.toString()?.trim().orEmpty()
-                if (code.isEmpty()) return@setOnClickListener
-                dialog.dismiss()
-                Fox.submitCode(requireContext(), code)
-            }
-            val neutral = dialog.getButton(android.app.AlertDialog.BUTTON_NEUTRAL)
-            if (link) neutral.visibility = View.GONE else neutral.setOnClickListener { Fox.resend(requireContext()) }
-        }
-        dialog.setOnDismissListener { if (Fox.needsStep()) codeShown = false }
-        dialog.show()
-    }
-
     private fun showHint(text: String) {
         if (!isAdded) return
         errorView.visibility = View.VISIBLE
@@ -187,6 +235,7 @@ class FoxFragment : Fragment() {
     private fun render() {
         val c = context ?: return
         val mail = FoxStore.email(c)
+        val signed = Fox.signedIn(c)
         account.text = if (mail.isEmpty()) getString(R.string.fox_signed_out) else mail
         val live = FoxLink.connected
         val busy = FoxLink.connecting
@@ -206,15 +255,18 @@ class FoxFragment : Fragment() {
         state.text = when {
             live -> getString(R.string.fox_connected)
             busy -> getString(R.string.fox_connecting)
+            !signed -> getString(R.string.fox_plan_title)
             else -> getString(R.string.fox_plan_title)
         }
 
-        primary.text = when {
-            mail.isEmpty() -> getString(R.string.fox_sign_in)
-            live || busy -> getString(R.string.disconnect)
-            else -> getString(R.string.connect)
+        val wanted = when {
+            FoxLink.error.isNotEmpty() && !live -> ConnectControl.ERROR
+            busy -> ConnectControl.BUSY
+            live -> ConnectControl.ON
+            else -> ConnectControl.OFF
         }
-        measureButton.isEnabled = Fox.servers.isNotEmpty() && !Fox.busy
+        if (connect.state != wanted) connect.state = wanted
+        if (live) connect.elapsedSeconds = FoxLink.elapsed().toInt() else if (!busy) connect.elapsedSeconds = 0
 
         val failure = when {
             FoxLink.error.isNotEmpty() -> FoxLink.error
@@ -223,6 +275,18 @@ class FoxFragment : Fragment() {
             else -> ""
         }
         if (failure.isEmpty()) errorView.visibility = View.GONE else showHint(failure)
+
+        signInCard.visibility = if (signed) View.GONE else View.VISIBLE
+        signInTitle.text = if (Fox.needsStep()) getString(R.string.fox_code_title) else getString(R.string.fox_auth_title)
+        signButtons.visibility = if (Fox.needsStep()) View.GONE else View.VISIBLE
+        codeBox.visibility = if (Fox.needsStep()) View.VISIBLE else View.GONE
+        if (Fox.needsStep()) {
+            val link = Fox.isLinkStep()
+            codeFrame.visibility = if (link) View.GONE else View.VISIBLE
+            verifyButton.text = if (link) getString(R.string.fox_confirm) else getString(R.string.fox_continue)
+            resendButton.visibility = if (link) View.GONE else View.VISIBLE
+            codeHint.text = if (link) getString(R.string.fox_link_hint) else getString(R.string.fox_code_hint)
+        }
 
         stats.visibility = if (live) View.VISIBLE else View.GONE
         if (live) {
@@ -238,20 +302,16 @@ class FoxFragment : Fragment() {
             statSession.text = fmtTime(FoxLink.elapsed())
         }
 
-        hint.text = if (Fox.busy || busy) getString(R.string.fox_working) else
-            getString(R.string.fox_build, versionName())
+        hint.text = if (Fox.busy) getString(R.string.fox_working) else getString(R.string.fox_servers_hint)
+        measureButton.isEnabled = Fox.servers.isNotEmpty() && !Fox.busy
 
-        if (Fox.needsStep()) {
-            if (!codeShown) showCode()
-        } else {
-            codeShown = false
-        }
+        maybeMeasure()
         renderServers(c)
     }
 
     private fun showLogs() {
         val c = context ?: return
-        val text = android.widget.TextView(c).apply {
+        val view = TextView(c).apply {
             text = FoxLog.dump().ifEmpty { getString(R.string.fox_log_empty) }
             typeface = android.graphics.Typeface.MONOSPACE
             textSize = 10f
@@ -259,7 +319,7 @@ class FoxFragment : Fragment() {
             val pad = (16 * resources.displayMetrics.density).toInt()
             setPadding(pad, pad, pad, pad)
         }
-        val scroll = android.widget.ScrollView(c).apply { addView(text) }
+        val scroll = android.widget.ScrollView(c).apply { addView(view) }
         MaterialAlertDialogBuilder(c)
             .setTitle(getString(R.string.fox_logs))
             .setView(scroll)
@@ -270,7 +330,7 @@ class FoxFragment : Fragment() {
             .apply {
                 setOnShowListener {
                     getButton(android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                        val clipboard = c.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                        val clipboard = c.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
                         clipboard.setPrimaryClip(android.content.ClipData.newPlainText("gozarwg", FoxLog.dump()))
                         dismiss()
                     }
@@ -311,9 +371,16 @@ class FoxFragment : Fragment() {
     }
 
     private fun renderServers(c: Context) {
-        val selected = FoxStore.selected(c)
+        val selected = Fox.selectedLocation(c)
+        val chosen = selected?.code ?: ""
+        selectedLabel.text = when {
+            selected == null -> ""
+            Fox.delayOf(selected) > 0 -> label(selected) + " · " + Fox.delayOf(selected) + " ms"
+            else -> label(selected)
+        }
+        if (!expanded) return
         val list = Fox.servers
-        val signature = list.size.toString() + "|" + selected + "|" + list.joinToString(",") { Fox.delayOf(it).toString() }
+        val signature = list.size.toString() + "|" + chosen + "|" + list.joinToString(",") { Fox.delayOf(it).toString() }
         if (signature == rowSignature) return
         rowSignature = signature
         serverBox.removeAllViews()
@@ -330,7 +397,7 @@ class FoxFragment : Fragment() {
                 else -> "$delay ms"
             }
             row.findViewById<View>(R.id.foxCheck).visibility =
-                if (location.code == selected) View.VISIBLE else View.INVISIBLE
+                if (location.code == chosen) View.VISIBLE else View.INVISIBLE
             row.setOnClickListener {
                 Fox.select(c, location)
                 rowSignature = ""
@@ -338,5 +405,10 @@ class FoxFragment : Fragment() {
             }
             serverBox.addView(row)
         }
+    }
+
+    private fun label(location: FoxLocation): String = when {
+        location.city.isEmpty() || location.city.equals(location.country, true) -> location.country
+        else -> location.country + " · " + location.city
     }
 }

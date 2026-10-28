@@ -14,13 +14,13 @@ class FoxDuplex(
     private val output: BufferedOutputStream,
     private val h2: Boolean,
     private val streamId: Int
-) {
+) : FoxPipe {
 
     private val lock = Object()
     private var sendWindow = 65535L
     private var connectionWindow = 65535L
 
-    fun read(buffer: ByteArray, offset: Int, length: Int): Int {
+    override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
         if (!h2) return input.read(buffer, offset, length)
         while (true) {
             val header = ByteArray(9)
@@ -64,7 +64,7 @@ class FoxDuplex(
         }
     }
 
-    fun write(buffer: ByteArray, offset: Int, length: Int) {
+    override fun write(buffer: ByteArray, offset: Int, length: Int) {
         if (!h2) {
             output.write(buffer, offset, length)
             output.flush()
@@ -105,7 +105,7 @@ class FoxDuplex(
         send(frame(0x08, 0, streamId, update))
     }
 
-    fun close() {
+    override fun close() {
         if (h2) {
             send(frame(0x03, 0, streamId, byteArrayOf(0, 0, 0, 0x08)))
             send(frame(0x07, 0, 0, ByteArray(8)))
@@ -160,12 +160,15 @@ object FoxTunnel {
 
     private const val AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:149.0) Gecko/20100101 Firefox/149.0"
 
+    @Volatile private var h2DownUntil = 0L
+
     fun open(location: FoxLocation, host: String, port: Int, pass: String, timeout: Int = 15000): FoxDuplex {
         var firstError: Exception? = null
-        val overH2 = try {
+        val overH2 = if (System.currentTimeMillis() < h2DownUntil) null else try {
             openH2(location, host, port, pass, timeout)
         } catch (e: Exception) {
             FoxLog.add("tunnel", "h2 failed: " + (e.message ?: e.javaClass.simpleName))
+            h2DownUntil = System.currentTimeMillis() + 600000
             firstError = e
             null
         }

@@ -247,6 +247,11 @@ object Fox {
                 if (delays.containsKey(key)) continue
                 delays[key] = ping(location.host, location.port)
             }
+            val chosen = FoxStore.selected(app)
+            if (chosen == "REC" || chosen.isEmpty() || servers.none { it.code == chosen }) {
+                val best = servers.filter { delayOf(it) > 0 }.minByOrNull { delayOf(it) }
+                if (best != null) FoxStore.setSelected(app, best.code)
+            }
             busy = false
             message = "ping"
             notifyUi()

@@ -245,6 +245,8 @@ AGPL-3.0-or-later</string>
     <string name="fox_code_title">Check your email</string>
     <string name="fox_code_hint">Mozilla emailed a 6-digit code. Enter it here. If your email only has a button, press it once and then Send again.</string>
     <string name="fox_create_toggle">Create a new Firefox account</string>
+    <string name="fox_create">Create account</string>
+    <string name="fox_no_device">Android refused to open the tunnel device</string>
     <string name="fox_email_bad">Enter a valid email address</string>
     <string name="fox_password_bad">Password must be at least 8 characters</string>
     <string name="fox_working">Working…</string>
