@@ -27,6 +27,7 @@ object FoxLink {
     private var lastDown = 0L
     private var lastUp = 0L
     private var lastAt = 0L
+    private var lastReport = 0L
     private var ticker: Thread? = null
 
     var onChange: (() -> Unit)? = null
@@ -143,6 +144,11 @@ object FoxLink {
                     break
                 }
                 val now = System.currentTimeMillis()
+                if (now - lastReport > 20000L) {
+                    FoxLog.add("link", "traffic down=" + fmtBytes(down) + " up=" + fmtBytes(up) +
+                        " rate=" + fmtSpeed(downRate) + "/" + fmtSpeed(upRate))
+                    lastReport = now
+                }
                 val span = (now - lastAt).coerceAtLeast(1)
                 downRate = (down - lastDown) * 1000.0 / span
                 upRate = (up - lastUp) * 1000.0 / span

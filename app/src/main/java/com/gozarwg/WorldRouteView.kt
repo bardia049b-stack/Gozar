@@ -316,10 +316,10 @@ class WorldRouteView @JvmOverloads constructor(
         // Packet travel is integrated frame-to-frame instead of recalculating a modulo phase.
         // Throughput changes therefore adjust velocity without teleporting; a cosine path gently
         // slows at either endpoint before returning along the route.
-        if (reveal > 0.98f && max(downloadBps, uploadBps) > 1.0) {
+        if (reveal > 0.98f && max(downloadBps, uploadBps) > 0.4) {
             advancePackets(now)
-            if (downloadBps > 1.0) drawPacket(canvas, packetFraction(downloadPacket), exitColor, px)
-            if (uploadBps > 1.0) drawPacket(canvas, packetFraction(uploadPacket), originColor, px)
+            if (downloadBps > 0.4) drawPacket(canvas, packetFraction(downloadPacket), exitColor, px)
+            if (uploadBps > 0.4) drawPacket(canvas, packetFraction(uploadPacket), originColor, px)
         } else {
             packetTickAt = now
         }
@@ -353,12 +353,12 @@ class WorldRouteView @JvmOverloads constructor(
         if (previous == 0L) return
         // Limit a resumed/paused frame to a small visual step rather than jumping across the map.
         val seconds = ((now - previous).coerceIn(1L, 48L) / 1000.0).toFloat()
-        if (downloadBps > 1.0) advancePacket(downloadPacket, packetSpeed(downloadBps) * seconds)
-        if (uploadBps > 1.0) advancePacket(uploadPacket, packetSpeed(uploadBps) * seconds)
+        if (downloadBps > 0.4) advancePacket(downloadPacket, packetSpeed(downloadBps) * seconds)
+        if (uploadBps > 0.4) advancePacket(uploadPacket, packetSpeed(uploadBps) * seconds)
     }
 
     private fun packetSpeed(bytesPerSecond: Double): Float =
-        (0.07 + ln(bytesPerSecond + 1.0) * 0.020).coerceIn(0.10, 0.55).toFloat()
+        (0.05 + ln(bytesPerSecond + 1.0) * 0.035).coerceIn(0.06, 0.70).toFloat()
 
     private fun advancePacket(packet: Packet, amount: Float) {
         var phase = packet.phase + packet.direction * amount

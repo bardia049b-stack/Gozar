@@ -120,6 +120,8 @@ class FoxStack(
             return
         }
 
+        if (length > 0) meter(false, length.toLong())
+
         var known = flows[key]
         if (known != null && flags and SYN != 0 && flags and ACK == 0) {
             known.shutdown()
@@ -166,6 +168,7 @@ class FoxStack(
             unreachable(target, packet, total)
             return
         }
+        meter(false, length.toLong())
         val query = packet.copyOfRange(start, start + length - 8)
         thread(isDaemon = true, name = "fox-dns") {
             val answer = try {
@@ -312,7 +315,7 @@ class FoxStack(
         val check = fold(pseudo(destination, local, TCP, tcpLength) + sum(packet, 20, tcpLength))
         putU16(packet, 36, if (check == 0) 0xFFFF else check)
         emit(packet)
-        if (length > 0) meter(false, length.toLong())
+        if (length > 0) meter(true, length.toLong())
     }
 
     private fun emit(packet: ByteArray) {
