@@ -88,10 +88,10 @@ object Fox {
             pendingPassword = password
             pendingUid = session.uid
             pendingToken = session.token
-            byLink = session.byLink
+            byLink = false
             if (session.needsCode) {
                 step = STEP_SIGNUP
-                message = if (byLink) "link" else "code"
+                message = "code"
             } else {
                 finish(c.applicationContext, session.token, session.uid, clean, password)
             }
@@ -120,6 +120,18 @@ object Fox {
         if (step == STEP_NONE) return
         work(c) {
             try {
+                if (FoxApi.emailVerified(pendingToken)) {
+                    val again = FoxApi.signIn(pendingEmail, pendingPassword)
+                    pendingToken = again.token
+                    pendingUid = again.uid
+                    if (!again.needsCode) {
+                        finish(c.applicationContext, again.token, again.uid, pendingEmail, pendingPassword)
+                        return@work
+                    }
+                    byLink = again.byLink
+                    message = if (byLink) "link" else "code"
+                    throw FoxError(if (byLink) "The email link is not confirmed yet" else "Mozilla emailed a code to finish signing in")
+                }
                 finish(c.applicationContext, pendingToken, pendingUid, pendingEmail, pendingPassword)
             } catch (e: FoxError) {
                 val again = FoxApi.signIn(pendingEmail, pendingPassword)
@@ -141,13 +153,13 @@ object Fox {
         }
     }
 
-    fun submitCode(c: Context, code: String) {
-        val clean = code.trim()
+    fun submitCode(c: Context, raw: String) {
+        val clean = cleanCode(raw)
         if (clean.isEmpty() || step == STEP_NONE) return
         val mode = step
         work(c) {
             if (mode == STEP_SIGNUP) {
-                FoxApi.verifyEmail(pendingUid, clean)
+                FoxApi.verifyEmail(pendingToken, pendingUid, clean)
                 try {
                     finish(c.applicationContext, pendingToken, pendingUid, pendingEmail, pendingPassword)
                 } catch (e: FoxError) {
@@ -163,6 +175,29 @@ object Fox {
             } else {
                 FoxApi.verifySession(pendingToken, clean)
                 finish(c.applicationContext, pendingToken, pendingUid, pendingEmail, pendingPassword)
+            }
+        }
+    }
+
+    private fun cleanCode(raw: String): String {
+        val text = raw.trim()
+        if (text.contains("code=")) {
+            val code = text.substringAfter("code=").substringBefore("&").substringBefore(" ").trim()
+            if (code.isNotEmpty()) return code
+        }
+        return text.filter { !it.isWhitespace() && it != '-' }
+    }
+
+    fun resend(c: Context) {
+        if (step == STEP_NONE) return
+        val mode = step
+        val app = c.applicationContext
+        work(c) {
+            if (mode == STEP_SIGNUP) {
+                FoxApi.resendSignupCode(pendingToken)
+                message = "code"
+            } else {
+                signInNow(app, pendingEmail, pendingPassword, false)
             }
         }
     }

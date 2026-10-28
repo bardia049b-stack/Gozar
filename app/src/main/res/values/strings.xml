@@ -243,7 +243,7 @@ AGPL-3.0-or-later</string>
     <string name="fox_password">Password</string>
     <string name="fox_code">Code</string>
     <string name="fox_code_title">Check your email</string>
-    <string name="fox_code_hint">Mozilla emailed you a 6-digit code. Enter it to finish signing in.</string>
+    <string name="fox_code_hint">Mozilla emailed a 6-digit code. Enter it here. If your email only has a button, press it once and then Send again.</string>
     <string name="fox_create_toggle">Create a new Firefox account</string>
     <string name="fox_email_bad">Enter a valid email address</string>
     <string name="fox_password_bad">Password must be at least 8 characters</string>
@@ -261,4 +261,5 @@ AGPL-3.0-or-later</string>
     <string name="fox_link_title">Confirm by link</string>
     <string name="fox_link_hint">Mozilla sent a confirmation link instead of a code. Open it once in your browser, then press Confirm.</string>
     <string name="fox_confirm">Confirm</string>
+    <string name="fox_send_again">Send again</string>
 </resources>

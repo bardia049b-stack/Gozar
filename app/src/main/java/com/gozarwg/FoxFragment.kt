@@ -155,6 +155,7 @@ class FoxFragment : Fragment() {
             .setTitle(if (link) R.string.fox_link_title else R.string.fox_code_title)
             .setView(view)
             .setNegativeButton(R.string.cancel, null)
+            .setNeutralButton(R.string.fox_send_again, null)
             .setPositiveButton(if (link) R.string.fox_confirm else R.string.fox_continue, null)
             .create()
         dialog.setOnShowListener {
@@ -169,6 +170,8 @@ class FoxFragment : Fragment() {
                 dialog.dismiss()
                 Fox.submitCode(requireContext(), code)
             }
+            val neutral = dialog.getButton(android.app.AlertDialog.BUTTON_NEUTRAL)
+            if (link) neutral.visibility = View.GONE else neutral.setOnClickListener { Fox.resend(requireContext()) }
         }
         dialog.setOnDismissListener { if (Fox.needsStep()) codeShown = false }
         dialog.show()

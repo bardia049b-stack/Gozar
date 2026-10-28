@@ -243,7 +243,7 @@ AGPL-3.0-or-later</string>
     <string name="fox_password">رمز عبور</string>
     <string name="fox_code">کد</string>
     <string name="fox_code_title">ایمیل خود را ببینید</string>
-    <string name="fox_code_hint">موزیلا یک کد ۶ رقمی ایمیل کرده است. برای پایان ورود آن را وارد کنید.</string>
+    <string name="fox_code_hint">موزیلا یک کد ۶ رقمی ایمیل کرده است. آن را اینجا وارد کنید. اگر ایمیل فقط دکمه داشت، یک‌بار روی دکمه بزنید و بعد «ارسال دوباره» را بزنید.</string>
     <string name="fox_create_toggle">ساخت حساب جدید فایرفاکس</string>
     <string name="fox_email_bad">یک ایمیل معتبر وارد کنید</string>
     <string name="fox_password_bad">رمز باید حداقل ۸ کاراکتر باشد</string>
@@ -261,4 +261,5 @@ AGPL-3.0-or-later</string>
     <string name="fox_link_title">تأیید با لینک</string>
     <string name="fox_link_hint">موزیلا به‌جای کد یک لینک تأیید فرستاده است. یک‌بار در مرورگر بازش کنید و بعد «تأیید» را بزنید.</string>
     <string name="fox_confirm">تأیید</string>
+    <string name="fox_send_again">ارسال دوباره</string>
 </resources>

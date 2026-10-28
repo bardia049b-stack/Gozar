@@ -58,18 +58,12 @@ object FoxApi {
             .put("email", email)
             .put("authPW", FoxCrypto.hex(FoxCrypto.authPw(email, password)))
             .put("service", "sync")
-            .put("verificationMethod", "email-2fa")
+            .put("verificationMethod", "email-otp")
             .toString()
         val reply = FoxNet.call(FoxNet.AUTH + "/account/create", "POST", body)
         val data = json(reply)
-        val verified = data.optBoolean("verified", false)
-        val method = data.optString("verificationMethod", "")
-        return FoxSession(
-            data.optString("uid"),
-            data.optString("sessionToken"),
-            !verified,
-            method.isEmpty() || method == "email"
-        )
+        val verified = data.optBoolean("verified", data.optBoolean("emailVerified", false))
+        return FoxSession(data.optString("uid"), data.optString("sessionToken"), !verified, false)
     }
 
     fun signIn(email: String, password: String): FoxSession {
@@ -112,13 +106,55 @@ object FoxApi {
         val token = data.optString("sessionToken")
         val verified = data.optBoolean("verified", false)
         val method = data.optString("verificationMethod", "")
-        val byLink = method.isEmpty() || method == "email"
+        val byLink = method == "email"
         return FoxSession(data.optString("uid"), token, !verified, byLink)
     }
 
-    fun verifyEmail(uid: String, code: String) {
-        val body = JSONObject().put("uid", uid).put("code", code).toString()
-        json(FoxNet.call(FoxNet.AUTH + "/recovery_email/verify_code", "POST", body))
+    fun verifyEmail(sessionToken: String, uid: String, code: String) {
+        var last: Exception? = null
+        val signed = JSONObject().put("code", code).toString()
+        val url = java.net.URL(FoxNet.AUTH + "/recovery_email/verify_code")
+        try {
+            val header = authHeader(sessionToken, "POST", url, signed)
+            val reply = FoxNet.call(url.toString(), "POST", signed, mapOf("Authorization" to header))
+            if (reply.code in 200..299) return
+            last = failure(reply)
+        } catch (e: Exception) {
+            last = e
+        }
+        val plain = JSONObject().put("uid", uid).put("code", code).toString()
+        try {
+            val reply = FoxNet.call(FoxNet.AUTH + "/recovery_email/verify_code", "POST", plain)
+            if (reply.code in 200..299) return
+            last = failure(reply)
+        } catch (e: Exception) {
+            last = e
+        }
+        try {
+            verifySession(sessionToken, code)
+            return
+        } catch (e: Exception) {
+            last = e
+        }
+        throw last ?: FoxError("The code was not accepted")
+    }
+
+    fun emailVerified(sessionToken: String): Boolean {
+        val url = java.net.URL(FoxNet.AUTH + "/recovery_email/status")
+        return try {
+            val header = authHeader(sessionToken, "GET", url, "")
+            val reply = FoxNet.call(url.toString(), "GET", null, mapOf("Authorization" to header))
+            reply.code in 200..299 && reply.body.contains("\"verified\"") &&
+                !reply.body.contains("\"verified\":false")
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    fun resendSignupCode(sessionToken: String) {
+        val url = java.net.URL(FoxNet.AUTH + "/recovery_email/resend_code")
+        val header = authHeader(sessionToken, "POST", url, "")
+        FoxNet.call(url.toString(), "POST", "", mapOf("Authorization" to header))
     }
 
     fun verifySession(sessionToken: String, code: String) {
