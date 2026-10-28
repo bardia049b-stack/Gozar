@@ -237,7 +237,8 @@ class FoxFragment : Fragment() {
             statSession.text = fmtTime(FoxLink.elapsed())
         }
 
-        hint.text = if (Fox.busy || busy) getString(R.string.fox_working) else getString(R.string.fox_servers_hint)
+        hint.text = if (Fox.busy || busy) getString(R.string.fox_working) else
+            getString(R.string.fox_build, versionName())
 
         if (Fox.needsStep()) {
             if (!codeShown) showCode()
@@ -245,6 +246,15 @@ class FoxFragment : Fragment() {
             codeShown = false
         }
         renderServers(c)
+    }
+
+    private fun versionName(): String {
+        val c = context ?: return ""
+        return try {
+            c.packageManager.getPackageInfo(c.packageName, 0).versionName ?: ""
+        } catch (e: Exception) {
+            ""
+        }
     }
 
     private fun resetText(raw: String): String {

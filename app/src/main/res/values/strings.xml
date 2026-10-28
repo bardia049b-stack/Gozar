@@ -262,4 +262,5 @@ AGPL-3.0-or-later</string>
     <string name="fox_link_hint">Mozilla sent a confirmation link instead of a code. Open it once in your browser, then press Confirm.</string>
     <string name="fox_confirm">Confirm</string>
     <string name="fox_send_again">Send again</string>
+    <string name="fox_build">GozarWG %1$s · pick a server, then measure the delay to it.</string>
 </resources>

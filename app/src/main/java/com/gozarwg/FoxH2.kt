@@ -11,11 +11,13 @@ import kotlin.concurrent.thread
 
 class FoxDuplex(
     private val socket: SSLSocket,
-    private val streamId: Int
+    private val streamId: Int,
+    input: BufferedInputStream,
+    output: BufferedOutputStream
 ) {
 
-    private val input = BufferedInputStream(socket.inputStream)
-    private val output = BufferedOutputStream(socket.outputStream)
+    private val input = input
+    private val output = output
     private val lock = Object()
     private val chunks = ArrayDeque<ByteArray>()
     private var position = 0
@@ -265,13 +267,18 @@ object FoxH2 {
                 0x01 -> {
                     if (id != 1) continue
                     val status = status(payload)
-                    if (status == 200) return FoxDuplex(tls, 1)
+                    if (status == 200) return FoxDuplex(tls, 1, input, BufferedOutputStream(tls.outputStream))
+                    val why = if (status == null) "the proxy answered with ${hex(payload)}" else refusalReason(status)
                     tls.close()
-                    throw java.io.IOException(refusal(status))
+                    throw java.io.IOException(why)
                 }
-                0x03, 0x07 -> {
+                0x03 -> {
                     tls.close()
-                    throw java.io.IOException("the proxy refused the tunnel")
+                    throw java.io.IOException("the proxy reset the tunnel (${code(payload)})")
+                }
+                0x07 -> {
+                    tls.close()
+                    throw java.io.IOException("the proxy closed the connection (${code(payload)})")
                 }
             }
         }
@@ -301,12 +308,27 @@ object FoxH2 {
         }
     }
 
-    private fun refusal(status: Int?): String = when (status) {
+    private fun code(payload: ByteArray): Int {
+        if (payload.size < 4) return 0
+        return ((payload[0].toInt() and 0xFF) shl 24) or ((payload[1].toInt() and 0xFF) shl 16) or
+            ((payload[2].toInt() and 0xFF) shl 8) or (payload[3].toInt() and 0xFF)
+    }
+
+    private fun hex(block: ByteArray): String {
+        val builder = StringBuilder()
+        for (i in 0 until minOf(block.size, 24)) {
+            builder.append(String.format("%02x", block[i]))
+        }
+        return builder.toString()
+    }
+
+    private fun refusalReason(status: Int?): String = when (status) {
+        400 -> "the proxy rejected the pass (400)"
         401, 407 -> "the proxy pass was refused"
         403 -> "this account has no Firefox VPN access"
         429 -> "the monthly allowance is used up"
         451 -> "Mozilla does not serve this region"
-        null -> "the proxy refused the tunnel"
+        null -> "the proxy refused the tunnel without a status"
         else -> "the proxy answered $status"
     }
 

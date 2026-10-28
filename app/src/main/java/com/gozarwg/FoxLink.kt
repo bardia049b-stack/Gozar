@@ -53,7 +53,7 @@ object FoxLink {
         thread {
             try {
                 val access = Fox.validAccess(app)
-                val pass = FoxApi.pass(access)
+                var pass = FoxApi.pass(access)
                 FoxStore.saveUsage(app, pass)
                 if (Fox.servers.isEmpty()) Fox.servers = FoxApi.servers()
                 val chosen = Fox.selectedLocation(app) ?: throw FoxError("No server available")
@@ -69,10 +69,15 @@ object FoxLink {
                     FoxH2.probe(chosen, pass.token)
                 } catch (e: Exception) {
                     val reason = e.message ?: ""
-                    if (reason.contains("refused") || reason.contains("allowance") || reason.contains("region") || reason.contains("access")) {
+                    if (reason.contains("rejected the pass") || reason.contains("pass was refused")) {
+                        pass = FoxApi.pass(Fox.validAccess(app))
+                        FoxStore.saveUsage(app, pass)
+                        FoxH2.probe(chosen, pass.token)
+                    } else if (reason.contains("allowance") || reason.contains("region") || reason.contains("access") || reason.contains("reset the tunnel") || reason.contains("closed the connection")) {
                         throw FoxError(reason)
+                    } else {
+                        ""
                     }
-                    ""
                 }
                 connected = true
                 connecting = false

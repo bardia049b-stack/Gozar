@@ -262,4 +262,5 @@ AGPL-3.0-or-later</string>
     <string name="fox_link_hint">موزیلا به‌جای کد یک لینک تأیید فرستاده است. یک‌بار در مرورگر بازش کنید و بعد «تأیید» را بزنید.</string>
     <string name="fox_confirm">تأیید</string>
     <string name="fox_send_again">ارسال دوباره</string>
+    <string name="fox_build">گزر WG %1$s · یک سرور انتخاب کنید و بعد پینگ بگیرید.</string>
 </resources>
