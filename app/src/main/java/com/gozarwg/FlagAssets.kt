@@ -14,7 +14,7 @@ import android.util.LruCache
  * flag-icons (MIT); compact PNG derivatives are stored in assets/flags for View/Canvas rendering.
  */
 object FlagAssets {
-    private val cache = object : LruCache<String, Bitmap>(32) {}
+    private val cache = object : LruCache<String, Bitmap>(256) {}
 
     fun bitmap(context: Context, countryCode: String?): Bitmap? {
         val code = countryCode?.trim()?.lowercase()?.takeIf { it.length == 2 } ?: return null
@@ -26,6 +26,14 @@ object FlagAssets {
         } ?: return null
         cache.put(code, decoded)
         return decoded
+    }
+
+    fun prefetch(context: Context, codes: Collection<String>) {
+        for (code in codes) {
+            if (code.length != 2) continue
+            if (cache.get(code.lowercase()) != null) continue
+            bitmap(context, code)
+        }
     }
 
     /** Center-crops a 4:3 flag into the supplied round-marker square without stretching it. */

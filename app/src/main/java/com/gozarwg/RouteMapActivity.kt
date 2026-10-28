@@ -98,21 +98,21 @@ class RouteMapActivity : BaseActivity() {
     private fun render() {
         if (!::routeMap.isInitialized) return
         val fox = foxLive()
-        val origin = if (fox) localeOrigin() else Vpn.originInfo ?: localeOrigin()
+        val origin = iranOrigin(fox)
         val exit = if (fox) foxExit() else Vpn.ipInfo
         if (!fox && Vpn.up && exit == null) fetchExit()
 
         val routeToken = listOf(
             if (fox) "fox" else Vpn.profile?.id.orEmpty(),
             if (fox) FoxLink.since.toString() else Vpn.since.toString(),
-            origin?.ip.orEmpty(), origin?.code.orEmpty(),
+            origin.ip, origin.code,
             exit?.ip.orEmpty(), exit?.code.orEmpty()
         ).joinToString("|")
-        routeMap.setEndpoints(origin?.code, exit?.code, routeToken)
+        routeMap.setEndpoints(origin.code, exit?.code, routeToken)
         val rx = if (fox) FoxLink.downRate else if (Vpn.up) Vpn.downSpeed else 0.0
         val tx = if (fox) FoxLink.upRate else if (Vpn.up) Vpn.upSpeed else 0.0
         routeMap.setTraffic(rx, tx)
-        originFlag.countryCode = origin?.code
+        originFlag.countryCode = origin.code
         exitFlag.countryCode = exit?.code
 
         val originLabel = locationLabel(origin, getString(R.string.map_unknown))
@@ -137,10 +137,10 @@ class RouteMapActivity : BaseActivity() {
     /** IP metadata is live tunnel metadata, not map imagery; Vpn owns the shared lookup/backoff. */
     private fun fetchExit() = Vpn.refreshExitInfo()
 
-    private fun localeOrigin(): IpInfo? {
-        val country = Locale.getDefault().country.uppercase()
-        if (country.length != 2) return null
-        return IpInfo(ip = "", city = "", country = country, code = country, provider = "")
+    private fun iranOrigin(fox: Boolean): IpInfo {
+        val sampled = if (fox) null else Vpn.originInfo
+        val ip = sampled?.ip.orEmpty()
+        return IpInfo(ip = ip, city = "", country = ipCountry("IR"), code = "IR", provider = "")
     }
 
     private fun locationLabel(info: IpInfo?, fallback: String): String {
@@ -153,6 +153,8 @@ class RouteMapActivity : BaseActivity() {
         val total = ((System.currentTimeMillis() - FoxLink.since) / 1000L).coerceAtLeast(0)
         return String.format(java.util.Locale.US, "%02d:%02d", total / 60, total % 60)
     }
+
+    private fun ipCountry(code: String): String = java.util.Locale("", code).getDisplayCountry(java.util.Locale.ENGLISH).ifBlank { code }
 
     private fun shortLabel(value: String): String = value.substringBefore(',').trim()
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density + 0.5f).toInt()

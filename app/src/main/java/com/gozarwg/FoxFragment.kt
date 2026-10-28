@@ -27,6 +27,10 @@ class FoxFragment : Fragment() {
     private lateinit var connect: ConnectControl
     private lateinit var errorView: TextView
     private lateinit var map: View
+    private lateinit var liveRow: View
+    private lateinit var liveFlag: CountryFlagView
+    private lateinit var liveIp: TextView
+    private lateinit var livePing: TextView
     private lateinit var stats: View
     private lateinit var down: RollingValueView
     private lateinit var up: RollingValueView
@@ -72,6 +76,10 @@ class FoxFragment : Fragment() {
         connect = view.findViewById(R.id.foxConnect)
         errorView = view.findViewById(R.id.foxError)
         map = view.findViewById(R.id.foxMap)
+        liveRow = view.findViewById(R.id.foxLive)
+        liveFlag = view.findViewById(R.id.foxLiveFlag)
+        liveIp = view.findViewById(R.id.foxLiveIp)
+        livePing = view.findViewById(R.id.foxLivePing)
         stats = view.findViewById(R.id.foxStats)
         down = view.findViewById(R.id.foxDown)
         up = view.findViewById(R.id.foxUp)
@@ -300,6 +308,14 @@ class FoxFragment : Fragment() {
         if (failure.isEmpty()) errorView.visibility = View.GONE else showError(failure)
 
         map.visibility = if (live) View.VISIBLE else View.GONE
+        liveRow.visibility = if (live) View.VISIBLE else View.GONE
+        if (live) {
+            val place = FoxLink.location
+            liveFlag.countryCode = place?.code
+            liveIp.text = FoxLink.exitIp.ifEmpty { "…" }
+            val delay = if (place != null) Fox.delayOf(place) else -1
+            livePing.text = if (delay > 0) "$delay ms" else ""
+        }
         stats.visibility = if (live) View.VISIBLE else View.GONE
         if (live) {
             down.setValue(fmtSpeed(FoxLink.downRate))

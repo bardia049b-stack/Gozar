@@ -186,9 +186,8 @@
                 android:background="@drawable/frame_burst"
                 android:backgroundTint="@color/tile_container"
                 android:contentDescription="@string/select_profile"
-                android:padding="10dp"
-                android:scaleType="fitCenter"
-                android:src="@drawable/amnezia_mark"
+                android:padding="12dp"
+                android:src="@drawable/ic_dns"
                 app:tint="@color/tile_on_container" />
 
             <LinearLayout style="@style/Gozar.Row.Text">

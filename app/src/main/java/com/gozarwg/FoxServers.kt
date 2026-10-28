@@ -25,6 +25,7 @@ object FoxServers {
             val ready = servers.count { Fox.delayOf(it) > 0 }
             count.text = if (servers.isEmpty()) "" else if (ready == 0) "" else "$ready / ${servers.size}"
             val chosen = FoxStore.selected(host)
+            FlagAssets.prefetch(host, servers.map { it.code })
             for (location in servers) {
                 val row = LayoutInflater.from(host).inflate(R.layout.item_fox_server, list, false)
                 row.findViewById<CountryFlagView>(R.id.foxFlag).countryCode = location.code

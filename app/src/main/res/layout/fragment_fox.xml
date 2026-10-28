@@ -143,6 +143,44 @@
                         android:textAppearance="?attr/textAppearanceBodySmall"
                         android:textColor="@color/fox_cream"
                         android:visibility="gone" />
+
+                    <LinearLayout
+                        android:id="@+id/foxLive"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:visibility="gone">
+
+                        <com.gozarwg.CountryFlagView
+                            android:id="@+id/foxLiveFlag"
+                            android:layout_width="22dp"
+                            android:layout_height="22dp"
+                            android:contentDescription="@string/fox_location" />
+
+                        <TextView
+                            android:id="@+id/foxLiveIp"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:includeFontPadding="false"
+                            android:maxLines="1"
+                            android:textAppearance="?attr/textAppearanceTitleSmall"
+                            android:textColor="@color/fox_cream"
+                            android:textDirection="ltr" />
+
+                        <TextView
+                            android:id="@+id/foxLivePing"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="10dp"
+                            android:includeFontPadding="false"
+                            android:maxLines="1"
+                            android:textAppearance="?attr/textAppearanceLabelMedium"
+                            android:textColor="@color/fox_dim"
+                            android:textDirection="ltr" />
+                    </LinearLayout>
                 </LinearLayout>
 
                 <ImageButton
