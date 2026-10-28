@@ -52,11 +52,14 @@ object FoxLink {
         tick()
         thread {
             try {
+                FoxLog.add("link", "connect start, account=" + FoxStore.email(app))
                 val access = Fox.validAccess(app)
+                FoxLog.secret("access", access)
                 var pass = FoxApi.pass(access)
                 FoxStore.saveUsage(app, pass)
                 if (Fox.servers.isEmpty()) Fox.servers = FoxApi.servers()
                 val chosen = Fox.selectedLocation(app) ?: throw FoxError("No server available")
+                FoxLog.add("link", "server=" + chosen.host + ":" + chosen.port + " quota=" + pass.remaining + "/" + pass.limit)
                 val lower = pass.limit > 0 && pass.remaining <= 0
                 if (lower) throw FoxError("Your 50 GB for this month is used up")
                 location = chosen
@@ -65,11 +68,13 @@ object FoxLink {
                 if (socks?.start() != true || web?.start() != true) {
                     throw FoxError("The local proxy did not start")
                 }
+                FoxLog.add("link", "proxy on ${FoxProxy.SOCKS_PORT}/${FoxProxy.WEB_PORT}")
                 exitIp = try {
                     FoxTunnel.probe(chosen, pass.token)
                 } catch (e: Exception) {
                     val reason = e.message ?: ""
-                    if (reason.contains("rejected the pass") || reason.contains("pass was refused")) {
+                    FoxLog.add("link", "probe failed: " + reason)
+                    if (reason.contains("rejected the pass") || reason.contains("pass was refused") || reason.contains("no status")) {
                         pass = FoxApi.pass(Fox.validAccess(app))
                         FoxStore.saveUsage(app, pass)
                         FoxTunnel.probe(chosen, pass.token)
@@ -79,6 +84,7 @@ object FoxLink {
                         ""
                     }
                 }
+                FoxLog.add("link", "connected, exit=" + exitIp)
                 connected = true
                 connecting = false
                 since = System.currentTimeMillis()

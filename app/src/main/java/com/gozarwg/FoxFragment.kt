@@ -62,6 +62,7 @@ class FoxFragment : Fragment() {
         view.findViewById<View>(R.id.foxAccountButton).setOnClickListener { accountMenu() }
         primary.setOnClickListener { primaryAction() }
         measureButton.setOnClickListener { Fox.measure(requireContext()) }
+        view.findViewById<View>(R.id.foxLogs).setOnClickListener { showLogs() }
         return view
     }
 
@@ -246,6 +247,40 @@ class FoxFragment : Fragment() {
             codeShown = false
         }
         renderServers(c)
+    }
+
+    private fun showLogs() {
+        val c = context ?: return
+        val text = android.widget.TextView(c).apply {
+            text = FoxLog.dump().ifEmpty { getString(R.string.fox_log_empty) }
+            typeface = android.graphics.Typeface.MONOSPACE
+            textSize = 10f
+            setTextIsSelectable(true)
+            val pad = (16 * resources.displayMetrics.density).toInt()
+            setPadding(pad, pad, pad, pad)
+        }
+        val scroll = android.widget.ScrollView(c).apply { addView(text) }
+        MaterialAlertDialogBuilder(c)
+            .setTitle(getString(R.string.fox_logs))
+            .setView(scroll)
+            .setPositiveButton(R.string.fox_copy, null)
+            .setNeutralButton(R.string.fox_clear, null)
+            .setNegativeButton(R.string.cancel, null)
+            .create()
+            .apply {
+                setOnShowListener {
+                    getButton(android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                        val clipboard = c.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                        clipboard.setPrimaryClip(android.content.ClipData.newPlainText("gozarwg", FoxLog.dump()))
+                        dismiss()
+                    }
+                    getButton(android.app.AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
+                        FoxLog.clear()
+                        dismiss()
+                    }
+                }
+                show()
+            }
     }
 
     private fun versionName(): String {

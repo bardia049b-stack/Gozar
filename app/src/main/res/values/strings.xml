@@ -263,4 +263,8 @@ AGPL-3.0-or-later</string>
     <string name="fox_confirm">Confirm</string>
     <string name="fox_send_again">Send again</string>
     <string name="fox_build">GozarWG %1$s · pick a server, then measure the delay to it.</string>
+    <string name="fox_logs">Logs</string>
+    <string name="fox_log_empty">Nothing logged yet</string>
+    <string name="fox_copy">Copy</string>
+    <string name="fox_clear">Clear</string>
 </resources>
