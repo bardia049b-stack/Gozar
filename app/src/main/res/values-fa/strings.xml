@@ -258,4 +258,7 @@ AGPL-3.0-or-later</string>
     <string name="fox_connected">متصل · فایرفاکس VPN</string>
     <string name="fox_connecting">در حال اتصال…</string>
     <string name="fox_perm_denied">برای اتصال، اجازه‌ی VPN لازم است</string>
+    <string name="fox_link_title">تأیید با لینک</string>
+    <string name="fox_link_hint">موزیلا به‌جای کد یک لینک تأیید فرستاده است. یک‌بار در مرورگر بازش کنید و بعد «تأیید» را بزنید.</string>
+    <string name="fox_confirm">تأیید</string>
 </resources>

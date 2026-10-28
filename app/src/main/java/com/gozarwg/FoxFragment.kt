@@ -142,23 +142,35 @@ class FoxFragment : Fragment() {
         if (codeShown || !isAdded) return
         codeShown = true
         val c = requireContext()
+        val link = Fox.isLinkStep()
         val view = layoutInflater.inflate(R.layout.dialog_fox_code, null)
         val input = view.findViewById<TextInputEditText>(R.id.foxCode)
+        val hintView = view.findViewById<TextView>(R.id.foxCodeHint)
+        if (link) {
+            input.visibility = View.GONE
+            (input.parent?.parent as? View)?.visibility = View.GONE
+            hintView.text = getString(R.string.fox_link_hint)
+        }
         val dialog = MaterialAlertDialogBuilder(c)
-            .setTitle(R.string.fox_code_title)
+            .setTitle(if (link) R.string.fox_link_title else R.string.fox_code_title)
             .setView(view)
             .setNegativeButton(R.string.cancel, null)
-            .setPositiveButton(R.string.fox_continue, null)
+            .setPositiveButton(if (link) R.string.fox_confirm else R.string.fox_continue, null)
             .create()
         dialog.setOnShowListener {
             dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                if (link) {
+                    dialog.dismiss()
+                    Fox.confirmLink(requireContext())
+                    return@setOnClickListener
+                }
                 val code = input.text?.toString()?.trim().orEmpty()
                 if (code.isEmpty()) return@setOnClickListener
                 dialog.dismiss()
                 Fox.submitCode(requireContext(), code)
             }
         }
-        dialog.setOnDismissListener { if (Fox.needsCode()) codeShown = false }
+        dialog.setOnDismissListener { if (Fox.needsStep()) codeShown = false }
         dialog.show()
     }
 
@@ -202,7 +214,7 @@ class FoxFragment : Fragment() {
 
         val failure = when {
             FoxLink.error.isNotEmpty() -> FoxLink.error
-            Fox.message.isNotEmpty() && Fox.message != "code" && Fox.message != "ping" &&
+            Fox.message.isNotEmpty() && Fox.message != "code" && Fox.message != "link" && Fox.message != "ping" &&
                 Fox.message != "quota" && Fox.message != "servers" -> Fox.message
             else -> ""
         }
@@ -219,7 +231,7 @@ class FoxFragment : Fragment() {
 
         hint.text = if (Fox.busy || busy) getString(R.string.fox_working) else getString(R.string.fox_servers_hint)
 
-        if (Fox.needsCode()) {
+        if (Fox.needsStep()) {
             if (!codeShown) showCode()
         } else {
             codeShown = false

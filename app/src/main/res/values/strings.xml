@@ -258,4 +258,7 @@ AGPL-3.0-or-later</string>
     <string name="fox_connected">Connected · Firefox VPN</string>
     <string name="fox_connecting">Connecting…</string>
     <string name="fox_perm_denied">The VPN permission is needed to connect</string>
+    <string name="fox_link_title">Confirm by link</string>
+    <string name="fox_link_hint">Mozilla sent a confirmation link instead of a code. Open it once in your browser, then press Confirm.</string>
+    <string name="fox_confirm">Confirm</string>
 </resources>

@@ -25,6 +25,7 @@ object Fox {
     @Volatile var message: String = ""
     @Volatile var servers: List<FoxLocation> = emptyList()
 
+    @Volatile private var byLink = false
     private var step = STEP_NONE
     private var pendingEmail = ""
     private var pendingPassword = ""
@@ -42,7 +43,9 @@ object Fox {
 
     fun signedIn(c: Context): Boolean = FoxStore.email(c).isNotEmpty() && FoxStore.refreshToken(c).isNotEmpty()
 
-    fun needsCode(): Boolean = step != STEP_NONE
+    fun needsCode(): Boolean = step != STEP_NONE && !byLink
+
+    fun needsStep(): Boolean = step != STEP_NONE
 
     private fun notifyUi() {
         main.post { onChange?.invoke() }
@@ -72,30 +75,69 @@ object Fox {
     fun signUp(c: Context, mail: String, password: String) {
         val clean = mail.trim()
         work(c) {
-            val session = FoxApi.register(clean, password)
+            val session = try {
+                FoxApi.register(clean, password)
+            } catch (e: FoxError) {
+                if (e.errno == 101 || e.errno == 144) {
+                    signInNow(c.applicationContext, clean, password, true)
+                    return@work
+                }
+                throw e
+            }
             pendingEmail = clean
             pendingPassword = password
             pendingUid = session.uid
             pendingToken = session.token
-            step = STEP_SIGNUP
-            message = "code"
+            byLink = session.byLink
+            if (session.needsCode) {
+                step = STEP_SIGNUP
+                message = if (byLink) "link" else "code"
+            } else {
+                finish(c.applicationContext, session.token, session.uid, clean, password)
+            }
+        }
+    }
+
+    private fun signInNow(c: Context, mail: String, password: String, created: Boolean) {
+        if (created) message = ""
+        val session = FoxApi.signIn(mail, password)
+        pendingEmail = mail
+        pendingPassword = password
+        pendingUid = session.uid
+        pendingToken = session.token
+        byLink = session.byLink
+        if (session.needsCode) {
+            step = STEP_LOGIN
+            message = if (byLink) "link" else "code"
+        } else {
+            finish(c, session.token, session.uid, mail, password)
+        }
+    }
+
+    fun isLinkStep(): Boolean = step != STEP_NONE && byLink
+
+    fun confirmLink(c: Context) {
+        if (step == STEP_NONE) return
+        work(c) {
+            try {
+                finish(c.applicationContext, pendingToken, pendingUid, pendingEmail, pendingPassword)
+            } catch (e: FoxError) {
+                val again = FoxApi.signIn(pendingEmail, pendingPassword)
+                pendingToken = again.token
+                if (again.needsCode) {
+                    byLink = again.byLink
+                    message = if (byLink) "link" else "code"
+                    throw FoxError(if (byLink) "The email link is not confirmed yet" else "Mozilla now wants the emailed code")
+                }
+                finish(c.applicationContext, again.token, again.uid, pendingEmail, pendingPassword)
+            }
         }
     }
 
     fun signIn(c: Context, mail: String, password: String) {
         val clean = mail.trim()
         work(c) {
-            val session = FoxApi.signIn(clean, password)
-            pendingEmail = clean
-            pendingPassword = password
-            pendingUid = session.uid
-            pendingToken = session.token
-            if (session.needsCode) {
-                step = STEP_LOGIN
-                message = "code"
-            } else {
-                finish(c.applicationContext, session.token, session.uid, clean, password)
-            }
+            signInNow(c.applicationContext, clean, password, false)
         }
     }
 
@@ -129,6 +171,7 @@ object Fox {
         val tokens = FoxApi.tokens(sessionToken)
         FoxStore.saveAccount(c, mail, uid, tokens)
         step = STEP_NONE
+        byLink = false
         pendingPassword = ""
         val pass = FoxApi.pass(tokens.access)
         FoxStore.saveUsage(c, pass)
@@ -214,6 +257,7 @@ object Fox {
     fun signOut(c: Context) {
         FoxStore.clear(c)
         step = STEP_NONE
+        byLink = false
         email = ""
         limit = 0L
         remaining = 0L

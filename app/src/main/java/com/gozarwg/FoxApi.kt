@@ -5,7 +5,7 @@ import org.json.JSONObject
 
 class FoxError(message: String, val errno: Int = 0, val status: Int = 0) : Exception(message)
 
-class FoxSession(val uid: String, val token: String, val needsCode: Boolean)
+class FoxSession(val uid: String, val token: String, val needsCode: Boolean, val byLink: Boolean = false)
 
 class FoxTokens(val access: String, val refresh: String, val expiresIn: Int)
 
@@ -58,10 +58,18 @@ object FoxApi {
             .put("email", email)
             .put("authPW", FoxCrypto.hex(FoxCrypto.authPw(email, password)))
             .put("service", "sync")
+            .put("verificationMethod", "email-2fa")
             .toString()
         val reply = FoxNet.call(FoxNet.AUTH + "/account/create", "POST", body)
         val data = json(reply)
-        return FoxSession(data.optString("uid"), data.optString("sessionToken"), false)
+        val verified = data.optBoolean("verified", false)
+        val method = data.optString("verificationMethod", "")
+        return FoxSession(
+            data.optString("uid"),
+            data.optString("sessionToken"),
+            !verified,
+            method.isEmpty() || method == "email"
+        )
     }
 
     fun signIn(email: String, password: String): FoxSession {
@@ -104,8 +112,8 @@ object FoxApi {
         val token = data.optString("sessionToken")
         val verified = data.optBoolean("verified", false)
         val method = data.optString("verificationMethod", "")
-        val needsCode = !verified || method == "email-2fa"
-        return FoxSession(data.optString("uid"), token, needsCode)
+        val byLink = method.isEmpty() || method == "email"
+        return FoxSession(data.optString("uid"), token, !verified, byLink)
     }
 
     fun verifyEmail(uid: String, code: String) {
