@@ -37,13 +37,16 @@ object FoxShield {
     private const val ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
     fun solve(jar: FoxJar, origin: String = SITE): Boolean {
-        if (origin != SITE && solveHost(jar, origin)) return true
-        return solveHost(jar, SITE)
+        val hosts = if (origin == SITE) listOf(SITE) else listOf(origin, SITE)
+        for (host in hosts) {
+            if (solveHost(jar, host)) return true
+        }
+        return false
     }
 
     private fun solveHost(jar: FoxJar, host: String): Boolean {
         val page = fetch(jar, host + "/", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8") ?: return false
-        if (!page.contains("/_fs-ch-")) return true
+        if (!page.contains("/_fs-ch-") || !page.contains("Client Challenge")) return false
         val matcher = prefix.matcher(page)
         if (!matcher.find()) return false
         val path = matcher.group()
@@ -73,7 +76,10 @@ object FoxShield {
             } catch (_: Exception) {
                 return false
             }
-            if (back.optString("status") == "success") return jar.header().isNotEmpty()
+            if (back.optString("status") == "success") {
+                val probe = fetch(jar, host + "/", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+                return probe != null && !probe.contains("Client Challenge") && jar.header().isNotEmpty()
+            }
             val next = back.optJSONArray("ch") ?: return false
             val nextToken = back.optString("tok")
             if (next.length() == 0 || nextToken.isEmpty()) return false

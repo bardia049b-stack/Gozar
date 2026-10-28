@@ -31,6 +31,7 @@ object FoxNet {
         headers: Map<String, String> = emptyMap(),
         timeout: Int = 25000
     ): FoxReply {
+        if (url.startsWith(AUTH) && jar.header().isEmpty()) FoxShield.solve(jar)
         var reply = once(url, method, body, headers, timeout)
         var round = 0
         while (reply.code == 406 && round < 4) {
