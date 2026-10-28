@@ -1,5 +1,8 @@
 package com.gozarwg
 
+import android.app.Activity
+import android.content.Context
+import android.net.VpnService
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -7,6 +10,7 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.checkbox.MaterialCheckBox
@@ -21,11 +25,21 @@ class FoxFragment : Fragment() {
     private lateinit var quotaBar: ProgressBar
     private lateinit var reset: TextView
     private lateinit var primary: MaterialButton
+    private lateinit var errorView: TextView
+    private lateinit var stats: LinearLayout
+    private lateinit var statLocation: TextView
+    private lateinit var statExit: TextView
+    private lateinit var statSpeed: TextView
+    private lateinit var statSession: TextView
     private lateinit var measureButton: MaterialButton
     private lateinit var hint: TextView
     private lateinit var serverBox: LinearLayout
     private var codeShown = false
     private var rowSignature = ""
+
+    private val permission = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) FoxVpnService.start(requireContext()) else showHint(getString(R.string.fox_perm_denied))
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, saved: Bundle?): View {
         val view = inflater.inflate(R.layout.fragment_fox, container, false)
@@ -35,6 +49,12 @@ class FoxFragment : Fragment() {
         quotaBar = view.findViewById(R.id.foxQuotaBar)
         reset = view.findViewById(R.id.foxReset)
         primary = view.findViewById(R.id.foxPrimary)
+        errorView = view.findViewById(R.id.foxError)
+        stats = view.findViewById(R.id.foxStats)
+        statLocation = view.findViewById(R.id.foxStatLocation)
+        statExit = view.findViewById(R.id.foxStatExit)
+        statSpeed = view.findViewById(R.id.foxStatSpeed)
+        statSession = view.findViewById(R.id.foxStatSession)
         measureButton = view.findViewById(R.id.foxMeasure)
         hint = view.findViewById(R.id.foxHint)
         serverBox = view.findViewById(R.id.foxServers)
@@ -48,6 +68,7 @@ class FoxFragment : Fragment() {
     override fun onViewCreated(view: View, saved: Bundle?) {
         super.onViewCreated(view, saved)
         Fox.onChange = { if (isAdded) render() }
+        FoxLink.onChange = { if (isAdded) render() }
         Fox.load(requireContext())
         Fox.loadServers(requireContext())
         render()
@@ -55,12 +76,20 @@ class FoxFragment : Fragment() {
 
     override fun onDestroyView() {
         Fox.onChange = null
+        FoxLink.onChange = null
         super.onDestroyView()
     }
 
     private fun primaryAction() {
         val c = requireContext()
-        if (!Fox.signedIn(c)) showAuth() else Fox.refreshUsage(c)
+        when {
+            !Fox.signedIn(c) -> showAuth()
+            FoxLink.connected || FoxLink.connecting -> FoxVpnService.stop(c)
+            else -> {
+                val ask = VpnService.prepare(c)
+                if (ask != null) permission.launch(ask) else FoxVpnService.start(c)
+            }
+        }
     }
 
     private fun accountMenu() {
@@ -72,7 +101,10 @@ class FoxFragment : Fragment() {
         MaterialAlertDialogBuilder(c)
             .setTitle(FoxStore.email(c))
             .setItems(arrayOf(getString(R.string.fox_refresh), getString(R.string.fox_sign_out))) { _, which ->
-                if (which == 0) Fox.refreshUsage(c) else Fox.signOut(c)
+                if (which == 0) Fox.refreshUsage(c) else {
+                    FoxVpnService.stop(c)
+                    Fox.signOut(c)
+                }
             }
             .show()
     }
@@ -130,34 +162,62 @@ class FoxFragment : Fragment() {
         dialog.show()
     }
 
+    private fun showHint(text: String) {
+        if (!isAdded) return
+        errorView.visibility = View.VISIBLE
+        errorView.text = text
+    }
+
     private fun render() {
         val c = context ?: return
         val mail = FoxStore.email(c)
         account.text = if (mail.isEmpty()) getString(R.string.fox_signed_out) else mail
+        val live = FoxLink.connected
+        val busy = FoxLink.connecting
 
         if (Fox.limit > 0) {
             val used = (Fox.limit - Fox.remaining).coerceAtLeast(0)
             quotaText.text = getString(R.string.fox_quota_value, fmtBytes(used), fmtBytes(Fox.limit))
             quotaBar.progress = ((used * 100) / Fox.limit).toInt().coerceIn(0, 100)
-            state.text = getString(R.string.fox_plan_title)
             reset.visibility = View.VISIBLE
             reset.text = if (Fox.reset.isEmpty()) "" else getString(R.string.fox_reset, resetText(Fox.reset))
         } else {
             quotaText.text = getString(R.string.fox_quota_empty)
             quotaBar.progress = 0
-            state.text = getString(R.string.fox_plan_title)
             reset.visibility = View.GONE
         }
 
-        primary.text = if (mail.isEmpty()) getString(R.string.fox_sign_in) else getString(R.string.fox_refresh)
+        state.text = when {
+            live -> getString(R.string.fox_connected)
+            busy -> getString(R.string.fox_connecting)
+            else -> getString(R.string.fox_plan_title)
+        }
+
+        primary.text = when {
+            mail.isEmpty() -> getString(R.string.fox_sign_in)
+            live || busy -> getString(R.string.disconnect)
+            else -> getString(R.string.connect)
+        }
         measureButton.isEnabled = Fox.servers.isNotEmpty() && !Fox.busy
 
-        val note = Fox.message
-        hint.text = when {
-            Fox.busy -> getString(R.string.fox_working)
-            note.isNotEmpty() && note != "code" && note != "ping" && note != "quota" && note != "servers" -> note
-            else -> getString(R.string.fox_servers_hint)
+        val failure = when {
+            FoxLink.error.isNotEmpty() -> FoxLink.error
+            Fox.message.isNotEmpty() && Fox.message != "code" && Fox.message != "ping" &&
+                Fox.message != "quota" && Fox.message != "servers" -> Fox.message
+            else -> ""
         }
+        if (failure.isEmpty()) errorView.visibility = View.GONE else showHint(failure)
+
+        stats.visibility = if (live) View.VISIBLE else View.GONE
+        if (live) {
+            val place = FoxLink.location
+            statLocation.text = if (place == null) "—" else listOf(place.country, place.city).filter { it.isNotEmpty() }.joinToString(" · ")
+            statExit.text = FoxLink.exitIp.ifEmpty { "—" }
+            statSpeed.text = "↓ " + fmtSpeed(FoxLink.downRate) + "  ↑ " + fmtSpeed(FoxLink.upRate)
+            statSession.text = fmtTime(FoxLink.elapsed())
+        }
+
+        hint.text = if (Fox.busy || busy) getString(R.string.fox_working) else getString(R.string.fox_servers_hint)
 
         if (Fox.needsCode()) {
             if (!codeShown) showCode()
@@ -185,7 +245,7 @@ class FoxFragment : Fragment() {
             .format(java.util.Date(millis))
     }
 
-    private fun renderServers(c: android.content.Context) {
+    private fun renderServers(c: Context) {
         val selected = FoxStore.selected(c)
         val list = Fox.servers
         val signature = list.size.toString() + "|" + selected + "|" + list.joinToString(",") { Fox.delayOf(it).toString() }

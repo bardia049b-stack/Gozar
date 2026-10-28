@@ -20,12 +20,33 @@ object FoxNet {
     const val GUARDIAN = "https://vpn.mozilla.org"
     const val SERVERS = "https://firefox.settings.services.mozilla.com/v1/buckets/main/collections/vpn-serverlist/records"
 
+    private val jar = FoxJar()
+
+    fun forget() = jar.clear()
+
     fun call(
         url: String,
         method: String = "GET",
         body: String? = null,
         headers: Map<String, String> = emptyMap(),
         timeout: Int = 25000
+    ): FoxReply {
+        var reply = once(url, method, body, headers, timeout)
+        var round = 0
+        while (reply.code == 406 && round < 4) {
+            round++
+            if (!FoxShield.solve(jar)) break
+            reply = once(url, method, body, headers, timeout)
+        }
+        return reply
+    }
+
+    private fun once(
+        url: String,
+        method: String,
+        body: String?,
+        headers: Map<String, String>,
+        timeout: Int
     ): FoxReply {
         val connection = URL(url).openConnection() as HttpURLConnection
         connection.requestMethod = method
@@ -35,6 +56,7 @@ object FoxNet {
         connection.setRequestProperty("User-Agent", UA)
         connection.setRequestProperty("Accept", "*/*")
         connection.setRequestProperty("Cache-Control", "max-age=0")
+        if (jar.header().isNotEmpty()) connection.setRequestProperty("Cookie", jar.header())
         if (body != null) connection.setRequestProperty("Content-Type", "application/json")
         for ((k, v) in headers) connection.setRequestProperty(k, v)
         try {
@@ -50,7 +72,9 @@ object FoxNet {
                 if (k == null || values.isEmpty()) continue
                 found[k] = values.joinToString(",")
             }
-            return FoxReply(code, text, found)
+            val reply = FoxReply(code, text, found)
+            jar.absorb(reply)
+            return reply
         } finally {
             connection.disconnect()
         }

@@ -37,6 +37,7 @@ object FoxApi {
             }
         } catch (_: Exception) {
         }
+        if (reply.code == 406) message = "Mozilla's anti-bot check needs another try"
         return FoxError(message, errno, reply.code)
     }
 
@@ -56,6 +57,7 @@ object FoxApi {
         val body = JSONObject()
             .put("email", email)
             .put("authPW", FoxCrypto.hex(FoxCrypto.authPw(email, password)))
+            .put("service", "sync")
             .toString()
         val reply = FoxNet.call(FoxNet.AUTH + "/account/create", "POST", body)
         val data = json(reply)
@@ -164,12 +166,21 @@ object FoxApi {
     }
 
     fun pass(access: String): FoxPass {
-        val reply = FoxNet.call(
+        var reply = FoxNet.call(
             FoxNet.GUARDIAN + "/api/v1/fpn/token",
             "GET",
             null,
             mapOf("Authorization" to "Bearer $access")
         )
+        if (reply.code == 403) {
+            activate(access)
+            reply = FoxNet.call(
+                FoxNet.GUARDIAN + "/api/v1/fpn/token",
+                "GET",
+                null,
+                mapOf("Authorization" to "Bearer $access")
+            )
+        }
         if (reply.code != 200) throw failure(reply)
         val token = try {
             JSONObject(reply.body).optString("token")
@@ -179,6 +190,18 @@ object FoxApi {
         if (token.isEmpty()) throw FoxError("Mozilla did not return a proxy pass", status = reply.code)
         val usage = quota(reply) ?: FoxPass(token, 0, 0, "")
         return FoxPass(token, usage.limit, usage.remaining, usage.reset)
+    }
+
+    private fun activate(access: String) {
+        try {
+            FoxNet.call(
+                FoxNet.GUARDIAN + "/api/v1/fpn/activate",
+                "POST",
+                "{}",
+                mapOf("Authorization" to "Bearer $access")
+            )
+        } catch (_: Exception) {
+        }
     }
 
     fun quota(access: String): FoxPass? {

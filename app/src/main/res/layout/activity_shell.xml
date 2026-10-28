@@ -32,7 +32,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="@string/mode_firefox"
-            app:icon="@drawable/ic_fox"
+            app:icon="@drawable/fox_logo"
             app:iconSize="18dp" />
     </com.google.android.material.button.MaterialButtonToggleGroup>
 

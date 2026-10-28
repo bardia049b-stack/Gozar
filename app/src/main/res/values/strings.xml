@@ -248,4 +248,14 @@ AGPL-3.0-or-later</string>
     <string name="fox_email_bad">Enter a valid email address</string>
     <string name="fox_password_bad">Password must be at least 8 characters</string>
     <string name="fox_working">Working…</string>
+    <string name="fox_notify">Firefox VPN is running</string>
+    <string name="fox_exit">Exit IP</string>
+    <string name="fox_location">Location</string>
+    <string name="fox_speed">Speed</string>
+    <string name="fox_session">Session</string>
+    <string name="fox_local_proxy">Local proxy</string>
+    <string name="fox_proxy_hint">Apps that honour a proxy use 127.0.0.1:10811 (HTTP) or 10810 (SOCKS5).</string>
+    <string name="fox_connected">Connected · Firefox VPN</string>
+    <string name="fox_connecting">Connecting…</string>
+    <string name="fox_perm_denied">The VPN permission is needed to connect</string>
 </resources>

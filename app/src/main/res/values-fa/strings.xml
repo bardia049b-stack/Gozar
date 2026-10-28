@@ -248,4 +248,14 @@ AGPL-3.0-or-later</string>
     <string name="fox_email_bad">یک ایمیل معتبر وارد کنید</string>
     <string name="fox_password_bad">رمز باید حداقل ۸ کاراکتر باشد</string>
     <string name="fox_working">در حال انجام…</string>
+    <string name="fox_notify">فایرفاکس VPN روشن است</string>
+    <string name="fox_exit">IP خروج</string>
+    <string name="fox_location">موقعیت</string>
+    <string name="fox_speed">سرعت</string>
+    <string name="fox_session">مدت اتصال</string>
+    <string name="fox_local_proxy">پروکسی محلی</string>
+    <string name="fox_proxy_hint">برنامه‌هایی که پروکسی را رعایت می‌کنند از 127.0.0.1:10811 (HTTP) یا 10810 (SOCKS5) استفاده می‌کنند.</string>
+    <string name="fox_connected">متصل · فایرفاکس VPN</string>
+    <string name="fox_connecting">در حال اتصال…</string>
+    <string name="fox_perm_denied">برای اتصال، اجازه‌ی VPN لازم است</string>
 </resources>
