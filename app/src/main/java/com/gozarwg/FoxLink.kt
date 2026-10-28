@@ -63,8 +63,8 @@ object FoxLink {
                 val lower = pass.limit > 0 && pass.remaining <= 0
                 if (lower) throw FoxError("Your 50 GB for this month is used up")
                 location = chosen
-                socks = FoxLink.SOCKS_PORT) { FoxStore.pass(app).ifEmpty { null } }
-                web = FoxLink.WEB_PORT) { FoxStore.pass(app).ifEmpty { null } }
+                socks = FoxProxy(SOCKS_PORT) { FoxStore.pass(app).ifEmpty { null } }
+                web = FoxProxy(WEB_PORT) { FoxStore.pass(app).ifEmpty { null } }
                 if (socks?.start() != true || web?.start() != true) {
                     throw FoxError("The local proxy did not start")
                 }
