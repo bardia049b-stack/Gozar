@@ -104,6 +104,7 @@ object FoxLink {
     }
 
     fun stop() {
+        FoxLog.add("link", "disconnect")
         stopServers()
         connected = false
         connecting = false
@@ -133,6 +134,12 @@ object FoxLink {
                 try {
                     Thread.sleep(1000)
                 } catch (e: InterruptedException) {
+                    break
+                }
+                if (!FoxVpnService.isAlive()) {
+                    error = "The system closed the tunnel"
+                    FoxLog.add("link", "the vpn service is gone, resetting")
+                    stop()
                     break
                 }
                 val now = System.currentTimeMillis()

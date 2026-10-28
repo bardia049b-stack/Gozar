@@ -28,7 +28,8 @@
                 android:adjustViewBounds="true"
                 android:contentDescription="@string/app_name"
                 android:scaleType="fitStart"
-                android:src="@drawable/amnezia_mark" />
+                android:src="@drawable/logo"
+                app:tint="?attr/colorOnSurface" />
 
             <View
                 android:layout_width="0dp"
@@ -185,8 +186,9 @@
                 android:background="@drawable/frame_burst"
                 android:backgroundTint="@color/tile_container"
                 android:contentDescription="@string/select_profile"
-                android:padding="12dp"
-                android:src="@drawable/ic_dns"
+                android:padding="10dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/amnezia_mark"
                 app:tint="@color/tile_on_container" />
 
             <LinearLayout style="@style/Gozar.Row.Text">

@@ -6,6 +6,7 @@ import android.os.Looper
 import java.net.InetSocketAddress
 import java.net.Socket
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.concurrent.thread
 
 object Fox {
@@ -23,6 +24,7 @@ object Fox {
     @Volatile var reset: String = ""
     @Volatile var busy: Boolean = false
     @Volatile var message: String = ""
+    @Volatile var stage: String = ""
     @Volatile var servers: List<FoxLocation> = emptyList()
 
     @Volatile private var byLink = false
@@ -33,6 +35,16 @@ object Fox {
     private var pendingToken = ""
 
     var onChange: (() -> Unit)? = null
+
+    private val listeners = CopyOnWriteArrayList<() -> Unit>()
+
+    fun watch(listener: () -> Unit) {
+        listeners.add(listener)
+    }
+
+    fun unwatch(listener: () -> Unit) {
+        listeners.remove(listener)
+    }
 
     fun load(c: Context) {
         email = FoxStore.email(c)
@@ -48,12 +60,26 @@ object Fox {
     fun needsStep(): Boolean = step != STEP_NONE
 
     private fun notifyUi() {
-        main.post { onChange?.invoke() }
+        main.post {
+            onChange?.invoke()
+            for (listener in listeners) {
+                try {
+                    listener()
+                } catch (e: Exception) {
+                }
+            }
+        }
     }
 
-    private fun work(c: Context, body: () -> Unit) {
+    private fun say(c: Context, text: Int) {
+        stage = c.getString(text)
+        notifyUi()
+    }
+
+    private fun work(c: Context, first: Int = 0, body: () -> Unit) {
         busy = true
         message = ""
+        if (first != 0) stage = c.getString(first)
         notifyUi()
         val app = c.applicationContext
         thread {
@@ -66,6 +92,7 @@ object Fox {
                 failure = e.message ?: "Network error"
             }
             busy = false
+            stage = ""
             if (failure != null) message = failure
             load(app)
             notifyUi()
@@ -75,7 +102,7 @@ object Fox {
     fun signUp(c: Context, mail: String, password: String) {
         val clean = mail.trim()
         FoxLog.add("auth", "sign up $clean")
-        work(c) {
+        work(c, R.string.fox_stage_signup) {
             val session = try {
                 FoxApi.register(clean, password)
             } catch (e: FoxError) {
@@ -120,6 +147,7 @@ object Fox {
     fun confirmLink(c: Context) {
         if (step == STEP_NONE) return
         work(c) {
+            say(c, R.string.fox_stage_link)
             try {
                 if (FoxApi.emailVerified(pendingToken)) {
                     val again = FoxApi.signIn(pendingEmail, pendingPassword)
@@ -150,7 +178,7 @@ object Fox {
     fun signIn(c: Context, mail: String, password: String) {
         val clean = mail.trim()
         FoxLog.add("auth", "sign in $clean")
-        work(c) {
+        work(c, R.string.fox_stage_signin) {
             signInNow(c.applicationContext, clean, password, false)
         }
     }
@@ -160,6 +188,7 @@ object Fox {
         if (clean.isEmpty() || step == STEP_NONE) return
         val mode = step
         work(c) {
+            say(c, R.string.fox_stage_code)
             if (mode == STEP_SIGNUP) {
                 FoxApi.verifyEmail(pendingToken, pendingUid, clean)
                 try {
@@ -205,6 +234,7 @@ object Fox {
     }
 
     private fun finish(c: Context, sessionToken: String, uid: String, mail: String, password: String) {
+        say(c, R.string.fox_stage_pass)
         FoxLog.add("auth", "verified, getting the OAuth token")
         val tokens = FoxApi.tokens(sessionToken)
         FoxLog.secret("oauth", tokens.access)
@@ -220,7 +250,7 @@ object Fox {
 
     fun refreshUsage(c: Context) {
         if (!signedIn(c)) return
-        work(c) {
+        work(c, R.string.fox_stage_usage) {
             val access = validAccess(c)
             val pass = FoxApi.pass(access)
             FoxStore.saveUsage(c, pass)
@@ -230,7 +260,7 @@ object Fox {
 
     fun loadServers(c: Context) {
         if (servers.isNotEmpty()) return
-        work(c) {
+        work(c, R.string.fox_stage_servers) {
             servers = FoxApi.servers()
             message = "servers"
         }
@@ -240,6 +270,7 @@ object Fox {
         if (servers.isEmpty()) return
         val app = c.applicationContext
         busy = true
+        stage = c.getString(R.string.fox_stage_measure)
         notifyUi()
         thread {
             for (location in servers) {
@@ -253,6 +284,7 @@ object Fox {
                 if (best != null) FoxStore.setSelected(app, best.code)
             }
             busy = false
+            stage = ""
             message = "ping"
             notifyUi()
         }

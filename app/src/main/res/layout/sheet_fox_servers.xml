@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="?attr/colorSurfaceContainerLow"
+    android:orientation="vertical"
+    android:paddingBottom="@dimen/sp_m">
+
+    <View
+        android:layout_width="32dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="@dimen/sp_m"
+        android:background="@drawable/pill"
+        android:backgroundTint="?attr/colorOutlineVariant" />
+
+    <TextView
+        style="@style/Gozar.Sheet.Title"
+        android:layout_marginTop="@dimen/sp_s"
+        android:text="@string/fox_servers_pick" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="@dimen/sp_xxl"
+        android:paddingEnd="@dimen/sp_xxl"
+        android:text="@string/fox_servers_sub"
+        android:textAppearance="?attr/textAppearanceBodySmall"
+        android:textColor="@color/text2" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="@dimen/sp_l"
+        android:paddingEnd="@dimen/sp_l">
+
+        <TextView
+            android:id="@+id/foxSheetCount"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:textColor="@color/text2" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/foxSheetMeasure"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/fox_measure_all" />
+    </LinearLayout>
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/sp_xs"
+        android:paddingStart="@dimen/sp_m"
+        android:paddingEnd="@dimen/sp_m"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:id="@+id/foxSheetList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+    </androidx.core.widget.NestedScrollView>
+
+    <TextView
+        android:id="@+id/foxSheetEmpty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:padding="@dimen/sp_xl"
+        android:text="@string/fox_server_empty"
+        android:textAppearance="?attr/textAppearanceBodyMedium"
+        android:textColor="@color/text2" />
+</LinearLayout>

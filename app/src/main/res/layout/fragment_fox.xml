@@ -67,86 +67,315 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:paddingStart="@dimen/screen_gutter"
-            android:paddingTop="@dimen/sp_m"
+            android:paddingTop="@dimen/sp_s"
             android:paddingEnd="@dimen/screen_gutter"
             android:paddingBottom="@dimen/sp_xl">
 
-            <LinearLayout
+            <FrameLayout
                 android:id="@+id/foxHero"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/fox_hero"
-                android:gravity="center_horizontal"
-                android:orientation="vertical"
-                android:paddingStart="@dimen/sp_l"
-                android:paddingTop="18dp"
-                android:paddingEnd="@dimen/sp_l"
-                android:paddingBottom="18dp">
+                android:background="@drawable/fox_hero">
 
-                <com.gozarwg.ConnectControl
-                    android:id="@+id/foxConnect"
-                    android:layout_width="168dp"
-                    android:layout_height="168dp"
-                    android:contentDescription="@string/connect" />
-
-                <TextView
-                    android:id="@+id/foxState"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/sp_m"
-                    android:gravity="center"
-                    android:text="@string/fox_plan_title"
-                    android:textAppearance="?attr/textAppearanceTitleLarge"
-                    android:textColor="@color/fox_on_red" />
+                    android:gravity="center_horizontal"
+                    android:orientation="vertical"
+                    android:paddingStart="@dimen/sp_l"
+                    android:paddingTop="18dp"
+                    android:paddingEnd="@dimen/sp_l"
+                    android:paddingBottom="18dp">
 
-                <TextView
-                    android:id="@+id/foxQuotaText"
-                    android:layout_width="match_parent"
+                    <com.gozarwg.ConnectControl
+                        android:id="@+id/foxConnect"
+                        android:layout_width="168dp"
+                        android:layout_height="168dp"
+                        android:contentDescription="@string/connect" />
+
+                    <TextView
+                        android:id="@+id/foxState"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/sp_m"
+                        android:gravity="center"
+                        android:text="@string/fox_plan_title"
+                        android:textAppearance="?attr/textAppearanceTitleLarge"
+                        android:textColor="@color/fox_on_red" />
+
+                    <TextView
+                        android:id="@+id/foxQuotaText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:gravity="center"
+                        android:text="@string/fox_quota_empty"
+                        android:textAppearance="?attr/textAppearanceBodyMedium"
+                        android:textColor="@color/fox_dim" />
+
+                    <ProgressBar
+                        android:id="@+id/foxQuotaBar"
+                        style="?android:attr/progressBarStyleHorizontal"
+                        android:layout_width="match_parent"
+                        android:layout_height="8dp"
+                        android:layout_marginTop="@dimen/sp_s"
+                        android:max="100"
+                        android:progress="0"
+                        android:progressBackgroundTint="#4DFFFFFF"
+                        android:progressTint="@color/fox_cream" />
+
+                    <TextView
+                        android:id="@+id/foxReset"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:gravity="center"
+                        android:textAppearance="?attr/textAppearanceBodySmall"
+                        android:textColor="@color/fox_dim"
+                        android:visibility="gone" />
+
+                    <TextView
+                        android:id="@+id/foxError"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:gravity="center"
+                        android:textAppearance="?attr/textAppearanceBodySmall"
+                        android:textColor="@color/fox_cream"
+                        android:visibility="gone" />
+                </LinearLayout>
+
+                <ImageButton
+                    android:id="@+id/foxMap"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:layout_gravity="top|end"
+                    android:layout_marginTop="12dp"
+                    android:layout_marginEnd="12dp"
+                    android:background="@drawable/bg_map_button"
+                    android:contentDescription="@string/open_live_map"
+                    android:padding="11dp"
+                    android:src="@drawable/ic_map"
+                    android:visibility="gone"
+                    app:tint="@color/fox_cream" />
+            </FrameLayout>
+
+            <LinearLayout
+                android:id="@+id/foxStats"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/sp_l"
+                android:baselineAligned="false"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:gravity="center"
-                    android:text="@string/fox_quota_empty"
-                    android:textAppearance="?attr/textAppearanceBodyMedium"
-                    android:textColor="@color/fox_dim" />
+                    android:layout_weight="1"
+                    android:gravity="center_horizontal"
+                    android:orientation="vertical">
 
-                <ProgressBar
-                    android:id="@+id/foxQuotaBar"
-                    style="?android:attr/progressBarStyleHorizontal"
-                    android:layout_width="match_parent"
-                    android:layout_height="8dp"
-                    android:layout_marginTop="@dimen/sp_s"
-                    android:max="100"
-                    android:progress="0"
-                    android:progressBackgroundTint="#4DFFFFFF"
-                    android:progressTint="@color/fox_cream" />
+                    <ImageView
+                        android:layout_width="60dp"
+                        android:layout_height="60dp"
+                        android:background="@drawable/frame_puff"
+                        android:backgroundTint="@color/tile_container"
+                        android:contentDescription="@string/download"
+                        android:padding="16dp"
+                        android:src="@drawable/ic_down"
+                        app:tint="@color/tile_on_container" />
 
-                <TextView
-                    android:id="@+id/foxReset"
-                    android:layout_width="match_parent"
+                    <com.gozarwg.RollingValueView
+                        android:id="@+id/foxDown"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:includeFontPadding="false"
+                        android:maxLines="1"
+                        android:text="0 B/s"
+                        android:textAppearance="@style/TextAppearance.Gozar.TitleMedium"
+                        android:textColor="@color/metric_number"
+                        android:textDirection="ltr" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:text="@string/download"
+                        android:textAppearance="@style/TextAppearance.Gozar.LabelSmall"
+                        android:textColor="@color/metric_label" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:gravity="center"
-                    android:textAppearance="?attr/textAppearanceBodySmall"
-                    android:textColor="@color/fox_dim"
-                    android:visibility="gone" />
+                    android:layout_weight="1"
+                    android:gravity="center_horizontal"
+                    android:orientation="vertical">
 
-                <TextView
-                    android:id="@+id/foxError"
-                    android:layout_width="match_parent"
+                    <ImageView
+                        android:layout_width="60dp"
+                        android:layout_height="60dp"
+                        android:background="@drawable/frame_gem"
+                        android:backgroundTint="@color/m3_primary"
+                        android:contentDescription="@string/upload"
+                        android:padding="16dp"
+                        android:src="@drawable/ic_up"
+                        app:tint="@color/m3_on_primary" />
+
+                    <com.gozarwg.RollingValueView
+                        android:id="@+id/foxUp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:includeFontPadding="false"
+                        android:maxLines="1"
+                        android:text="0 B/s"
+                        android:textAppearance="@style/TextAppearance.Gozar.TitleMedium"
+                        android:textColor="@color/metric_number"
+                        android:textDirection="ltr" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:text="@string/upload"
+                        android:textAppearance="@style/TextAppearance.Gozar.LabelSmall"
+                        android:textColor="@color/metric_label" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:gravity="center"
-                    android:textAppearance="?attr/textAppearanceBodySmall"
-                    android:textColor="@color/fox_cream"
-                    android:visibility="gone" />
+                    android:layout_weight="1"
+                    android:gravity="center_horizontal"
+                    android:orientation="vertical">
 
+                    <ImageView
+                        android:layout_width="60dp"
+                        android:layout_height="60dp"
+                        android:background="@drawable/frame_hex"
+                        android:backgroundTint="@color/m3_tertiary_container"
+                        android:contentDescription="@string/total"
+                        android:padding="16dp"
+                        android:src="@drawable/ic_data"
+                        app:tint="@color/m3_on_tertiary_container" />
+
+                    <com.gozarwg.RollingValueView
+                        android:id="@+id/foxTotal"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:includeFontPadding="false"
+                        android:maxLines="1"
+                        android:text="0 B"
+                        android:textAppearance="@style/TextAppearance.Gozar.TitleMedium"
+                        android:textColor="@color/metric_number"
+                        android:textDirection="ltr" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:text="@string/total"
+                        android:textAppearance="@style/TextAppearance.Gozar.LabelSmall"
+                        android:textColor="@color/metric_label" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center_horizontal"
+                    android:orientation="vertical">
+
+                    <ImageView
+                        android:layout_width="60dp"
+                        android:layout_height="60dp"
+                        android:background="@drawable/frame_flower"
+                        android:backgroundTint="@color/m3_secondary_container"
+                        android:contentDescription="@string/fox_session"
+                        android:padding="16dp"
+                        android:src="@drawable/ic_timer"
+                        app:tint="@color/m3_on_secondary_container" />
+
+                    <TextView
+                        android:id="@+id/foxSession"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:gravity="center"
+                        android:includeFontPadding="false"
+                        android:maxLines="1"
+                        android:text="00:00"
+                        android:textAppearance="@style/TextAppearance.Gozar.TitleMedium"
+                        android:textColor="@color/metric_number"
+                        android:textDirection="ltr" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:maxLines="1"
+                        android:text="@string/fox_session"
+                        android:textAppearance="@style/TextAppearance.Gozar.LabelSmall"
+                        android:textColor="@color/metric_label" />
+                </LinearLayout>
             </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/foxServerRow"
+                style="@style/Gozar.Row">
+
+                <com.gozarwg.CountryFlagView
+                    android:id="@+id/foxServerFlag"
+                    android:layout_width="@dimen/tile_size"
+                    android:layout_height="@dimen/tile_size"
+                    android:contentDescription="@string/fox_server_title" />
+
+                <LinearLayout style="@style/Gozar.Row.Text">
+
+                    <TextView
+                        android:id="@+id/foxServerName"
+                        style="@style/Gozar.Row.Title"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="@string/fox_server_empty" />
+
+                    <TextView
+                        android:id="@+id/foxServerMeta"
+                        style="@style/Gozar.Row.Subtitle"
+                        android:maxLines="1"
+                        android:text="@string/fox_servers_sub" />
+                </LinearLayout>
+
+                <ImageView
+                    style="@style/Gozar.Row.Chevron"
+                    android:contentDescription="@string/fox_servers_pick" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/foxServerDelay"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/sp_xs"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:textColor="@color/text2"
+                android:visibility="gone" />
 
             <LinearLayout
                 android:id="@+id/foxSignIn"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/sp_m"
+                android:layout_marginTop="@dimen/sp_l"
                 android:background="@drawable/fox_form"
                 android:orientation="vertical"
                 android:padding="@dimen/sp_l"
@@ -157,14 +386,23 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/fox_auth_title"
-                    android:textAppearance="?attr/textAppearanceTitleSmall" />
+                    android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+                <TextView
+                    android:id="@+id/foxSignInSub"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/fox_sign_sub"
+                    android:textAppearance="?attr/textAppearanceBodySmall"
+                    android:textColor="@color/text2" />
 
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/foxEmailBox"
                     style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/sp_s"
+                    android:layout_marginTop="@dimen/sp_m"
                     android:hint="@string/fox_email">
 
                     <com.google.android.material.textfield.TextInputEditText
@@ -192,34 +430,23 @@
                         android:maxLines="1" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <LinearLayout
-                    android:id="@+id/foxSignButtons"
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/foxSignInButton"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/sp_s"
-                    android:orientation="horizontal">
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:text="@string/fox_sign_in" />
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/foxSignInButton"
-                        style="@style/Widget.Material3.Button.TonalButton"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:insetTop="0dp"
-                        android:insetBottom="0dp"
-                        android:text="@string/fox_sign_in" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/foxSignUpButton"
-                        style="@style/Widget.Material3.Button.TextButton"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="@dimen/sp_xs"
-                        android:layout_weight="1"
-                        android:insetTop="0dp"
-                        android:insetBottom="0dp"
-                        android:text="@string/fox_create" />
-                </LinearLayout>
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/foxSignUpButton"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:text="@string/fox_create" />
 
                 <LinearLayout
                     android:id="@+id/foxCodeBox"
@@ -253,228 +480,60 @@
                         android:textAppearance="?attr/textAppearanceBodySmall"
                         android:textColor="@color/text2" />
 
-                    <LinearLayout
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/foxVerifyButton"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="@dimen/sp_xs"
-                        android:orientation="horizontal">
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:text="@string/fox_continue" />
 
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/foxVerifyButton"
-                            style="@style/Widget.Material3.Button.TonalButton"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            android:text="@string/fox_continue" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/foxResendButton"
-                            style="@style/Widget.Material3.Button.TextButton"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="@dimen/sp_xs"
-                            android:layout_weight="1"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            android:text="@string/fox_send_again" />
-                    </LinearLayout>
-                </LinearLayout>
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/foxStats"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/sp_m"
-                android:orientation="vertical"
-                android:visibility="gone">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-
-                    <LinearLayout
-                        android:layout_width="0dp"
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/foxResendButton"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/fox_location"
-                            android:textAppearance="?attr/textAppearanceBodySmall"
-                            android:textColor="@color/text2" />
-
-                        <TextView
-                            android:id="@+id/foxStatLocation"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:ellipsize="end"
-                            android:maxLines="1"
-                            android:textAppearance="?attr/textAppearanceTitleSmall" />
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/fox_exit"
-                            android:textAppearance="?attr/textAppearanceBodySmall"
-                            android:textColor="@color/text2" />
-
-                        <TextView
-                            android:id="@+id/foxStatExit"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:ellipsize="end"
-                            android:maxLines="1"
-                            android:textAppearance="?attr/textAppearanceTitleSmall"
-                            android:textDirection="ltr" />
-                    </LinearLayout>
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:text="@string/fox_send_again" />
                 </LinearLayout>
 
                 <LinearLayout
+                    android:id="@+id/foxBusyRow"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="@dimen/sp_s"
-                    android:orientation="horizontal">
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/fox_speed"
-                            android:textAppearance="?attr/textAppearanceBodySmall"
-                            android:textColor="@color/text2" />
-
-                        <TextView
-                            android:id="@+id/foxStatSpeed"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:maxLines="1"
-                            android:textAppearance="?attr/textAppearanceTitleSmall"
-                            android:textDirection="ltr" />
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/fox_session"
-                            android:textAppearance="?attr/textAppearanceBodySmall"
-                            android:textColor="@color/text2" />
-
-                        <TextView
-                            android:id="@+id/foxStatSession"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:maxLines="1"
-                            android:textAppearance="?attr/textAppearanceTitleSmall"
-                            android:textDirection="ltr" />
-                    </LinearLayout>
-                </LinearLayout>
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/foxServerHead"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/sp_xl"
-                android:background="?attr/selectableItemBackground"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingTop="@dimen/sp_s"
-                android:paddingBottom="@dimen/sp_s">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/fox_servers"
-                    android:textAppearance="?attr/textAppearanceTitleSmall" />
-
-                <TextView
-                    android:id="@+id/foxSelected"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="@dimen/sp_s"
-                    android:layout_weight="1"
-                    android:ellipsize="end"
-                    android:gravity="end"
-                    android:maxLines="1"
-                    android:textAppearance="?attr/textAppearanceBodyMedium"
-                    android:textColor="@color/text2" />
-
-                <ImageView
-                    android:id="@+id/foxChevron"
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:contentDescription="@string/fox_servers"
-                    android:padding="2dp"
-                    android:src="@drawable/ic_chev"
-                    app:tint="@color/icon" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/foxServerBody"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:visibility="gone">
-
-                <TextView
-                    android:id="@+id/foxHint"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/fox_servers_hint"
-                    android:textAppearance="?attr/textAppearanceBodySmall"
-                    android:textColor="@color/text2" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
                     android:gravity="center_vertical"
-                    android:orientation="horizontal">
+                    android:orientation="horizontal"
+                    android:visibility="gone">
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/foxMeasure"
-                        style="@style/Widget.Material3.Button.TextButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/fox_measure" />
+                    <com.google.android.material.progressindicator.CircularProgressIndicator
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:indeterminate="true"
+                        app:indicatorColor="@color/m3_primary"
+                        app:indicatorSize="16dp"
+                        app:trackThickness="2dp" />
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/foxLogs"
-                        style="@style/Widget.Material3.Button.TextButton"
-                        android:layout_width="wrap_content"
+                    <TextView
+                        android:id="@+id/foxBusyText"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:text="@string/fox_logs" />
+                        android:layout_marginStart="@dimen/sp_s"
+                        android:layout_weight="1"
+                        android:textAppearance="?attr/textAppearanceBodySmall"
+                        android:textColor="@color/text2" />
                 </LinearLayout>
 
-                <LinearLayout
-                    android:id="@+id/foxServers"
+                <TextView
+                    android:id="@+id/foxSignError"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/sp_xs"
-                    android:orientation="vertical" />
+                    android:layout_marginTop="@dimen/sp_s"
+                    android:textAppearance="?attr/textAppearanceBodySmall"
+                    android:textColor="@color/m3_error"
+                    android:visibility="gone" />
             </LinearLayout>
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>

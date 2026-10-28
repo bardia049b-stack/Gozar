@@ -23,11 +23,12 @@ class FoxVpnService : VpnService() {
     override fun onCreate() {
         super.onCreate()
         alive = true
+        instance = this
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == STOP) {
-            stopSelf()
+            close()
             return START_NOT_STICKY
         }
         foreground()
@@ -85,12 +86,28 @@ class FoxVpnService : VpnService() {
 
     override fun onRevoke() {
         FoxLog.add("vpn", "another vpn took over")
-        stopSelf()
+        close()
         super.onRevoke()
     }
 
     override fun onDestroy() {
         alive = false
+        if (instance === this) instance = null
+        release()
+        super.onDestroy()
+    }
+
+    private fun close() {
+        FoxLog.add("vpn", "closing the device")
+        release()
+        try {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        } catch (e: Exception) {
+        }
+        stopSelf()
+    }
+
+    private fun release() {
         try {
             stack?.stop()
         } catch (e: Exception) {
@@ -102,7 +119,6 @@ class FoxVpnService : VpnService() {
         }
         descriptor = null
         FoxLink.stop()
-        super.onDestroy()
     }
 
     private fun foreground() {
@@ -147,6 +163,7 @@ class FoxVpnService : VpnService() {
         private const val STOP = "com.gozarwg.FOX_STOP"
 
         @Volatile private var alive = false
+        @Volatile private var instance: FoxVpnService? = null
 
         fun isAlive(): Boolean = alive
 
@@ -164,10 +181,16 @@ class FoxVpnService : VpnService() {
         }
 
         fun stop(c: Context) {
+            val running = instance
+            try {
+                running?.close()
+            } catch (e: Exception) {
+            }
             try {
                 c.stopService(Intent(c, FoxVpnService::class.java))
             } catch (e: Exception) {
             }
+            FoxLink.stop()
         }
     }
 }

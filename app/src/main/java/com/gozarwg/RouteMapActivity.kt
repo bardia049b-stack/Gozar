@@ -86,19 +86,32 @@ class RouteMapActivity : BaseActivity() {
         ViewCompat.requestApplyInsets(root)
     }
 
+    private fun foxLive(): Boolean = FoxLink.connected && !Vpn.up
+
+    private fun foxExit(): IpInfo? {
+        val place = FoxLink.location ?: return null
+        val ip = FoxLink.exitIp
+        if (ip.isEmpty() && place.code.isEmpty()) return null
+        return IpInfo(ip = ip, city = place.city, country = place.country, code = place.code, provider = "Firefox VPN")
+    }
+
     private fun render() {
         if (!::routeMap.isInitialized) return
-        val origin = Vpn.originInfo ?: localeOrigin()
-        val exit = Vpn.ipInfo
-        if (Vpn.up && exit == null) fetchExit()
+        val fox = foxLive()
+        val origin = if (fox) localeOrigin() else Vpn.originInfo ?: localeOrigin()
+        val exit = if (fox) foxExit() else Vpn.ipInfo
+        if (!fox && Vpn.up && exit == null) fetchExit()
 
         val routeToken = listOf(
-            Vpn.profile?.id.orEmpty(), Vpn.since.toString(),
+            if (fox) "fox" else Vpn.profile?.id.orEmpty(),
+            if (fox) FoxLink.since.toString() else Vpn.since.toString(),
             origin?.ip.orEmpty(), origin?.code.orEmpty(),
             exit?.ip.orEmpty(), exit?.code.orEmpty()
         ).joinToString("|")
         routeMap.setEndpoints(origin?.code, exit?.code, routeToken)
-        routeMap.setTraffic(if (Vpn.up) Vpn.downSpeed else 0.0, if (Vpn.up) Vpn.upSpeed else 0.0)
+        val rx = if (fox) FoxLink.downRate else if (Vpn.up) Vpn.downSpeed else 0.0
+        val tx = if (fox) FoxLink.upRate else if (Vpn.up) Vpn.upSpeed else 0.0
+        routeMap.setTraffic(rx, tx)
         originFlag.countryCode = origin?.code
         exitFlag.countryCode = exit?.code
 
@@ -109,6 +122,7 @@ class RouteMapActivity : BaseActivity() {
         routeBadge.text = getString(R.string.map_route_badge, shortLabel(originLabel), shortLabel(exitLabel))
         val provider = exit?.provider?.takeIf { it.isNotBlank() }
         sessionValue.text = when {
+            fox -> locationLabel(foxExit(), getString(R.string.map_session_live)) + " · " + sessionSeconds()
             !Vpn.up -> getString(R.string.map_not_connected)
             Vpn.latencyChecking -> provider?.let { getString(R.string.map_session_provider_live, it) }
                 ?: getString(R.string.map_session_checking)
@@ -133,6 +147,11 @@ class RouteMapActivity : BaseActivity() {
         if (info == null) return fallback
         return listOf(info.city, info.country).filter { it.isNotBlank() }.joinToString(", ")
             .ifBlank { info.code.ifBlank { fallback } }
+    }
+
+    private fun sessionSeconds(): String {
+        val total = ((System.currentTimeMillis() - FoxLink.since) / 1000L).coerceAtLeast(0)
+        return String.format(java.util.Locale.US, "%02d:%02d", total / 60, total % 60)
     }
 
     private fun shortLabel(value: String): String = value.substringBefore(',').trim()
