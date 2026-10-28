@@ -219,4 +219,33 @@
     <string name="update_notification_text">نسخهٔ %s آمادهٔ دریافت است</string>
     <string name="legal_notice">GozarWG
 AGPL-3.0-or-later</string>
+    <string name="mode_wireguard">وایرگارد</string>
+    <string name="mode_firefox">فایرفاکس VPN</string>
+    <string name="fox_title">فایرفاکس VPN</string>
+    <string name="fox_account">حساب</string>
+    <string name="fox_signed_out">وارد نشده‌اید</string>
+    <string name="fox_plan_title">پلن رایگان · ماهی ۵۰ گیگابایت</string>
+    <string name="fox_quota_empty">با حساب فایرفاکس وارد شوید تا ۵۰ گیگابایت فعال شود</string>
+    <string name="fox_quota_value">%1$s از %2$s مصرف شده</string>
+    <string name="fox_reset">بازنشانی: %1$s</string>
+    <string name="fox_sign_in">ورود</string>
+    <string name="fox_refresh">به‌روزرسانی مصرف</string>
+    <string name="fox_sign_out">خروج</string>
+    <string name="fox_servers">سرورها</string>
+    <string name="fox_servers_hint">یک سرور را انتخاب کنید و بعد پینگ بگیرید.</string>
+    <string name="fox_measure">پینگ</string>
+    <string name="fox_ping_wait">—</string>
+    <string name="fox_recommended">پیشنهادی</string>
+    <string name="fox_selected">انتخاب‌شده</string>
+    <string name="fox_auth_title">حساب فایرفاکس</string>
+    <string name="fox_continue">ادامه</string>
+    <string name="fox_email">ایمیل</string>
+    <string name="fox_password">رمز عبور</string>
+    <string name="fox_code">کد</string>
+    <string name="fox_code_title">ایمیل خود را ببینید</string>
+    <string name="fox_code_hint">موزیلا یک کد ۶ رقمی ایمیل کرده است. برای پایان ورود آن را وارد کنید.</string>
+    <string name="fox_create_toggle">ساخت حساب جدید فایرفاکس</string>
+    <string name="fox_email_bad">یک ایمیل معتبر وارد کنید</string>
+    <string name="fox_password_bad">رمز باید حداقل ۸ کاراکتر باشد</string>
+    <string name="fox_working">در حال انجام…</string>
 </resources>

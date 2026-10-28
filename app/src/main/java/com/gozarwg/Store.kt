@@ -15,6 +15,8 @@ object Store {
     fun setKill(c: Context, v: Boolean) = p(c).edit().putBoolean("kill", v).apply()
     fun auto(c: Context) = p(c).getBoolean("auto", false)
     fun setAuto(c: Context, v: Boolean) = p(c).edit().putBoolean("auto", v).apply()
+    fun foxMode(c: Context) = p(c).getBoolean("fox_mode", false)
+    fun setFoxMode(c: Context, v: Boolean) = p(c).edit().putBoolean("fox_mode", v).apply()
     fun lan(c: Context) = p(c).getBoolean("lan", true)
     fun setLan(c: Context, v: Boolean) = p(c).edit().putBoolean("lan", v).apply()
     fun proxy(c: Context) = p(c).getBoolean("proxy", false)

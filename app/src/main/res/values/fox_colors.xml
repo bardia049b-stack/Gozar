@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="fox_red">#C5002E</color>
+    <color name="fox_red_dark">#7A0018</color>
+    <color name="fox_orange">#FF7A1A</color>
+    <color name="fox_cream">#FFF3E8</color>
+    <color name="fox_on_red">#FFFFFF</color>
+    <color name="fox_dim">#FFD9E1</color>
+</resources>

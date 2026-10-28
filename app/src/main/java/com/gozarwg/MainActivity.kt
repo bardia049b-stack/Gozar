@@ -6,15 +6,20 @@ import androidx.activity.OnBackPressedCallback
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.google.android.material.button.MaterialButtonToggleGroup
 
 class MainActivity : BaseActivity() {
 
     private lateinit var home: HomeFragment
     private lateinit var settings: SettingsFragment
+    private lateinit var fox: FoxFragment
     private var onSettings = false
+    private var onFox = false
     private var nav: BottomNavigationView? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        onFox = Store.foxMode(this)
+        setTheme(if (onFox) R.style.AppTheme_Fox else R.style.AppTheme)
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_shell)
         if (savedInstanceState != null) onSettings = savedInstanceState.getBoolean("onSettings", false)
@@ -22,21 +27,24 @@ class MainActivity : BaseActivity() {
         val manager = supportFragmentManager
         val existingHome = manager.findFragmentByTag("home") as? HomeFragment
         val existingSettings = manager.findFragmentByTag("settings") as? SettingsFragment
+        val existingFox = manager.findFragmentByTag("fox") as? FoxFragment
         home = existingHome ?: HomeFragment()
         settings = existingSettings ?: SettingsFragment()
+        fox = existingFox ?: FoxFragment()
 
-        if (existingHome == null || existingSettings == null) {
-            manager.beginTransaction()
-                .setReorderingAllowed(true)
-                .add(R.id.container, settings, "settings")
-                .add(R.id.container, home, "home")
-                .commitNow()
+        if (existingHome == null || existingSettings == null || existingFox == null) {
+            val transaction = manager.beginTransaction().setReorderingAllowed(true)
+            if (existingSettings == null) transaction.add(R.id.container, settings, "settings")
+            if (existingHome == null) transaction.add(R.id.container, home, "home")
+            if (existingFox == null) transaction.add(R.id.container, fox, "fox")
+            transaction.commitNow()
         }
         home.restore(intent)
         settings.restore(intent)
 
         back()
         applyState()
+        switch()
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.shell)) { target, insets ->
             val bars = insets.getInsets(
@@ -66,14 +74,33 @@ class MainActivity : BaseActivity() {
         bar.selectedItemId = if (onSettings) R.id.nav_settings else R.id.nav_home
     }
 
+    private fun switch() {
+        val group = findViewById<MaterialButtonToggleGroup>(R.id.modeSwitch)
+        group.isSelectionRequired = true
+        group.check(if (onFox) R.id.modeFox else R.id.modeWg)
+        group.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (!isChecked) return@addOnButtonCheckedListener
+            val wantFox = checkedId == R.id.modeFox
+            if (wantFox == Store.foxMode(this)) return@addOnButtonCheckedListener
+            Store.setFoxMode(this, wantFox)
+            Store.setWantUp(this, false)
+            recreate()
+        }
+    }
+
     private fun back() {
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if (onSettings) {
-                    showHome()
-                } else {
-                    isEnabled = false
-                    onBackPressedDispatcher.onBackPressed()
+                when {
+                    onFox -> {
+                        Store.setFoxMode(this@MainActivity, false)
+                        recreate()
+                    }
+                    onSettings -> showHome()
+                    else -> {
+                        isEnabled = false
+                        onBackPressedDispatcher.onBackPressed()
+                    }
                 }
             }
         })
@@ -108,13 +135,15 @@ class MainActivity : BaseActivity() {
     }
 
     private fun applyState() {
-        if (!::home.isInitialized || !::settings.isInitialized) return
+        if (!::home.isInitialized || !::settings.isInitialized || !::fox.isInitialized) return
         val transaction = supportFragmentManager.beginTransaction().setReorderingAllowed(true)
-        if (onSettings) {
-            transaction.hide(home).show(settings)
+        if (onFox) {
+            transaction.hide(home).hide(settings).show(fox)
         } else {
-            transaction.hide(settings).show(home)
+            transaction.hide(fox)
+            if (onSettings) transaction.hide(home).show(settings) else transaction.hide(settings).show(home)
         }
         transaction.commitAllowingStateLoss()
+        nav?.visibility = if (onFox) android.view.View.GONE else android.view.View.VISIBLE
     }
 }

@@ -219,4 +219,33 @@
     <string name="update_notification_text">Version %s is ready to download</string>
     <string name="legal_notice">GozarWG
 AGPL-3.0-or-later</string>
+    <string name="mode_wireguard">WireGuard</string>
+    <string name="mode_firefox">Firefox VPN</string>
+    <string name="fox_title">Firefox VPN</string>
+    <string name="fox_account">Account</string>
+    <string name="fox_signed_out">Not signed in</string>
+    <string name="fox_plan_title">Free plan · 50 GB a month</string>
+    <string name="fox_quota_empty">Sign in with a Firefox account to activate 50 GB</string>
+    <string name="fox_quota_value">%1$s of %2$s used</string>
+    <string name="fox_reset">Resets %1$s</string>
+    <string name="fox_sign_in">Sign in</string>
+    <string name="fox_refresh">Refresh usage</string>
+    <string name="fox_sign_out">Sign out</string>
+    <string name="fox_servers">Servers</string>
+    <string name="fox_servers_hint">Pick a server, then measure the delay to it.</string>
+    <string name="fox_measure">Measure</string>
+    <string name="fox_ping_wait">—</string>
+    <string name="fox_recommended">Recommended</string>
+    <string name="fox_selected">Selected</string>
+    <string name="fox_auth_title">Firefox account</string>
+    <string name="fox_continue">Continue</string>
+    <string name="fox_email">Email</string>
+    <string name="fox_password">Password</string>
+    <string name="fox_code">Code</string>
+    <string name="fox_code_title">Check your email</string>
+    <string name="fox_code_hint">Mozilla emailed you a 6-digit code. Enter it to finish signing in.</string>
+    <string name="fox_create_toggle">Create a new Firefox account</string>
+    <string name="fox_email_bad">Enter a valid email address</string>
+    <string name="fox_password_bad">Password must be at least 8 characters</string>
+    <string name="fox_working">Working…</string>
 </resources>
