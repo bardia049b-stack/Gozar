@@ -235,7 +235,7 @@ object FoxH2 {
         val out = BufferedOutputStream(tls.outputStream)
         out.write(PREFACE.toByteArray(Charsets.US_ASCII))
         out.write(simpleFrame(0x04, 0, 0, ByteArray(0)))
-        out.write(simpleFrame(0x08, 0, 0, byteArrayOf(0x7F, 0xFF, 0x00, 0x00)))
+        out.write(simpleFrame(0x08, 0, 0, byteArrayOf(0x7F, 0xFF.toByte(), 0x00, 0x00)))
         out.write(simpleFrame(0x01, 0x04, 1, headers(authority, pass)))
         out.flush()
 
