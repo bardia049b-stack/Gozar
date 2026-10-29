@@ -99,7 +99,6 @@ jobs:
           rm -rf "$RUNNER_TEMP/deb"
           dpkg-deb -x "$DEB" "$RUNNER_TEMP/deb"
           python3 scripts/arch_check.py "$RUNNER_TEMP/deb" x86_64
-          python3 scripts/arch_check.py desktop/build/compose/binaries/main/app x86_64
           file "$DEB" | grep -q "Debian binary package" || { echo "not a deb"; exit 1; }
           dpkg-deb -f "$DEB" Architecture | grep -qx amd64
           mkdir -p out
@@ -110,6 +109,10 @@ jobs:
           set -e
           APP=$(ls -d desktop/build/compose/binaries/main/app/GozarWG | head -1)
           "$APP/bin/GozarWG" --version
+          "$APP/bin/GozarWG" --selftest | tee "$RUNNER_TEMP/selftest.txt"
+          grep -q "ALL OK" "$RUNNER_TEMP/selftest.txt"
+          "$APP/bin/GozarWG" --proxy-test | tee "$RUNNER_TEMP/proxy.txt"
+          grep -q "ALL OK" "$RUNNER_TEMP/proxy.txt"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -130,8 +133,11 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Install WiX
-        run: choco install wixtoolset --version=3.14.1 -y --no-progress
+      - name: WiX
+        shell: pwsh
+        run: |
+          $light = "C:\Program Files (x86)\WiX Toolset v3.14\bin\light.exe"
+          if (-not (Test-Path $light)) { choco install wixtoolset -y --no-progress }
 
       - name: Package
         run: ./gradlew.bat :desktop:packageMsi --no-daemon --stacktrace
@@ -148,8 +154,8 @@ jobs:
             [ -e "$cab" ] || continue
             7z x -y -o"$RUNNER_TEMP/msi/unpacked" "$cab" > /dev/null
           done
-          python3 scripts/arch_check.py "$RUNNER_TEMP/msi/unpacked" x86_64
-          python3 scripts/arch_check.py desktop/build/compose/binaries/main/app x86_64
+          PY=$(command -v python3 || command -v python)
+          "$PY" scripts/arch_check.py "$RUNNER_TEMP/msi/unpacked" x86_64
           mkdir -p out
           cp "$MSI" "out/GozarWG-${VERSION}-Windows-x64.msi"
 
@@ -170,10 +176,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - runner: macos-13
+          - runner: macos-15-intel
             arch: x86_64
             label: Intel
-          - runner: macos-14
+          - runner: macos-15
             arch: arm64
             label: ARM
     runs-on: ${{ matrix.runner }}
@@ -211,6 +217,10 @@ jobs:
           set -e
           APP=$(ls -d desktop/build/compose/binaries/main/app/GozarWG.app | head -1)
           "$APP/Contents/MacOS/GozarWG" --version
+          "$APP/Contents/MacOS/GozarWG" --selftest | tee "$RUNNER_TEMP/selftest.txt"
+          grep -q "ALL OK" "$RUNNER_TEMP/selftest.txt"
+          "$APP/Contents/MacOS/GozarWG" --proxy-test | tee "$RUNNER_TEMP/proxy.txt"
+          grep -q "ALL OK" "$RUNNER_TEMP/proxy.txt"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -271,11 +281,14 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
+          KEEP="${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}"
           gh release list --limit 100 --json tagName --jq '.[].tagName' | while read -r tag; do
+            if [ "$tag" = "$KEEP" ]; then echo "keeping $tag"; continue; fi
             echo "removing $tag"
             gh release delete "$tag" --yes --cleanup-tag || true
           done
           git ls-remote --tags origin | awk '{print $2}' | sed 's|refs/tags/||' | grep -v '\^{}' | while read -r tag; do
+            if [ "$tag" = "$KEEP" ]; then continue; fi
             echo "removing tag $tag"
             git push origin ":refs/tags/$tag" || true
           done

@@ -20,6 +20,12 @@ object SystemProxy {
         }
     }
 
+    fun backend(): String = when {
+        windows() -> "registry"
+        mac() -> "networksetup"
+        else -> "gsettings"
+    }
+
     fun enable(port: Int): Boolean {
         return when {
             windows() -> registry(port, true)

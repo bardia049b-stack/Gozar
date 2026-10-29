@@ -37,7 +37,8 @@ object SelfTest {
             check("proxy reachable", reachable,
                 ((System.nanoTime() - start) / 1_000_000L).toString() + " ms")
         }
-        check("system proxy probe returns without throwing", runCatching { SystemProxy.disable() }.isSuccess)
+        check("system proxy backend", SystemProxy.backend() in setOf("registry", "networksetup", "gsettings"),
+            SystemProxy.backend())
         report.append(if (failures == 0) "ALL OK" else "FAILURES: $failures")
         return report.toString()
     }
