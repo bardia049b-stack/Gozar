@@ -47,6 +47,9 @@ lines.append("- Desktop builds for Windows (x64), macOS (Intel and Apple Silicon
 lines.append("- The log screen was removed from every platform.")
 lines.append("- Firefox VPN tab connects through the Mozilla proxy with the same 50 GB monthly pass.")
 lines.append("- The system proxy is switched on when the tunnel is up and switched back off on disconnect.")
+lines.append("- The WireGuard tab stays Android-only on the desktop for now, because the AmneziaWG core "
+             "that tab needs is the Android native library. The desktop builds carry the Firefox VPN "
+             "path only and say so on that tab.")
 lines.append("")
 lines.append("### Install")
 lines.append("")
