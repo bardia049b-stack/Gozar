@@ -352,4 +352,6 @@ AGPL-3.0-or-later</string>
     <string name="login_show_password">Show password</string>
     <string name="apps_none">No apps were found on this device.</string>
     <string name="chain_hint_short">socks5://host:port</string>
+    <string name="apps_all_hint">All apps go through the tunnel</string>
+    <string name="apps_picked">%1$d selected</string>
 </resources>

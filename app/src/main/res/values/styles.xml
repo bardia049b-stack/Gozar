@@ -193,4 +193,5 @@
         <item name="android:textAppearance">@style/TextAppearance.Gozar.LabelMedium</item>
         <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
     </style>
+
 </resources>

@@ -288,7 +288,14 @@ object Connect {
                     Desk.tunActive = tun
                     if (!tun) Desk.fault = TunService.last()
                 }
-                if (!Desk.tunActive) Desk.systemProxy = SystemProxy.enable(port)
+                if (Desk.tunActive) {
+                    if (Desk.systemProxy) {
+                        SystemProxy.disable()
+                        Desk.systemProxy = false
+                    }
+                } else {
+                    Desk.systemProxy = SystemProxy.enable(port)
+                }
                 Desk.startTicker()
             } catch (e: Exception) {
                 stop()

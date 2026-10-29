@@ -199,56 +199,38 @@ object Wintun {
             val releasePacket = library.getFunction("WintunReleaseReceivePacket")
             val allocate = library.getFunction("WintunAllocateSendPacket")
             val send = library.getFunction("WintunSendPacket")
-            val adapter = createAdapter.invokePointer(arrayOf("Gozar", "Gozar", null))
+            val openAdapter = try {
+                library.getFunction("WintunOpenAdapter")
+            } catch (e: Exception) {
+                null
+            }
+            var reused = false
+            var adapter = try {
+                openAdapter?.invokePointer(arrayOf("Gozar"))
+            } catch (e: Exception) {
+                null
+            }
+            if (adapter != null) reused = true
             if (adapter == null) {
-                TunService.note("wintun refused to create the adapter; run the app as administrator")
+                adapter = createAdapter.invokePointer(arrayOf("Gozar", "Gozar", null))
+            }
+            if (adapter == null) {
+                val code = Native.getLastError()
+                TunService.note(
+                    if (code == 5) "wintun needs administrator rights (error 5: access denied)"
+                    else "wintun could not create the adapter (error $code)"
+                )
                 return null
             }
-            val session = startSession.invokePointer(arrayOf(adapter, RING))
+            var session = startSession.invokePointer(arrayOf(adapter, RING))
+            if (session == null && reused) {
+                library.getFunction("WintunCloseAdapter").invoke(arrayOf(adapter))
+                adapter = createAdapter.invokePointer(arrayOf("Gozar", "Gozar", null))
+                if (adapter != null) session = startSession.invokePointer(arrayOf(adapter, RING))
+            }
             if (session == null) {
-                TunService.note("the wintun session did not start")
+                TunService.note("the wintun session did not start (error " + Native.getLastError() + ")")
                 return null
-            }
-            val size = Memory(4)
-            val input = object : InputStream() {
-                override fun read(): Int {
-                    val one = ByteArray(1)
-                    return if (read(one, 0, 1) <= 0) -1 else one[0].toInt() and 0xFF
-                }
-
-                override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
-                    while (true) {
-                        val pointer = receive.invokePointer(arrayOf(session, size))
-                        if (pointer != null) {
-                            val total = size.getInt(0)
-                            val take = minOf(length, total)
-                            pointer.read(0, buffer, offset, take)
-                            releasePacket.invoke(arrayOf(session, pointer))
-                            return take
-                        }
-                        Thread.sleep(1)
-                    }
-                }
-            }
-            val output = object : OutputStream() {
-                override fun write(b: Int) = write(byteArrayOf(b.toByte()), 0, 1)
-
-                override fun write(buffer: ByteArray, offset: Int, length: Int) {
-                    val packet = allocate.invokePointer(arrayOf(session, length)) ?: return
-                    packet.write(0, buffer, offset, length)
-                    send.invoke(arrayOf(session, packet))
-                }
-            }
-            TunService.note("windows adapter Gozar is ready")
-            TunDevice("Gozar", input, output) {
-                try {
-                    library.getFunction("WintunEndSession").invoke(arrayOf(session))
-                } catch (e: Exception) {
-                }
-                try {
-                    library.getFunction("WintunCloseAdapter").invoke(arrayOf(adapter))
-                } catch (e: Exception) {
-                }
             }
         } catch (e: Exception) {
             TunService.note("wintun failed: " + (e.message ?: e.javaClass.simpleName))
@@ -323,14 +305,34 @@ object TunService {
 
     fun wintunPath(): String? {
         if (!windows()) return null
+        val near = nearFile()
+        if (near.exists() && near.length() > 10000) {
+            System.setProperty("jna.library.path", near.parentFile.absolutePath)
+            return near.absolutePath
+        }
         val base = System.getenv("LOCALAPPDATA") ?: System.getenv("APPDATA") ?: System.getProperty("user.home")
         val folder = File(base, "Gozar")
         if (!folder.exists() && !folder.mkdirs()) return null
         val target = File(folder, "wintun.dll")
-        if (target.exists() && target.length() > 10000) return target.absolutePath
-        if (!serve("wintun.dll", target)) return null
-        return if (target.length() > 10000) target.absolutePath else null
+        if (!target.exists() || target.length() < 10000) {
+            if (!serve("wintun.dll", target)) return null
+        }
+        if (target.length() < 10000) return null
+        System.setProperty("jna.library.path", folder.absolutePath)
+        try {
+            val near = nearFile()
+            if (!near.exists() && near.parentFile != null && near.parentFile.canWrite()) {
+                target.copyTo(near, overwrite = false)
+            }
+        } catch (e: Exception) {
+        }
+        return target.absolutePath
     }
+
+    fun nearFile(): File = File(
+        File(System.getProperty("jpackage.app-path").orEmpty()).parentFile ?: File("."),
+        "wintun.dll"
+    )
 
     fun jnaLoaded(): Boolean = try {
         Native.getNativeSize(Int::class.java)

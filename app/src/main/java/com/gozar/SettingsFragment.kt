@@ -191,6 +191,9 @@ class SettingsFragment : Fragment() {
         AppPicker(requireContext()) { applyApps() }.open()
     }
 
+    private fun describeApps(count: Int): String =
+        if (count == 0) getString(R.string.apps_all) else getString(R.string.apps_picked, count)
+
     private fun applyApps() {
         paint()
         val context = context ?: return

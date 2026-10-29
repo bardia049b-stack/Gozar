@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
+import android.os.Handler
+import android.os.Looper
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.LayoutInflater
@@ -14,7 +16,8 @@ import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.TextView
-import androidx.appcompat.app.AlertDialog
+import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.button.MaterialButton
 
 class AppPicker(private val context: Context, private val done: () -> Unit) {
 
@@ -25,63 +28,61 @@ class AppPicker(private val context: Context, private val done: () -> Unit) {
         val system: Boolean
     )
 
-    private val loader = Thread {
-        val manager = context.packageManager
-        val rows = ArrayList<Row>()
-        val seen = HashSet<String>()
-        val flags = PackageManager.GET_META_DATA
-        for (info in manager.getInstalledApplications(flags)) {
-            if (info.packageName == context.packageName) continue
-            if (!seen.add(info.packageName)) continue
-            val system = (info.flags and ApplicationInfo.FLAG_SYSTEM) != 0 &&
-                (info.flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) == 0
-            val label = try {
-                manager.getApplicationLabel(info).toString()
-            } catch (e: Exception) {
-                info.packageName
-            }
-            val icon = try {
-                manager.getApplicationIcon(info)
-            } catch (e: Exception) {
-                null
-            }
-            rows.add(Row(info.packageName, label, icon, system))
-        }
-        rows.sortWith(compareBy({ it.system }, { it.label.lowercase() }))
-        android.os.Handler(android.os.Looper.getMainLooper()).post { show(rows) }
-    }
+    private val chosen = Store.apps(context).toMutableSet()
+    private var dialog: BottomSheetDialog? = null
 
     fun open() {
-        loader.start()
+        Thread {
+            val manager = context.packageManager
+            val rows = ArrayList<Row>()
+            val seen = HashSet<String>()
+            for (info in manager.getInstalledApplications(PackageManager.GET_META_DATA)) {
+                if (info.packageName == context.packageName) continue
+                if (!seen.add(info.packageName)) continue
+                val system = (info.flags and ApplicationInfo.FLAG_SYSTEM) != 0 &&
+                    (info.flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) == 0 &&
+                    (info.flags and ApplicationInfo.FLAG_INSTALLED) != 0
+                val label = try {
+                    manager.getApplicationLabel(info).toString()
+                } catch (e: Exception) {
+                    info.packageName
+                }
+                val icon = try {
+                    manager.getApplicationIcon(info)
+                } catch (e: Exception) {
+                    null
+                }
+                rows.add(Row(info.packageName, label, icon, system))
+            }
+            rows.sortWith(compareBy({ it.system }, { it.label.lowercase() }))
+            Handler(Looper.getMainLooper()).post { show(rows) }
+        }.start()
     }
 
     private fun show(rows: List<Row>) {
-        if (rows.isEmpty()) {
-            AlertDialog.Builder(context)
-                .setTitle(R.string.apps)
-                .setMessage(R.string.apps_none)
-                .setPositiveButton(R.string.ok, null)
-                .show()
-            return
-        }
-        val chosen = Store.apps(context).toMutableSet()
-        val filtered = ArrayList<Row>(rows)
+        if (rows.isEmpty()) return
+        val sheet = BottomSheetDialog(context, R.style.ThemeOverlay_Gozar_BottomSheet)
+        val view = LayoutInflater.from(context).inflate(R.layout.sheet_app_picker, null)
+        sheet.setContentView(view)
 
-        val builder = AlertDialog.Builder(context)
-        builder.setTitle(R.string.apps)
-        val layout = android.widget.LinearLayout(context).apply {
-            orientation = android.widget.LinearLayout.VERTICAL
-            setPadding(0, 0, 0, 0)
+        val list = view.findViewById<android.widget.ListView>(R.id.appList)
+        val search = view.findViewById<EditText>(R.id.appSearch)
+        val count = view.findViewById<TextView>(R.id.appCount)
+        val empty = view.findViewById<TextView>(R.id.appEmpty)
+        val all = view.findViewById<MaterialButton>(R.id.appAll)
+        val save = view.findViewById<MaterialButton>(R.id.appSave)
+
+        val filtered = ArrayList<Row>()
+        filtered.addAll(rows)
+
+        fun refreshCount() {
+            count.text = if (chosen.isEmpty()) {
+                context.getString(R.string.apps_all_hint)
+            } else {
+                context.getString(R.string.apps_picked, chosen.size)
+            }
+            save.isEnabled = true
         }
-        val search = EditText(context).apply {
-            hint = context.getString(R.string.apps_search)
-            setSingleLine(true)
-            setPadding(56, 24, 56, 24)
-        }
-        val list = android.widget.ListView(context).apply { dividerHeight = 0 }
-        layout.addView(search, android.widget.LinearLayout.LayoutParams(-1, -2))
-        layout.addView(list, android.widget.LinearLayout.LayoutParams(-1, 0, 1f))
-        builder.setView(layout)
 
         val adapter = object : BaseAdapter() {
             override fun getCount(): Int = filtered.size
@@ -89,17 +90,16 @@ class AppPicker(private val context: Context, private val done: () -> Unit) {
             override fun getItemId(position: Int): Long = position.toLong()
 
             override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View {
-                val view = convertView ?: LayoutInflater.from(context)
-                    .inflate(R.layout.item_app_pick, parent, false)
                 val row = filtered[position]
-                view.findViewById<TextView>(R.id.appLabel).text = row.label
-                view.findViewById<TextView>(R.id.appSystem).visibility =
+                val cell = convertView ?: LayoutInflater.from(context).inflate(R.layout.item_app_pick, parent, false)
+                cell.findViewById<TextView>(R.id.appLabel).text = row.label
+                cell.findViewById<TextView>(R.id.appPackage).text = row.packageName
+                cell.findViewById<TextView>(R.id.appSystem).visibility =
                     if (row.system) View.VISIBLE else View.GONE
-                view.findViewById<TextView>(R.id.appPackage).text = row.packageName
-                val picture = view.findViewById<ImageView>(R.id.appIcon)
+                val picture = cell.findViewById<ImageView>(R.id.appIcon)
                 if (row.icon != null) picture.setImageDrawable(row.icon) else picture.setImageResource(R.drawable.ic_apps)
-                view.findViewById<CheckBox>(R.id.appCheck).isChecked = row.packageName in chosen
-                return view
+                cell.findViewById<CheckBox>(R.id.appCheck).isChecked = row.packageName in chosen
+                return cell
             }
         }
         list.adapter = adapter
@@ -107,6 +107,7 @@ class AppPicker(private val context: Context, private val done: () -> Unit) {
             val row = filtered[position]
             if (!chosen.add(row.packageName)) chosen.remove(row.packageName)
             adapter.notifyDataSetChanged()
+            refreshCount()
         }
 
         search.addTextChangedListener(object : TextWatcher {
@@ -122,19 +123,23 @@ class AppPicker(private val context: Context, private val done: () -> Unit) {
                         it.label.lowercase().contains(query) || it.packageName.contains(query)
                     }
                 }
+                empty.visibility = if (filtered.isEmpty()) View.VISIBLE else View.GONE
                 adapter.notifyDataSetChanged()
             }
         })
 
-        builder.setNeutralButton(R.string.apps_all) { _, _ ->
-            Store.setApps(context, emptySet())
+        all.setOnClickListener {
+            chosen.clear()
+            adapter.notifyDataSetChanged()
+            refreshCount()
+        }
+        save.setOnClickListener {
+            Store.setApps(context, HashSet(chosen))
+            sheet.dismiss()
             done()
         }
-        builder.setNegativeButton(R.string.cancel, null)
-        builder.setPositiveButton(R.string.routing_save) { _, _ ->
-            Store.setApps(context, chosen)
-            done()
-        }
-        builder.show()
+        refreshCount()
+        dialog = sheet
+        sheet.show()
     }
 }

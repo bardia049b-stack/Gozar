@@ -8,7 +8,7 @@ import androidx.compose.ui.window.rememberWindowState
 
 fun main(args: Array<String>) {
     if (args.contains("--version")) {
-        println("Gozar 1.8.2")
+        println("Gozar 1.8.3")
         return
     }
     if (args.contains("--selftest")) {

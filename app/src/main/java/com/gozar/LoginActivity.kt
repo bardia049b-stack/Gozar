@@ -152,7 +152,8 @@ class LoginActivity : BaseActivity() {
     }
 
     private fun render() {
-        if (Fox.signedIn(this) && !Fox.busy) {
+        val signed = Fox.signedIn(this)
+        if (signed && !Fox.busy) {
             startActivity(Intent(this, MainActivity::class.java))
             finish()
             return
@@ -165,7 +166,6 @@ class LoginActivity : BaseActivity() {
         codeBox.visibility = if (step && !link) View.VISIBLE else View.GONE
         forgot.visibility = if (step || create) View.GONE else View.VISIBLE
         switchButton.visibility = if (step) View.GONE else View.VISIBLE
-        busyRow.visibility = if (Fox.busy && notice.text.isNotEmpty()) View.VISIBLE else View.GONE
 
         title.text = when {
             step -> getString(R.string.login_check_title)
@@ -178,21 +178,28 @@ class LoginActivity : BaseActivity() {
             create -> getString(R.string.login_create_sub)
             else -> getString(R.string.login_signin_sub)
         }
-        primary.text = when {
+        val action = when {
             step && link -> getString(R.string.login_confirm_action)
             step -> getString(R.string.login_continue)
             create -> getString(R.string.login_create_action)
             else -> getString(R.string.login_action)
         }
+        val stage = Fox.stage.ifEmpty { getString(R.string.login_working) }
+        notice.text = if (Fox.busy) stage else ""
+        busyRow.visibility = if (Fox.busy) View.VISIBLE else View.GONE
+        primary.text = if (Fox.busy) stage else action
         primary.isEnabled = !Fox.busy
-        switchButton.text = if (create) getString(R.string.login_have_account) else getString(R.string.login_no_account)
-        notice.text = Fox.stage
+        mail.isEnabled = !Fox.busy
+        secret.isEnabled = !Fox.busy
+        confirm.isEnabled = !Fox.busy
+        codeInput.isEnabled = !Fox.busy
 
         val trouble = Fox.message.isNotEmpty() &&
             Fox.message != "code" && Fox.message != "link" &&
             Fox.message != "ping" && Fox.message != "servers" && Fox.message != "quota"
         if (trouble) {
-            show(Fox.message)
+            error.text = Fox.message
+            error.visibility = View.VISIBLE
         } else {
             error.visibility = View.GONE
         }

@@ -352,4 +352,6 @@ AGPL-3.0-or-later</string>
     <string name="login_show_password">نمایش رمز عبور</string>
     <string name="apps_none">برنامه‌ای روی این دستگاه پیدا نشد.</string>
     <string name="chain_hint_short">socks5://host:port</string>
+    <string name="apps_all_hint">همه برنامه‌ها از تونل می‌روند</string>
+    <string name="apps_picked">%1$d انتخاب شده</string>
 </resources>

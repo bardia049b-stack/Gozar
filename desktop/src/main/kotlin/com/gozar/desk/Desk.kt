@@ -52,7 +52,7 @@ object Desk {
     private var pendingUid = ""
     private var pendingToken = ""
 
-    fun version(): String = "1.8.2"
+    fun version(): String = "1.8.3"
 
     fun say(text: String) {
         message = text
