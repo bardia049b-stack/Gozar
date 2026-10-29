@@ -15,13 +15,10 @@ def stack(*items):
     return "<br>".join(items)
 
 
-apk = "Gozar_%s_" % version
+apk = "Gozar_%s.apk" % version
 rows = [
     ("**Android**", stack(
-        badge("APK", "Universal", "1a7f37", "android", apk + "universal.apk"),
-        badge("APK", "ARMv8", "2da44e", "android", apk + "arm64-v8a.apk"),
-        badge("APK", "ARMv7", "2da44e", "android", apk + "armeabi-v7a.apk"),
-        badge("APK", "x86__64", "2da44e", "android", apk + "x86_64.apk"))),
+        badge("APK", "Android", "1a7f37", "android", apk))),
     ("**Windows**", stack(
         badge("MSI", "x64", "0550ae", "windows", "Gozar-%s-Windows-x64.msi" % version))),
     ("**macOS**", stack(
