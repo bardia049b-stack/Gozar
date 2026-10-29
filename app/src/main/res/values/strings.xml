@@ -347,6 +347,5 @@ AGPL-3.0-or-later</string>
     <string name="chain_hint">socks5://host:port, then a second hop with a comma</string>
     <string name="apps">Apps in the tunnel</string>
     <string name="apps_all">All apps</string>
-    <string name="apps_count">%1$d app(s) only</string>
     <string name="apps_restart">Reconnect for the new app list to apply.</string>
 </resources>

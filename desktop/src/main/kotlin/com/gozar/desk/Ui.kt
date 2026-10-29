@@ -68,6 +68,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Switch
+import com.gozar.FoxRoute
+import com.gozar.FoxUpstream
 
 internal object Flag {
 

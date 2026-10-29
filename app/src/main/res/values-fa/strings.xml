@@ -347,6 +347,5 @@ AGPL-3.0-or-later</string>
     <string name="chain_hint">socks5://host:port و پرش دوم با کاما</string>
     <string name="apps">برنامه‌های داخل تونل</string>
     <string name="apps_all">همه برنامه‌ها</string>
-    <string name="apps_count">فقط %1$d برنامه</string>
     <string name="apps_restart">برای اعمال فهرست جدید یک‌بار قطع و وصل کنید.</string>
 </resources>
