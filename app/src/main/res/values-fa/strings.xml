@@ -319,7 +319,6 @@ AGPL-3.0-or-later</string>
     <string name="project">پروژه</string>
     <string name="project_desc">کد منبع و نسخه‌ها</string>
     <string name="update_channel">به‌روزرسانی‌ها</string>
-    <string name="about_section">درباره</string>
     <string name="update_action">دانلود</string>
     <string name="update_latest">شما آخرین نسخه را دارید.</string>
 </resources>

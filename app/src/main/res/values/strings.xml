@@ -319,7 +319,6 @@ AGPL-3.0-or-later</string>
     <string name="project">Project</string>
     <string name="project_desc">Source code and releases</string>
     <string name="update_channel">Updates</string>
-    <string name="about_section">About</string>
     <string name="update_action">Download</string>
     <string name="update_latest">You are on the latest version.</string>
 </resources>
