@@ -201,9 +201,20 @@ jobs:
           set -e
           DESKTOP=$(grep -m1 '^version:' desktop_flutter/pubspec.yaml | awk '{print $2}' | cut -d+ -f1)
           ANDROID=$(grep -m1 'versionName' app/build.gradle | sed -E "s/.*'([^']+)'.*/\1/" | tr -d ' ')
-          test "v$DESKTOP" = "$GITHUB_REF_NAME"
+          if [ "$GITHUB_REF_NAME" != "v$DESKTOP" ] && [ "$GITHUB_REF_NAME" != "v$ANDROID-desktop" ]; then
+            echo "::error::Release tag does not match a desktop or Android-compatible version"
+            exit 1
+          fi
           echo "desktop=$DESKTOP" >> "$GITHUB_OUTPUT"
           echo "android=$ANDROID" >> "$GITHUB_OUTPUT"
+      - name: Check release files
+        env:
+          ANDROID_VERSION: ${{ steps.version.outputs.android }}
+        run: |
+          set -e
+          for f in "Gozar_${ANDROID_VERSION}_universal.apk" "Gozar_${ANDROID_VERSION}_arm64-v8a.apk" "Gozar_${ANDROID_VERSION}_armeabi-v7a.apk" "Gozar_${ANDROID_VERSION}_x86.apk" "Gozar_${ANDROID_VERSION}_x86_64.apk" Gozar-Windows-x64.zip Gozar-Linux-amd64.tar.xz Gozar-macOS-ARM.tar.xz Gozar-macOS-Intel.tar.xz; do
+            test -s "collected/$f" || { echo "::error::Missing release file: $f"; exit 1; }
+          done
       - name: Import signing key
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
@@ -225,17 +236,40 @@ jobs:
             [ -e "$f" ] || continue
             gpg --batch --yes --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" --detach-sign --output "$f.sig" "$f"
           done
+      - name: Verify signatures
+        run: |
+          set -e
+          mkdir -m 700 "$RUNNER_TEMP/verify-keyring"
+          gpg --homedir "$RUNNER_TEMP/verify-keyring" --batch --import collected/gozar-public-key.asc
+          cd collected
+          for f in *.apk *.zip *.tar.xz; do
+            [ -e "$f" ] || continue
+            test -s "$f.sig"
+            gpg --homedir "$RUNNER_TEMP/verify-keyring" --batch --verify "$f.sig" "$f"
+          done
       - name: Notes
-        run: python3 scripts/notes.py "${{ steps.version.outputs.desktop }}" "${{ github.repository }}" "${{ steps.version.outputs.android }}" > "$RUNNER_TEMP/notes.md"
+        run: python3 scripts/notes.py "${{ steps.version.outputs.desktop }}" "${{ github.repository }}" "${{ steps.version.outputs.android }}" "${{ github.ref_name }}" > "$RUNNER_TEMP/notes.md"
       - name: Publish
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: ${{ format('Gozar {0}', steps.version.outputs.desktop) }}
+          name: ${{ format('Gozar Desktop {0}', steps.version.outputs.desktop) }}
           body_path: ${{ runner.temp }}/notes.md
           make_latest: true
           files: collected/*
           fail_on_unmatched_files: true
+      - name: Verify published files
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANDROID_VERSION: ${{ steps.version.outputs.android }}
+        run: |
+          set -e
+          assets=$(gh release view "$GITHUB_REF_NAME" --json assets --jq '.assets[].name')
+          for f in "Gozar_${ANDROID_VERSION}_universal.apk" "Gozar_${ANDROID_VERSION}_arm64-v8a.apk" "Gozar_${ANDROID_VERSION}_armeabi-v7a.apk" "Gozar_${ANDROID_VERSION}_x86.apk" "Gozar_${ANDROID_VERSION}_x86_64.apk" Gozar-Windows-x64.zip Gozar-Linux-amd64.tar.xz Gozar-macOS-ARM.tar.xz Gozar-macOS-Intel.tar.xz; do
+            printf '%s\n' "$assets" | grep -Fx "$f" >/dev/null
+            printf '%s\n' "$assets" | grep -Fx "$f.sig" >/dev/null
+          done
+          printf '%s\n' "$assets" | grep -Fx gozar-public-key.asc >/dev/null
       - name: Keep one release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
