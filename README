@@ -1,7 +1,13 @@
 Gozar is a Firefox VPN client for Android, Windows, macOS and Linux.
 
-It signs in with a Firefox account, opens the Mozilla proxy tunnel and routes the whole device
-through it. The interface is one screen: the connection control, live usage, the server list and
-an offline route map.
+It signs in with a Firefox account, opens the Mozilla proxy tunnel and routes the whole machine
+through it.
+
+Android keeps the Kotlin app. The desktop apps are Go only: one self-contained binary for Windows,
+macOS and Linux, about 9 MB each, with no Java and no runtime to install. The tunnel is a real
+kernel tunnel: a network adapter carries every packet, the Go TCP/UDP stack answers inside the app,
+DNS is resolved over the tunnel, and only the tunnel's own traffic to the proxy goes out directly.
+A small window opens in the browser for the account, the server list, the connection and the
+counters, and a system proxy mode is kept for machines without administrator rights.
 
 Source code is licensed under GNU AGPL-3.0-or-later. See LICENSE and NOTICE.

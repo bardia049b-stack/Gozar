@@ -14,5 +14,3 @@ dependencyResolutionManagement {
 }
 rootProject.name = "Gozar"
 include ':app'
-include ':core'
-include ':desktop'

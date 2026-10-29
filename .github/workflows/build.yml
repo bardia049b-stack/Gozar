@@ -74,183 +74,6 @@ jobs:
           name: android
           path: out/*
 
-  linux:
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      - uses: gradle/actions/setup-gradle@v4
-
-      - name: Package
-        run: bash ./gradlew :desktop:createDistributable :desktop:packageDeb --no-daemon --stacktrace
-
-      - name: Verify architecture
-        run: |
-          set -e
-          VERSION=$(grep -m1 'packageVersion' desktop/build.gradle | sed -E "s/.*'([^']+)'.*/\1/" | tr -d ' ')
-          DEB=$(ls desktop/build/compose/binaries/main/deb/*.deb | head -1)
-          rm -rf "$RUNNER_TEMP/deb"
-          dpkg-deb -x "$DEB" "$RUNNER_TEMP/deb"
-          python3 scripts/arch_check.py "$RUNNER_TEMP/deb" x86_64
-          file "$DEB" | grep -q "Debian binary package" || { echo "not a deb"; exit 1; }
-          dpkg-deb -f "$DEB" Architecture | grep -qx amd64
-          mkdir -p out
-          cp "$DEB" "out/Gozar-${VERSION}-Linux-amd64.deb"
-
-      - name: Smoke test
-        run: |
-          set -e
-          APP=$(ls -d desktop/build/compose/binaries/main/app/Gozar | head -1)
-          "$APP/bin/Gozar" --version
-          "$APP/bin/Gozar" --selftest | tee "$RUNNER_TEMP/selftest.txt"
-          grep -q "ALL OK" "$RUNNER_TEMP/selftest.txt"
-          "$APP/bin/Gozar" --proxy-test | tee "$RUNNER_TEMP/proxy.txt"
-          grep -q "ALL OK" "$RUNNER_TEMP/proxy.txt"
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: linux
-          path: out/*
-
-  windows:
-    runs-on: windows-latest
-    timeout-minutes: 45
-
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      - uses: gradle/actions/setup-gradle@v4
-
-      - name: WiX
-        shell: pwsh
-        run: |
-          $wix = "C:\Program Files (x86)\WiX Toolset v3.14"
-          if (-not (Test-Path "$wix\bin\light.exe")) { choco install wixtoolset -y --no-progress }
-          if (-not (Test-Path "$wix\bin\light.exe")) { throw "light.exe is missing" }
-
-      - name: Fetch wintun
-        shell: pwsh
-        run: |
-          $zip = "$env:RUNNER_TEMP\wintun.zip"
-          Invoke-WebRequest -Uri "https://www.wintun.net/builds/wintun-0.14.1.zip" -OutFile $zip
-          Expand-Archive -Path $zip -DestinationPath "$env:RUNNER_TEMP\wintun" -Force
-          New-Item -ItemType Directory -Force -Path "desktop\src\main\resources" | Out-Null
-          Copy-Item "$env:RUNNER_TEMP\wintun\wintun\bin\amd64\wintun.dll" "desktop\src\main\resources\wintun.dll" -Force
-
-      - name: Package
-        shell: bash
-        run: bash ./gradlew :desktop:createDistributable :desktop:packageMsi --no-daemon --stacktrace
-
-      - name: Verify installer platform
-        shell: pwsh
-        run: |
-          $msi = (Get-ChildItem "desktop\build\compose\binaries\main\msi\*.msi" | Select-Object -First 1).FullName
-          Write-Host "installer: $msi"
-          $installer = New-Object -ComObject WindowsInstaller.Installer
-          $db = $installer.GetType().InvokeMember("OpenDatabase", "InvokeMethod", $null, $installer, @($msi, 0))
-          $summary = $db.GetType().InvokeMember("SummaryInformation", "GetProperty", $null, $db, @(0))
-          $template = $summary.GetType().InvokeMember("Property", "GetProperty", $null, $summary, @(7))
-          Write-Host "template=$template"
-          if ("$template" -notlike "x64*") { throw "the installer platform is $template" }
-
-      - name: Verify packed binaries
-        shell: bash
-        run: |
-          set -e
-          PY=$(command -v python3 || command -v python)
-          "$PY" scripts/arch_check.py desktop/build/compose/binaries/main/app x86_64
-
-      - name: Collect
-        shell: bash
-        run: |
-          set -e
-          VERSION=$(grep -m1 'packageVersion' desktop/build.gradle | sed -E "s/.*'([^']+)'.*/\1/" | tr -d ' ')
-          MSI=$(ls desktop/build/compose/binaries/main/msi/*.msi | head -1)
-          mkdir -p out
-          cp "$MSI" "out/Gozar-${VERSION}-Windows-x64.msi"
-          ls -l out
-
-      - name: Smoke test
-        shell: bash
-        run: |
-          set -e
-          APP=$(ls -d desktop/build/compose/binaries/main/app/Gozar | head -1)
-          "$APP/Gozar.exe" --version
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: windows
-          path: out/*
-
-  macos:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - runner: macos-15-intel
-            arch: x86_64
-            label: Intel
-          - runner: macos-15
-            arch: arm64
-            label: ARM
-    runs-on: ${{ matrix.runner }}
-    timeout-minutes: 45
-
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      - uses: gradle/actions/setup-gradle@v4
-
-      - name: Package
-        run: bash ./gradlew :desktop:packageDmg --no-daemon --stacktrace
-
-      - name: Verify architecture
-        run: |
-          set -e
-          VERSION=$(grep -m1 'packageVersion' desktop/build.gradle | sed -E "s/.*'([^']+)'.*/\1/" | tr -d ' ')
-          DMG=$(ls desktop/build/compose/binaries/main/dmg/*.dmg | head -1)
-          python3 scripts/arch_check.py desktop/build/compose/binaries/main/app ${{ matrix.arch }}
-          MOUNT="$RUNNER_TEMP/mount"
-          rm -rf "$MOUNT" && mkdir -p "$MOUNT"
-          hdiutil attach "$DMG" -mountpoint "$MOUNT" -nobrowse -quiet
-          python3 scripts/arch_check.py "$MOUNT" ${{ matrix.arch }}
-          hdiutil detach "$MOUNT" -quiet
-          mkdir -p out
-          cp "$DMG" "out/Gozar-${VERSION}-macOS-${{ matrix.label }}.dmg"
-
-      - name: Smoke test
-        run: |
-          set -e
-          APP=$(ls -d desktop/build/compose/binaries/main/app/Gozar.app | head -1)
-          "$APP/Contents/MacOS/Gozar" --version
-          "$APP/Contents/MacOS/Gozar" --selftest | tee "$RUNNER_TEMP/selftest.txt"
-          grep -q "ALL OK" "$RUNNER_TEMP/selftest.txt"
-          "$APP/Contents/MacOS/Gozar" --proxy-test | tee "$RUNNER_TEMP/proxy.txt"
-          grep -q "ALL OK" "$RUNNER_TEMP/proxy.txt"
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: macos-${{ matrix.label }}
-          path: out/*
-
-  godesk:
     strategy:
       fail-fast: false
       matrix:
@@ -304,8 +127,76 @@ jobs:
           name: gozar-go-${{ matrix.name }}
           path: go-desktop/out/*
 
+  godesk:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            goos: linux
+            arch: amd64
+            name: Linux-amd64
+          - os: ubuntu-latest
+            goos: linux
+            arch: arm64
+            name: Linux-arm64
+          - os: windows-latest
+            goos: windows
+            arch: amd64
+            name: Windows-x64
+          - os: macos-15
+            goos: darwin
+            arch: arm64
+            name: macOS-ARM
+          - os: macos-15-intel
+            goos: darwin
+            arch: amd64
+            name: macOS-Intel
+
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache-dependency-path: go-desktop/go.sum
+
+      - name: Vet
+        working-directory: go-desktop
+        shell: bash
+        run: go vet ./...
+
+      - name: Build
+        working-directory: go-desktop
+        shell: bash
+        env:
+          CGO_ENABLED: '0'
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.arch }}
+        run: |
+          set -e
+          mkdir -p out
+          ext=""
+          if [ "$GOOS" = "windows" ]; then ext=".exe"; fi
+          go build -trimpath -ldflags "-s -w" -o "out/Gozar-${{ matrix.name }}$ext" ./cmd/gozar
+          ls -l out
+
+      - name: Self test
+        if: matrix.goos == 'linux' && matrix.arch == 'amd64'
+        working-directory: go-desktop
+        shell: bash
+        run: ./out/Gozar-Linux-amd64 --selftest
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gozar-${{ matrix.name }}
+          path: go-desktop/out/*
+
   publish:
-    needs: [android, linux, windows, macos]
+    needs: [android, godesk]
     if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -347,7 +238,7 @@ jobs:
         run: |
           set -e
           cd collected
-          for f in *.apk *.msi *.dmg *.deb; do
+          for f in *.apk *.exe Gozar-*; do
             [ -e "$f" ] || continue
             gpg --batch --yes --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" --detach-sign --output "$f.sig" "$f"
           done

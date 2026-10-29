@@ -14,8 +14,6 @@ func isMac() bool { return runtime.GOOS == "darwin" }
 func reg(name, value string) error   { return nil }
 func dword(name, value string) error { return nil }
 
-// Current is the port the system proxy points at, or 0. Only the ports this
-// app hands out are considered.
 func Current() int {
 	if isMac() {
 		out, err := exec.Command("networksetup", "-getwebproxy", "Wi-Fi").Output()

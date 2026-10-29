@@ -23,12 +23,13 @@ rows = [
         badge("APK", "ARMv7", "2da44e", "android", apk + "armeabi-v7a.apk"),
         badge("APK", "x86__64", "2da44e", "android", apk + "x86_64.apk"))),
     ("**Windows**", stack(
-        badge("MSI", "x64", "0550ae", "windows", "Gozar-%s-Windows-x64.msi" % version))),
+        badge("EXE", "x64", "0550ae", "windows", "Gozar-%s-Windows-x64.exe" % version))),
     ("**macOS**", stack(
-        badge("DMG", "Intel", "24292f", "apple", "Gozar-%s-macOS-Intel.dmg" % version),
-        badge("DMG", "Apple__Silicon", "24292f", "apple", "Gozar-%s-macOS-ARM.dmg" % version))),
+        badge("Binary", "Intel", "24292f", "apple", "Gozar-%s-macOS-Intel" % version),
+        badge("Binary", "Apple__Silicon", "24292f", "apple", "Gozar-%s-macOS-ARM" % version))),
     ("**Linux**", stack(
-        badge("DEB", "amd64", "e36209", "linux", "Gozar-%s-Linux-amd64.deb" % version))),
+        badge("Binary", "amd64", "e36209", "linux", "Gozar-%s-Linux-amd64" % version),
+        badge("Binary", "arm64", "e36209", "linux", "Gozar-%s-Linux-arm64" % version))),
 ]
 
 lines = []
@@ -42,27 +43,27 @@ for name, cell in rows:
 lines.append("")
 lines.append("### What changed")
 lines.append("")
-lines.append("- Desktop builds for Windows (x64), macOS (Intel and Apple Silicon) and Linux (amd64).")
-lines.append("- The log screen was removed from every platform.")
-lines.append("- The Firefox tunnel uses the Mozilla proxy with the same 50 GB monthly pass.")
-lines.append("- The system proxy is switched on when the tunnel is up and switched back off on disconnect.")
-lines.append("- WireGuard and AmneziaWG were removed from every platform; Gozar is a Firefox client only.")
-lines.append("- First launch opens a sign-in screen with email and password, Google and Apple shortcuts and a "
-             "create-account switch.")
-lines.append("- Settings shows the signed-in account, monthly usage and a sign-out button.")
-lines.append("- The package name, the window title, the installer names and the artifacts are Gozar now.")
-lines.append("- The app has a new launcher icon on every platform.")
+lines.append("- The desktop apps are rewritten in Go: one self-contained binary of about 9 MB for "
+             "Windows, macOS and Linux, with no Java and no runtime to install.")
+lines.append("- The tunnel is now a real kernel tunnel: a network adapter carries every packet, the "
+             "Go stack answers TCP, UDP and DNS inside the app, and only the tunnel's own traffic "
+             "goes out directly.")
+lines.append("- A simple window ships with the binary: sign in, choose a server, connect, and watch "
+             "the traffic counters.")
+lines.append("- A system proxy mode remains for machines without administrator rights, and the proxy "
+             "is always removed on exit.")
+lines.append("- The MSI, DMG and DEB packages and the Kotlin desktop code were removed.")
 lines.append("")
 lines.append("### Install")
 lines.append("")
-lines.append("- **Windows**: run the `.msi` and accept the prompt from the installer.")
-lines.append("- **macOS**: open the `.dmg` and drag Gozar to Applications. The first proxy change asks "
-             "for your password.")
-lines.append("- **Linux**: `sudo apt install ./Gozar-%s-Linux-amd64.deb`." % version)
+lines.append("- **Windows**: run `Gozar-Windows-x64.exe` as administrator for the tunnel. The window "
+             "opens in your browser and the tunnel driver travels inside the file.")
+lines.append("- **macOS**: `chmod +x Gozar-macOS-ARM`, run it, and allow the network change prompt.")
+lines.append("- **Linux**: `chmod +x Gozar-Linux-amd64`, then `sudo ./Gozar-Linux-amd64` for the tunnel.")
+lines.append("- **Proxy mode** works without administrator rights on every platform.")
 lines.append("")
-lines.append("Every desktop file is built on its own runner and the architecture of the packed runtime "
-             "is checked before upload, so the Intel and Apple Silicon images cannot be swapped and the "
-             "x64 Windows and amd64 Linux files stay 64-bit only.")
+lines.append("Every desktop file is a single self-contained binary built on its own runner, and the "
+             "tunnel driver is embedded, so nothing else has to be installed.")
 lines.append("")
 lines.append("`gozar-public-key.asc` verifies the `.sig` file of every asset.")
 

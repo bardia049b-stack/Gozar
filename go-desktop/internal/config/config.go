@@ -17,11 +17,9 @@ type Config struct {
 	BypassLAN  bool     `json:"bypass_lan"`
 	Bypass     []string `json:"bypass"`
 	Chain      []string `json:"chain"`
-	Apps       []string `json:"apps"`
 	Port       int      `json:"port"`
 }
 
-// Dir is where Gozar keeps its own files, one folder per user.
 func Dir() string {
 	base, err := os.UserConfigDir()
 	if err != nil {
@@ -34,17 +32,20 @@ func Dir() string {
 
 func path() string { return filepath.Join(Dir(), "config.json") }
 
+func defaults() Config { return Config{FullTunnel: true, BypassLAN: true, Port: 10810} }
+
 func Load() Config {
-	var loaded Config
+	fresh := defaults()
 	data, err := os.ReadFile(path())
 	if err != nil {
-		return Config{FullTunnel: true, BypassLAN: true, Port: 10810}
+		return fresh
 	}
+	var loaded Config
 	if json.Unmarshal(data, &loaded) != nil {
-		return Config{FullTunnel: true, BypassLAN: true, Port: 10810}
+		return fresh
 	}
 	if loaded.Port == 0 {
-		loaded.Port = 10810
+		loaded.Port = fresh.Port
 	}
 	return loaded
 }

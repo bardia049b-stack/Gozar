@@ -10,11 +10,8 @@ import (
 	"time"
 )
 
-// Dialer opens a connection to host:port for one client request.
 type Dialer func(host string, port int) (io.ReadWriteCloser, error)
 
-// Server is a minimal SOCKS5 proxy that every application on the machine can
-// point at while the tunnel carries the traffic.
 type Server struct {
 	listener net.Listener
 	dial     Dialer
@@ -173,7 +170,6 @@ func pump(local net.Conn, remote io.ReadWriteCloser, count func(down, up int64))
 	remote.Close()
 }
 
-// Address renders host:port for logging and dialing.
 func Address(host string, port int) string {
 	return net.JoinHostPort(host, strconv.Itoa(port))
 }

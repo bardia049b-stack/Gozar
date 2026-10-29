@@ -9,8 +9,6 @@ import (
 	"time"
 )
 
-// Set points the system proxy at 127.0.0.1:port; Clear removes it. Only a
-// proxy this app set is ever cleared, so a proxy the user set by hand stays.
 func Set(port int) error {
 	switch platform() {
 	case "windows":
@@ -61,8 +59,6 @@ func Clear() error {
 	return nil
 }
 
-// Stale reports whether the system proxy points at a port this app would use
-// but no process is listening there, which leaves the machine without network.
 func Stale() bool {
 	port := Current()
 	if port < 10810 || port > 10830 {

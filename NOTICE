@@ -38,3 +38,11 @@ ZXing
 -----
 Source: https://github.com/zxing/zxing
 License: Apache License 2.0
+
+Wintun
+------
+The Windows tunnel uses Wintun, embedded in the Windows build.
+
+Copyright (C) 2018-2024 WireGuard LLC
+Source: https://www.wintun.net
+License: WireGuard's Wintun license (prebuilt binaries may be used freely)

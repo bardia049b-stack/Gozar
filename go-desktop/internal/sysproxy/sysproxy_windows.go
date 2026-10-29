@@ -1,5 +1,6 @@
 //go:build windows
 
+
 package sysproxy
 
 import (
@@ -33,7 +34,6 @@ func dword(name, value string) error {
 	return key.SetDWordValue(name, uint32(number))
 }
 
-// Current is the port of the proxy the system settings point at, or 0.
 func Current() int {
 	key, err := registry.OpenKey(registry.CURRENT_USER, settingsKey, registry.QUERY_VALUE)
 	if err != nil {

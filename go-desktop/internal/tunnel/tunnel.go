@@ -16,13 +16,11 @@ import (
 
 const agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:149.0) Gecko/20100101 Firefox/149.0"
 
-// Target is the proxy endpoint a tunnel goes through.
 type Target struct {
 	Host string
 	Port int
 }
 
-// Dup is a bidirectional stream to the far side of a tunnel.
 type Dup interface {
 	io.ReadWriteCloser
 }
@@ -32,9 +30,6 @@ var (
 	h2DownTill time.Time
 )
 
-// Open builds a tunnel to host:port through the proxy at target, with the
-// bearer pass Mozilla issued. HTTP/2 is tried first and remembered as broken
-// for ten minutes when it fails, so a slow network does not pay for it twice.
 func Open(target Target, host string, port int, pass string, timeout time.Duration) (Dup, error) {
 	var firstErr error
 	if !h2Broken() {
@@ -395,7 +390,6 @@ func (s *h2Stream) Close() error {
 	return s.conn.Close()
 }
 
-// Probe asks the far side for its address, so the app can show the exit IP.
 func Probe(target Target, pass string, timeout time.Duration) (string, error) {
 	conn, err := Open(target, "ifconfig.me", 80, pass, timeout)
 	if err != nil {
