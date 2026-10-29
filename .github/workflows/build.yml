@@ -142,7 +142,7 @@ jobs:
 
       - name: Package
         shell: bash
-        run: ./gradlew.bat :desktop:createDistributable :desktop:packageMsi --no-daemon --stacktrace
+        run: bash ./gradlew :desktop:createDistributable :desktop:packageMsi --no-daemon --stacktrace
 
       - name: Verify architecture
         shell: bash
