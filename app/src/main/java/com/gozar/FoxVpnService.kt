@@ -65,7 +65,7 @@ class FoxVpnService : VpnService() {
         if (Store.bypassLan(this) && Build.VERSION.SDK_INT >= 33) {
             for (range in LAN_RANGES) {
                 try {
-                    builder.excludeRoute(android.net.IpPrefix(java.net.InetAddress.getByName(range[0]), range[1]))
+                    builder.excludeRoute(android.net.IpPrefix(java.net.InetAddress.getByName(range.first), range.second))
                 } catch (e: Exception) {
                 }
             }
@@ -175,10 +175,10 @@ class FoxVpnService : VpnService() {
     companion object {
         const val LOCAL_ADDRESS = "10.111.0.2"
         val LAN_RANGES = arrayOf(
-            arrayOf("10.0.0.0", 8),
-            arrayOf("172.16.0.0", 12),
-            arrayOf("192.168.0.0", 16),
-            arrayOf("169.254.0.0", 16)
+            "10.0.0.0" to 8,
+            "172.16.0.0" to 12,
+            "192.168.0.0" to 16,
+            "169.254.0.0" to 16
         )
         const val DNS_ADDRESS = "10.111.0.53"
         private const val CHANNEL = "fox_vpn"
