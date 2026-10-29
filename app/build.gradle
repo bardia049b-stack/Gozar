@@ -14,9 +14,18 @@ android {
         applicationId 'com.gozar'
         minSdk 24
         targetSdk 35
-        versionCode 17
-        versionName '1.7.0'
+        versionCode 18
+        versionName '1.7.1'
         resourceConfigurations += ['en', 'fa']
+    }
+
+    splits {
+        abi {
+            enable true
+            reset()
+            include 'arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64'
+            universalApk true
+        }
     }
 
     signingConfigs {

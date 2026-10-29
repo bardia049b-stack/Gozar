@@ -6,7 +6,6 @@ import android.os.Bundle
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.widget.LinearLayout
-import android.widget.ProgressBar
 import android.widget.TextView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
@@ -15,7 +14,8 @@ import com.google.android.material.textfield.TextInputLayout
 class LoginActivity : BaseActivity() {
 
     private companion object {
-        const val SIGN_IN_PAGE = "https://accounts.firefox.com/signin"
+        const val ACCOUNT_PAGE = "https://accounts.firefox.com/signin"
+        const val RESET_PAGE = "https://accounts.firefox.com/reset_password"
     }
 
     private lateinit var title: TextView
@@ -29,11 +29,13 @@ class LoginActivity : BaseActivity() {
     private lateinit var confirm: TextInputEditText
     private lateinit var codeInput: TextInputEditText
     private lateinit var primary: MaterialButton
-    private lateinit var switchLine: TextView
+    private lateinit var forgot: MaterialButton
+    private lateinit var switchButton: MaterialButton
     private lateinit var social: LinearLayout
     private lateinit var divider: LinearLayout
-    private lateinit var progress: ProgressBar
+    private lateinit var busyRow: LinearLayout
     private lateinit var notice: TextView
+    private lateinit var error: TextView
 
     private var create = false
     private val listener: () -> Unit = { render() }
@@ -52,20 +54,40 @@ class LoginActivity : BaseActivity() {
         confirm = findViewById(R.id.loginConfirm)
         codeInput = findViewById(R.id.loginCode)
         primary = findViewById(R.id.loginPrimary)
-        switchLine = findViewById(R.id.loginSwitch)
+        forgot = findViewById(R.id.loginForgot)
+        switchButton = findViewById(R.id.loginSwitch)
         social = findViewById(R.id.loginSocial)
         divider = findViewById(R.id.loginDivider)
-        progress = findViewById(R.id.loginProgress)
+        busyRow = findViewById(R.id.loginBusy)
         notice = findViewById(R.id.loginNotice)
+        error = findViewById(R.id.loginError)
 
         primary.setOnClickListener { act() }
-        switchLine.setOnClickListener {
+        forgot.setOnClickListener { web(RESET_PAGE) }
+        switchButton.setOnClickListener {
             create = !create
+            error.visibility = View.GONE
             render()
         }
-        findViewById<View>(R.id.loginGoogle).setOnClickListener { web(SIGN_IN_PAGE) }
-        findViewById<View>(R.id.loginApple).setOnClickListener { web(SIGN_IN_PAGE) }
+        findViewById<View>(R.id.loginGoogle).setOnClickListener { web(ACCOUNT_PAGE) }
+        findViewById<View>(R.id.loginApple).setOnClickListener { web(ACCOUNT_PAGE) }
         secret.setOnEditorActionListener { _, action, _ ->
+            if (action == EditorInfo.IME_ACTION_DONE) {
+                act()
+                true
+            } else {
+                false
+            }
+        }
+        confirm.setOnEditorActionListener { _, action, _ ->
+            if (action == EditorInfo.IME_ACTION_DONE) {
+                act()
+                true
+            } else {
+                false
+            }
+        }
+        codeInput.setOnEditorActionListener { _, action, _ ->
             if (action == EditorInfo.IME_ACTION_DONE) {
                 act()
                 true
@@ -87,14 +109,18 @@ class LoginActivity : BaseActivity() {
         try {
             startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
         } catch (e: Exception) {
-            notice.text = getString(R.string.login_no_browser)
-            notice.visibility = View.VISIBLE
+            show(getString(R.string.login_no_browser))
         }
+    }
+
+    private fun show(text: String) {
+        error.text = text
+        error.visibility = View.VISIBLE
     }
 
     private fun act() {
         if (Fox.busy) return
-        notice.visibility = View.GONE
+        error.visibility = View.GONE
         if (Fox.needsStep()) {
             if (Fox.isLinkStep()) Fox.confirmLink(this) else Fox.submitCode(this, codeInput.text?.toString().orEmpty().trim())
             return
@@ -102,16 +128,15 @@ class LoginActivity : BaseActivity() {
         val address = mail.text?.toString()?.trim().orEmpty()
         val password = secret.text?.toString().orEmpty()
         if (address.isEmpty() || password.isEmpty()) {
-            notice.text = getString(R.string.login_fill)
-            notice.visibility = View.VISIBLE
+            show(getString(R.string.login_fill))
             return
         }
         if (create && confirm.text?.toString().orEmpty() != password) {
-            notice.text = getString(R.string.login_mismatch)
-            notice.visibility = View.VISIBLE
+            show(getString(R.string.login_mismatch))
             return
         }
         secret.setText("")
+        confirm.setText("")
         if (create) Fox.signUp(this, address, password) else Fox.signIn(this, address, password)
     }
 
@@ -127,21 +152,22 @@ class LoginActivity : BaseActivity() {
         secretBox.visibility = if (step) View.GONE else View.VISIBLE
         confirmBox.visibility = if (create && !step) View.VISIBLE else View.GONE
         codeBox.visibility = if (step && !link) View.VISIBLE else View.GONE
+        forgot.visibility = if (step || create) View.GONE else View.VISIBLE
         social.visibility = if (step) View.GONE else View.VISIBLE
         divider.visibility = if (step) View.GONE else View.VISIBLE
-        switchLine.visibility = if (step) View.GONE else View.VISIBLE
-        progress.visibility = if (Fox.busy) View.VISIBLE else View.GONE
+        switchButton.visibility = if (step) View.GONE else View.VISIBLE
+        busyRow.visibility = if (Fox.busy) View.VISIBLE else View.GONE
 
         title.text = when {
             step -> getString(R.string.login_check_title)
             create -> getString(R.string.login_create_title)
-            else -> getString(R.string.login_welcome_title)
+            else -> getString(R.string.login_signin_title)
         }
         subtitle.text = when {
             step && link -> getString(R.string.login_check_link)
             step -> getString(R.string.login_check_code)
             create -> getString(R.string.login_create_sub)
-            else -> getString(R.string.login_welcome_sub)
+            else -> getString(R.string.login_signin_sub)
         }
         primary.text = when {
             step && link -> getString(R.string.login_confirm_action)
@@ -150,14 +176,14 @@ class LoginActivity : BaseActivity() {
             else -> getString(R.string.login_action)
         }
         primary.isEnabled = !Fox.busy
-        switchLine.text = if (create) getString(R.string.login_have_account) else getString(R.string.login_no_account)
+        switchButton.text = if (create) getString(R.string.login_have_account) else getString(R.string.login_no_account)
+        notice.text = Fox.stage.ifEmpty { getString(R.string.login_working) }
 
         val trouble = Fox.message.isNotEmpty() && Fox.message != "code" && Fox.message != "link"
-        notice.text = when {
-            trouble -> Fox.message
-            Fox.busy -> Fox.stage.ifEmpty { getString(R.string.login_working) }
-            else -> ""
+        if (trouble) {
+            show(Fox.message)
+        } else {
+            error.visibility = View.GONE
         }
-        notice.visibility = if (notice.text.isEmpty()) View.GONE else View.VISIBLE
     }
 }

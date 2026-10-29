@@ -322,4 +322,8 @@ AGPL-3.0-or-later</string>
     <string name="update_action">دانلود</string>
     <string name="update_latest">شما آخرین نسخه را دارید.</string>
     <string name="login_code">کد ۶ رقمی</string>
+    <string name="login_signin_title">ورود</string>
+    <string name="login_signin_sub">با حساب فایرفاکس خود هر ماه ۵۰ گیگابایت دریافت کنید.</string>
+    <string name="login_forgot">رمز عبور را فراموش کرده‌اید؟</string>
+    <string name="login_terms">گز‌ار رمز شما را نمی‌بیند. ورود روی سرورهای موزیلا انجام می‌شود.</string>
 </resources>

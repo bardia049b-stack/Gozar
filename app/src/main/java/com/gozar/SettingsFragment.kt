@@ -54,7 +54,7 @@ class SettingsFragment : Fragment() {
     }
 
     fun restore(intent: Intent?) {
-        paint()
+        if (view != null) paint()
     }
 
     private fun bind(row: Int, switchId: Int, initial: Boolean, save: (Boolean) -> Unit) {
@@ -65,6 +65,7 @@ class SettingsFragment : Fragment() {
     }
 
     private fun paint() {
+        if (view == null) return
         val context = context ?: return
         val signed = Fox.signedIn(context)
         val mail = FoxStore.email(context)

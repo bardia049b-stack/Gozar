@@ -578,6 +578,7 @@ private fun LoginScreen() {
     var confirm by remember { mutableStateOf("") }
     var code by remember { mutableStateOf("") }
     var create by remember { mutableStateOf(false) }
+    var localError by remember { mutableStateOf("") }
     val step = Desk.needsStep()
     val link = Desk.isLinkStep()
 
@@ -585,89 +586,102 @@ private fun LoginScreen() {
         Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp, vertical = 28.dp)
+            .padding(horizontal = 26.dp, vertical = 30.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Box(
-            Modifier.size(76.dp).clip(RoundedCornerShape(24.dp)).background(Palette.primary),
-            contentAlignment = Alignment.Center
-        ) {
-            Image(
-                painter = painterResource("app_mark.png"),
-                contentDescription = "Gozar",
-                modifier = Modifier.size(48.dp)
-            )
-        }
+        Image(
+            painter = painterResource("firefox_logo.png"),
+            contentDescription = "Firefox",
+            modifier = Modifier.size(76.dp)
+        )
         Spacer(Modifier.height(24.dp))
         Text(
             when {
                 step -> "Check your email"
-                create -> "Create\naccount"
-                else -> "Hi,\nWelcome back"
+                create -> "Create account"
+                else -> "Sign in"
             },
             style = MaterialTheme.typography.headlineMedium,
-            color = Palette.onSurface
+            color = Palette.onSurface,
+            modifier = Modifier.fillMaxWidth()
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(6.dp))
         Text(
             when {
                 step && link -> "Mozilla sent a confirmation link. Open it once, then press Confirm."
                 step -> "Mozilla emailed a 6-digit code. Enter it here."
-                create -> "One Firefox account gives you 50 GB every month on every device."
-                else -> "Sign in with your Firefox account to start the tunnel. 50 GB every month, no card needed."
+                create -> "Use your Firefox account to unlock 50 GB every month."
+                else -> "Use your Firefox account to unlock 50 GB every month."
             },
             style = MaterialTheme.typography.bodyMedium,
-            color = Palette.onSurfaceSoft
+            color = Palette.onSurfaceSoft,
+            modifier = Modifier.fillMaxWidth()
         )
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(22.dp))
         if (!step) {
             OutlinedTextField(
                 value = mail,
-                onValueChange = { mail = it },
+                onValueChange = { mail = it; localError = "" },
                 label = { Text("Email") },
                 singleLine = true,
                 enabled = !Desk.busy,
+                shape = RoundedCornerShape(14.dp),
                 modifier = Modifier.fillMaxWidth()
             )
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
             OutlinedTextField(
                 value = secret,
-                onValueChange = { secret = it },
+                onValueChange = { secret = it; localError = "" },
                 label = { Text("Password") },
                 singleLine = true,
                 enabled = !Desk.busy,
                 visualTransformation = PasswordVisualTransformation(),
+                shape = RoundedCornerShape(14.dp),
                 modifier = Modifier.fillMaxWidth()
             )
             if (create) {
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(12.dp))
                 OutlinedTextField(
                     value = confirm,
-                    onValueChange = { confirm = it },
+                    onValueChange = { confirm = it; localError = "" },
                     label = { Text("Repeat password") },
                     singleLine = true,
                     enabled = !Desk.busy,
                     visualTransformation = PasswordVisualTransformation(),
+                    shape = RoundedCornerShape(14.dp),
                     modifier = Modifier.fillMaxWidth()
                 )
+            }
+            if (!create) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = { Shortcuts.openUrl("https://accounts.firefox.com/reset_password") }) {
+                        Text("Forgot password?", style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+            } else {
+                Spacer(Modifier.height(8.dp))
             }
         } else if (!link) {
             OutlinedTextField(
                 value = code,
                 onValueChange = { code = it },
-                label = { Text("Code") },
+                label = { Text("6-digit code") },
                 singleLine = true,
                 enabled = !Desk.busy,
+                shape = RoundedCornerShape(14.dp),
                 modifier = Modifier.fillMaxWidth()
             )
         }
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(14.dp))
         Button(
             onClick = {
                 if (Desk.busy) return@Button
+                localError = ""
                 when {
                     step && link -> Desk.confirmLink()
                     step -> Desk.submitCode(code.trim())
-                    create && confirm != secret -> Desk.say("The two passwords do not match.")
+                    mail.isBlank() || secret.isEmpty() -> localError = "Enter your email and password."
+                    create && confirm != secret -> localError = "The two passwords do not match."
                     else -> {
                         if (create) Desk.signUp(mail.trim(), secret) else Desk.signIn(mail.trim(), secret)
                         secret = ""
@@ -676,33 +690,43 @@ private fun LoginScreen() {
                 }
             },
             enabled = !Desk.busy,
-            modifier = Modifier.fillMaxWidth().height(52.dp)
+            shape = RoundedCornerShape(28.dp),
+            modifier = Modifier.fillMaxWidth().height(54.dp)
         ) {
             Text(
                 when {
                     step && link -> "Confirm"
                     step -> "Continue"
-                    create -> "Sign up"
-                    else -> "Log in"
-                }
+                    create -> "Create account"
+                    else -> "Sign in"
+                },
+                style = MaterialTheme.typography.titleMedium
             )
         }
-        if (Desk.busy || Desk.message.isNotEmpty()) {
-            Spacer(Modifier.height(10.dp))
+        val trouble = localError.ifEmpty { if (Desk.message != "code" && Desk.message != "link") Desk.message else "" }
+        if (Desk.busy) {
+            Spacer(Modifier.height(12.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (Desk.busy) {
-                    CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp, color = Palette.primary)
-                    Spacer(Modifier.width(8.dp))
-                }
+                CircularProgressIndicator(modifier = Modifier.size(15.dp), strokeWidth = 2.dp, color = Palette.primary)
+                Spacer(Modifier.width(9.dp))
                 Text(
-                    if (Desk.busy) Desk.stage.ifEmpty { "Working…" } else Desk.message,
-                    color = if (Desk.busy) Palette.onSurfaceSoft else Palette.error,
-                    style = MaterialTheme.typography.bodySmall
+                    Desk.stage.ifEmpty { "Working…" },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Palette.onSurfaceSoft
                 )
             }
+        } else if (trouble.isNotEmpty()) {
+            Spacer(Modifier.height(12.dp))
+            Text(
+                trouble,
+                style = MaterialTheme.typography.bodySmall,
+                color = Palette.error,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
         if (!step) {
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(22.dp))
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.weight(1f).height(1.dp).background(Palette.surfaceHighest))
                 Text(
@@ -714,24 +738,26 @@ private fun LoginScreen() {
                 Box(Modifier.weight(1f).height(1.dp).background(Palette.surfaceHighest))
             }
             Spacer(Modifier.height(16.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedButton(
                     onClick = { Shortcuts.openUrl("https://accounts.firefox.com/signin") },
-                    modifier = Modifier.weight(1f).height(48.dp)
+                    shape = RoundedCornerShape(26.dp),
+                    modifier = Modifier.weight(1f).height(50.dp)
                 ) { Text("Google") }
                 OutlinedButton(
                     onClick = { Shortcuts.openUrl("https://accounts.firefox.com/signin") },
-                    modifier = Modifier.weight(1f).height(48.dp)
+                    shape = RoundedCornerShape(26.dp),
+                    modifier = Modifier.weight(1f).height(50.dp)
                 ) { Text("Apple") }
             }
-            Spacer(Modifier.height(20.dp))
-            TextButton(onClick = { create = !create }, modifier = Modifier.fillMaxWidth()) {
-                Text(if (create) "Already have an account? Log in" else "New here? Create an account")
+            Spacer(Modifier.height(18.dp))
+            TextButton(onClick = { create = !create; localError = "" }, modifier = Modifier.fillMaxWidth()) {
+                Text(if (create) "Already have an account? Sign in" else "New here? Create an account")
             }
         }
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(12.dp))
         Text(
-            "Gozar " + Desk.version(),
+            "Gozar never sees your password. Sign-in happens on Mozilla servers.",
             style = MaterialTheme.typography.labelSmall,
             color = Palette.onSurfaceSoft,
             textAlign = TextAlign.Center,
