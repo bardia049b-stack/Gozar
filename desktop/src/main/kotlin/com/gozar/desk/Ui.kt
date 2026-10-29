@@ -222,6 +222,10 @@ private fun Footer() {
             color = Palette.onSurfaceSoft,
             modifier = Modifier.weight(1f)
         )
+        TextButton(onClick = {
+            val file = Diag.save()
+            Shortcuts.reveal(file)
+        }) { Text("Report") }
         TextButton(onClick = { Shortcuts.openConfigFolder() }) {
             Text("Folder", style = MaterialTheme.typography.labelSmall)
         }
@@ -284,6 +288,11 @@ private fun HeroCard() {
         if (Desk.fault.isNotEmpty()) {
             Spacer(Modifier.height(8.dp))
             Text(Desk.fault, style = MaterialTheme.typography.bodySmall, color = Palette.foxCream, textAlign = TextAlign.Center)
+        }
+        if (Desk.needsAdmin) {
+            TextButton(onClick = { Elevate.restartInBackground() }) {
+                Text("Restart as administrator", color = Palette.foxCream)
+            }
         }
         if (Desk.live) {
             Spacer(Modifier.height(8.dp))
@@ -577,7 +586,8 @@ private fun SettingsScreen() {
             "Full tunnel (TUN)",
             when {
                 Desk.tunActive -> "Every app is tunnelled · " + (TunService.last().ifEmpty { "on" })
-                fullTunnel -> "Needs administrator rights · falls back to system proxy"
+                fullTunnel -> if (Elevate.windows() && !Elevate.isAdmin()) "On · needs administrator rights"
+                    else "On · every app is tunnelled"
                 else -> "Off · only apps that follow the system proxy"
             }
         ) {

@@ -30,7 +30,10 @@ object TunEngine {
             return false
         }
         val created = TunDevice.open()
-        if (created == null) return false
+        if (created == null) {
+            if (TunService.last().isEmpty()) TunService.note("the tunnel device could not be opened")
+            return false
+        }
         device = created
         FoxRoute.apply(Store.bypassLan(), Store.bypassList())
         FoxRoute.applyChain(Store.chain())
@@ -64,6 +67,18 @@ object TunEngine {
                 running = false
                 active = false
             }
+        }
+        var waited = 0
+        while (!active && running && waited < 4000) {
+            Thread.sleep(100)
+            waited += 100
+        }
+        if (!active) {
+            running = false
+            clearRoutes()
+            device?.close()
+            device = null
+            return false
         }
         return true
     }

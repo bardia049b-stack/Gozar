@@ -54,6 +54,40 @@ object SystemProxy {
         }
     }
 
+    fun port(): Int {
+        return when {
+            windows() -> windowsPort()
+            mac() -> 0
+            else -> 0
+        }
+    }
+
+    fun stale(): Boolean {
+        val port = port()
+        return port in 10810..10830
+    }
+
+    fun repair(): Boolean {
+        if (!stale()) return false
+        return disable()
+    }
+
+    private fun windowsPort(): Int {
+        return try {
+            val process = ProcessBuilder(
+                "reg", "query",
+                "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings",
+                "/v", "ProxyServer"
+            ).redirectErrorStream(true).start()
+            val text = process.inputStream.bufferedReader().readText()
+            process.waitFor(10, TimeUnit.SECONDS)
+            val match = Regex("127\\.0\\.0\\.1:(\\d{2,5})").find(text) ?: return 0
+            match.groupValues[1].toIntOrNull() ?: 0
+        } catch (e: Exception) {
+            0
+        }
+    }
+
     private fun registry(port: Int, on: Boolean): Boolean {
         if (!on) {
             val ok = run("reg", "add", "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings",

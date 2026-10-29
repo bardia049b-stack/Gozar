@@ -334,10 +334,15 @@ object TunService {
 
     fun elevated(command: String): Boolean {
         return when {
-            windows() -> run(
-                "powershell", "-NoProfile", "-Command",
-                "Start-Process -Verb RunAs -WindowStyle Hidden -FilePath cmd -ArgumentList '/c $command'"
-            )
+            windows() -> if (Elevate.isAdmin()) {
+                run("cmd", "/c", command)
+            } else {
+                run(
+                    "powershell", "-NoProfile", "-Command",
+                    "Start-Process -Verb RunAs -Wait -WindowStyle Hidden -FilePath cmd -ArgumentList '/c'," +
+                        "'" + command.replace("'", "''") + "'"
+                )
+            }
             mac() -> run(
                 "osascript", "-e",
                 "do shell script \"$command\" with administrator privileges"

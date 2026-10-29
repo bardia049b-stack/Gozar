@@ -46,13 +46,14 @@ object Desk {
     var proxyPort by mutableStateOf(0)
     var systemProxy by mutableStateOf(false)
     var tunActive by mutableStateOf(false)
+    var needsAdmin by mutableStateOf(false)
 
     private var pendingEmail = ""
     private var pendingPassword = ""
     private var pendingUid = ""
     private var pendingToken = ""
 
-    fun version(): String = "1.8.3"
+    fun version(): String = "1.8.4"
 
     fun say(text: String) {
         message = text

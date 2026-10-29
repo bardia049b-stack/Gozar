@@ -8,7 +8,7 @@ import androidx.compose.ui.window.rememberWindowState
 
 fun main(args: Array<String>) {
     if (args.contains("--version")) {
-        println("Gozar 1.8.3")
+        println("Gozar 1.8.4")
         return
     }
     if (args.contains("--selftest")) {
@@ -19,6 +19,22 @@ fun main(args: Array<String>) {
         println(ProxyTest.run())
         return
     }
+    if (args.contains("--report")) {
+        println(Diag.report())
+        println("saved: " + Diag.save().absolutePath)
+        return
+    }
+    if (args.contains("--fix-proxy")) {
+        println("proxy cleared: " + SystemProxy.disable())
+        return
+    }
+    SystemProxy.repair()
+    Runtime.getRuntime().addShutdownHook(Thread {
+        try {
+            Connect.release()
+        } catch (e: Throwable) {
+        }
+    })
     application {
         Window(
             onCloseRequest = ::exitApplication,

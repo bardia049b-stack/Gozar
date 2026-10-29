@@ -111,6 +111,14 @@ object Shortcuts {
         }
     }
 
+    fun reveal(file: File): Boolean {
+        return when {
+            os.contains("win") -> run("explorer", "/select,", file.absolutePath)
+            os.contains("mac") || os.contains("darwin") -> run("open", "-R", file.absolutePath)
+            else -> run("xdg-open", file.parentFile.absolutePath)
+        }
+    }
+
     fun openConfigFolder(): Boolean {
         val folder = Store.folder()
         return when {

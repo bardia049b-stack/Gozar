@@ -30,6 +30,15 @@ class LocalProxy(private val port: Int, private val tunnel: (String, Int) -> com
         }
     }
 
+    fun release() {
+        TunEngine.stop()
+        proxy?.stop()
+        proxy = null
+        if (Desk.systemProxy || Desk.proxyPort > 0 || SystemProxy.stale()) SystemProxy.disable()
+        Desk.systemProxy = false
+        Desk.tunActive = false
+    }
+
     fun stop() {
         running = false
         TunEngine.stop()
@@ -255,6 +264,7 @@ object Connect {
         if (running || Desk.connecting) return
         Desk.connecting = true
         Desk.fault = ""
+        Desk.needsAdmin = false
         thread(isDaemon = true, name = "gozar-connect") {
             try {
                 com.gozar.FoxRoute.apply(Store.bypassLan(), Store.bypassList())
@@ -284,11 +294,18 @@ object Connect {
                 Desk.live = true
                 Desk.connecting = false
                 if (Store.fullTunnel()) {
-                    val tun = TunEngine.start(chosen, pass, port)
+                    val admin = !Elevate.windows() || Elevate.isAdmin()
+                    val tun = admin && TunEngine.start(chosen, pass, port)
                     Desk.tunActive = tun
-                    if (!tun) Desk.fault = TunService.last()
-                }
-                if (Desk.tunActive) {
+                    if (!tun) {
+                        val reason = if (admin) TunService.last().ifEmpty { "The tunnel could not be started." }
+                            else "The full tunnel needs administrator rights."
+                        stop()
+                        Desk.needsAdmin = !admin
+                        Desk.fault = reason + " Nothing was changed in the system settings."
+                        Desk.connecting = false
+                        return@thread
+                    }
                     if (Desk.systemProxy) {
                         SystemProxy.disable()
                         Desk.systemProxy = false

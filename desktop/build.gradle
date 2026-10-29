@@ -47,7 +47,7 @@ compose.desktop {
                 'jdk.unsupported'
             )
             packageName = 'Gozar'
-            packageVersion = '1.8.3'
+            packageVersion = '1.8.4'
             description = 'Gozar desktop'
             vendor = 'Gozar'
 
