@@ -71,7 +71,7 @@ jobs:
             platform: linux
             arch: amd64
             name: Linux-amd64
-          - os: windows-latest
+          - os: windows-2022
             platform: windows
             arch: amd64
             name: Windows-x64
@@ -124,7 +124,7 @@ jobs:
           set -e
           flutter build linux --release
           (cd ../go-desktop && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags='-s -w' -o ../desktop_flutter/build/linux/x64/release/bundle/gozar-core ./cmd/gozar)
-          cp ../LICENSE ../NOTICE build/linux/x64/release/bundle/
+          cp ../LICENSE ../NOTICE ../WINTUN-LICENSE.txt build/linux/x64/release/bundle/
           mkdir -p out
           XZ_OPT=-9 tar -C build/linux/x64/release -cJf out/Gozar-Linux-amd64.tar.xz bundle
           ls -lh out/*
@@ -139,7 +139,10 @@ jobs:
           test -n "$RUNNER"
           FOLDER=$(dirname "$RUNNER")
           (cd ../go-desktop && CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags='-s -w -H=windowsgui' -o "../desktop_flutter/$FOLDER/gozar-core.exe" ./cmd/gozar)
-          cp ../LICENSE ../NOTICE "$FOLDER/"
+          mkdir -p "$RUNNER_TEMP/gozar-ipc"
+          printf '%s\n' '{"id":1,"method":"state"}' '{"id":2,"method":"language","params":{"language":"en"}}' '{"id":3,"method":"quit"}' | APPDATA="$RUNNER_TEMP/gozar-ipc" "$FOLDER/gozar-core.exe" --rpc > "$RUNNER_TEMP/gozar-ipc.jsonl"
+          python -c "import json,os; r=[json.loads(x) for x in open(os.path.join(os.environ['RUNNER_TEMP'],'gozar-ipc.jsonl'))]; assert [x['id'] for x in r]==[1,2,3] and r[1]['state']['language']=='en'"
+          cp ../LICENSE ../NOTICE ../WINTUN-LICENSE.txt "$FOLDER/"
           mkdir -p out
           pwsh -NoProfile -Command "Compress-Archive -Path '$FOLDER/*' -DestinationPath 'out/Gozar-Windows-x64.zip' -CompressionLevel Optimal"
           ls -lh out/*
@@ -156,7 +159,7 @@ jobs:
           APP=build/macos/Build/Products/Release/Gozar.app
           test -d "$APP"
           (cd ../go-desktop && CGO_ENABLED=0 GOOS=darwin GOARCH="$GOARCH" go build -trimpath -ldflags='-s -w' -o "../desktop_flutter/$APP/Contents/MacOS/gozar-core" ./cmd/gozar)
-          cp ../LICENSE ../NOTICE "$APP/Contents/Resources/"
+          cp ../LICENSE ../NOTICE ../WINTUN-LICENSE.txt "$APP/Contents/Resources/"
           codesign --force --deep --sign - "$APP"
           mkdir -p out
           ditto -c -k --sequesterRsrc --keepParent "$APP" "out/Gozar-$ARTIFACT_NAME.zip"

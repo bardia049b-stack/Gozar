@@ -56,6 +56,12 @@ class FakeCore extends Core {
       language = choice == 'system' ? '' : choice;
     }
     if (method == 'server') selectedHost = params!['host'] as String;
+    if (method == 'login') {
+      if ((params!['code'] as String).isEmpty) {
+        return CoreReply(state: current, error: 'code needed', needsCode: true);
+      }
+      signedIn = true;
+    }
     if (method == 'logout') signedIn = false;
     return CoreReply(state: current);
   }
@@ -136,6 +142,26 @@ void main() {
     await tester.tap(find.text('Netherlands · Amsterdam'));
     await tester.pumpAndSettle();
     expect(core.selectedHost, 'amsterdam.example');
+    expect(core.requests, isNot(contains('connect')));
+  });
+  testWidgets('verification code flow stays inside the native interface',
+      (tester) async {
+    tester.view.physicalSize = const Size(480, 740);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final core = FakeCore(language: 'en');
+    await tester.pumpWidget(GozarApp(core: core));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).at(0), 'person@example.com');
+    await tester.enterText(find.byType(TextField).at(1), 'fake-password');
+    await tester.tap(find.widgetWithText(FilledButton, 'Sign in'));
+    await tester.pumpAndSettle();
+    expect(find.text('Verification code'), findsOneWidget);
+    await tester.enterText(find.byType(TextField).at(2), '123456');
+    await tester.tap(find.widgetWithText(FilledButton, 'Verify and sign in'));
+    await tester.pumpAndSettle();
+    expect(find.text('Firefox VPN'), findsOneWidget);
     expect(core.requests, isNot(contains('connect')));
   });
 }

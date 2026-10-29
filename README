@@ -30,4 +30,4 @@ The desktop build needs Flutter 3.24.5, Go 1.24, and the platform's native build
 On Linux, the built app requires GTK 3 and a graphical desktop. A Flutter bundle contains
 multiple files: keep the Go core, the executable, and the bundled data and libraries together.
 
-Source code is licensed under GNU AGPL-3.0-or-later. See LICENSE and NOTICE.
+Source code is licensed under GNU AGPL-3.0-or-later. See LICENSE, NOTICE, and WINTUN-LICENSE.txt.

@@ -45,4 +45,4 @@ The Windows tunnel uses Wintun, embedded in the Windows build.
 
 Copyright (C) 2018-2024 WireGuard LLC
 Source: https://www.wintun.net
-License: WireGuard's Wintun license (prebuilt binaries may be used freely)
+License: Wintun Prebuilt Binaries License; see WINTUN-LICENSE.txt.
