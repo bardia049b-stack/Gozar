@@ -348,6 +348,5 @@ AGPL-3.0-or-later</string>
     <string name="apps">برنامه‌های داخل تونل</string>
     <string name="apps_all">همه برنامه‌ها</string>
     <string name="apps_restart">برای اعمال فهرست جدید یک‌بار قطع و وصل کنید.</string>
-    <string name="apps_search">جستجوی برنامه</string>
     <string name="apps_system">سیستمی</string>
 </resources>
