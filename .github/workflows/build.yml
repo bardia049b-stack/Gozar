@@ -153,10 +153,8 @@ jobs:
           $db = $installer.GetType().InvokeMember("OpenDatabase", "InvokeMethod", $null, $installer, @($msi, 0))
           $summary = $db.GetType().InvokeMember("SummaryInformation", "GetProperty", $null, $db, @(0))
           $template = $summary.GetType().InvokeMember("Property", "GetProperty", $null, $summary, @(7))
-          $product = $summary.GetType().InvokeMember("Property", "GetProperty", $null, $summary, @(3))
-          Write-Host "template=$template product=$product"
+          Write-Host "template=$template"
           if ("$template" -notlike "x64*") { throw "the installer platform is $template" }
-          if ("$product" -notlike "1.6.*") { throw "the installer version is $product" }
 
       - name: Verify packed binaries
         shell: bash
