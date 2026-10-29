@@ -86,7 +86,7 @@
         <item name="rippleColor">@color/login_ripple</item>
     </style>
 
-    <style name="Gozar.Login.Well">
+    <style name="Gozar.Login.Well" parent="">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">58dp</item>
         <item name="android:orientation">horizontal</item>
@@ -96,7 +96,7 @@
         <item name="android:paddingEnd">8dp</item>
     </style>
 
-    <style name="Gozar.Login.Well.Icon">
+    <style name="Gozar.Login.Well.Icon" parent="">
         <item name="android:layout_width">22dp</item>
         <item name="android:layout_height">22dp</item>
         <item name="android:layout_marginStart">4dp</item>
@@ -105,7 +105,7 @@
         <item name="android:tint">@color/login_text_dim</item>
     </style>
 
-    <style name="Gozar.Login.Well.Input">
+    <style name="Gozar.Login.Well.Input" parent="">
         <item name="android:layout_width">0dp</item>
         <item name="android:layout_height">match_parent</item>
         <item name="android:layout_weight">1</item>
