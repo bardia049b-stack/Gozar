@@ -216,10 +216,12 @@ object Wintun {
             }
             if (adapter == null) {
                 val code = Native.getLastError()
-                TunService.note(
-                    if (code == 5) "wintun needs administrator rights (error 5: access denied)"
-                    else "wintun could not create the adapter (error $code)"
-                )
+                val message = if (code == 5) {
+                    "wintun needs administrator rights (error 5: access denied)"
+                } else {
+                    "wintun could not create the adapter (error $code)"
+                }
+                TunService.note(message)
                 return null
             }
             var session = startSession.invokePointer(arrayOf(adapter, RING))
