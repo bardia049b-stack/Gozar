@@ -32,6 +32,9 @@ object Desk {
     var step by mutableStateOf(STEP_NONE)
     var byLink by mutableStateOf(false)
     var tab by mutableStateOf(1)
+    var screen by mutableStateOf(0)
+    var originCode by mutableStateOf("")
+    var exitCode by mutableStateOf("")
 
     var live by mutableStateOf(false)
     var connecting by mutableStateOf(false)

@@ -5,7 +5,7 @@ import java.util.Properties
 
 object Store {
 
-    private val file: File by lazy {
+    fun folder(): File {
         val home = System.getProperty("user.home") ?: "."
         val base = when {
             System.getProperty("os.name").orEmpty().lowercase().contains("win") ->
@@ -13,8 +13,10 @@ object Store {
             else -> File(home, ".config/gozarwg")
         }
         base.mkdirs()
-        File(base, "session.properties")
+        return base
     }
+
+    private val file: File by lazy { File(folder(), "session.properties") }
 
     private fun read(): Properties {
         val properties = Properties()

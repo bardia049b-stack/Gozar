@@ -29,6 +29,8 @@ object Palette {
     val foxCream = Color(0xFFFFF3E8)
     val foxDim = Color(0xFFFFD9E1)
     val foxPeach = Color(0xFFFFE2C9)
+    val mapOrigin = Color(0xFFD2BCFF)
+    val mapExit = Color(0xFF9CC7FF)
     val tileContainer = Color(0xFF2A2C52)
     val tileOnContainer = Color(0xFFE0E0FF)
 }
