@@ -18,7 +18,7 @@
         <item name="endIconTint">@color/login_text_dim</item>
     </style>
 
-    <style name="Gozar.Login.Input">
+    <style name="Gozar.Login.Input" parent="">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:textColor">@color/login_text</item>
