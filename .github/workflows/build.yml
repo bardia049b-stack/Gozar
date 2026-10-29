@@ -150,12 +150,14 @@ jobs:
           set -e
           VERSION=$(grep -m1 'packageVersion' desktop/build.gradle | sed -E "s/.*'([^']+)'.*/\1/" | tr -d ' ')
           MSI=$(ls desktop/build/compose/binaries/main/msi/*.msi | head -1)
-          rm -rf "$RUNNER_TEMP/msi" && mkdir -p "$RUNNER_TEMP/msi"
+          rm -rf "$RUNNER_TEMP/msi" && mkdir -p "$RUNNER_TEMP/msi/unpacked"
+          7z l "$MSI" | tail -20
           7z x -y -o"$RUNNER_TEMP/msi" "$MSI" > /dev/null
-          for cab in "$RUNNER_TEMP"/msi/*.cab; do
-            [ -e "$cab" ] || continue
+          find "$RUNNER_TEMP/msi" -iname '*.cab' -print0 | while IFS= read -r -d '' cab; do
+            echo "cab $cab"
             7z x -y -o"$RUNNER_TEMP/msi/unpacked" "$cab" > /dev/null
           done
+          find "$RUNNER_TEMP/msi/unpacked" -maxdepth 3 | head -20
           PY=$(command -v python3 || command -v python)
           "$PY" scripts/arch_check.py "$RUNNER_TEMP/msi/unpacked" x86_64
           mkdir -p out
