@@ -62,6 +62,10 @@ import kotlinx.coroutines.delay
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedTextFieldDefaults
 
 internal object Flag {
 
@@ -573,196 +577,278 @@ private fun SettingRow(title: String, subtitle: String, onClick: () -> Unit) {
 
 @Composable
 private fun LoginScreen() {
+    val bg = Color(0xFF0A0B0E)
+    val cardBg = Color(0xFF14161B)
+    val cardLine = Color(0x24FFFFFF)
+    val line = Color(0x1FFFFFFF)
+    val fieldBg = Color(0xFF22252D)
+    val fieldLine = Color(0x33FFFFFF)
+    val textMain = Color(0xFFF4F5F9)
+    val textDim = Color(0xFF9EA1AF)
+    val accent = Color(0xFFFF3B54)
+    val primaryFill = Color(0xFFE4002B)
+
     var mail by remember { mutableStateOf(Desk.email) }
     var secret by remember { mutableStateOf("") }
     var confirm by remember { mutableStateOf("") }
     var code by remember { mutableStateOf("") }
     var create by remember { mutableStateOf(false) }
     var localError by remember { mutableStateOf("") }
+    var socialNote by remember { mutableStateOf(false) }
     val step = Desk.needsStep()
     val link = Desk.isLinkStep()
 
-    Column(
-        Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 26.dp, vertical = 30.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
+    val fieldColors = OutlinedTextFieldDefaults.colors(
+        focusedTextColor = textMain,
+        unfocusedTextColor = textMain,
+        focusedContainerColor = fieldBg,
+        unfocusedContainerColor = fieldBg,
+        disabledContainerColor = fieldBg,
+        cursorColor = accent,
+        focusedBorderColor = accent,
+        unfocusedBorderColor = fieldLine,
+        disabledBorderColor = fieldLine,
+        focusedLabelColor = accent,
+        unfocusedLabelColor = textDim,
+        disabledLabelColor = textDim
+    )
+
+    Box(Modifier.fillMaxSize().background(bg)) {
         Image(
-            painter = painterResource("firefox_logo.png"),
-            contentDescription = "Firefox",
-            modifier = Modifier.size(76.dp)
+            painter = painterResource("login_fox.png"),
+            contentDescription = null,
+            modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth(0.94f)
         )
-        Spacer(Modifier.height(24.dp))
-        Text(
-            when {
-                step -> "Check your email"
-                create -> "Create account"
-                else -> "Sign in"
-            },
-            style = MaterialTheme.typography.headlineMedium,
-            color = Palette.onSurface,
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(Modifier.height(6.dp))
-        Text(
-            when {
-                step && link -> "Mozilla sent a confirmation link. Open it once, then press Confirm."
-                step -> "Mozilla emailed a 6-digit code. Enter it here."
-                create -> "Use your Firefox account to unlock 50 GB every month."
-                else -> "Use your Firefox account to unlock 50 GB every month."
-            },
-            style = MaterialTheme.typography.bodyMedium,
-            color = Palette.onSurfaceSoft,
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(Modifier.height(22.dp))
-        if (!step) {
-            OutlinedTextField(
-                value = mail,
-                onValueChange = { mail = it; localError = "" },
-                label = { Text("Email") },
-                singleLine = true,
-                enabled = !Desk.busy,
-                shape = RoundedCornerShape(14.dp),
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(Modifier.height(12.dp))
-            OutlinedTextField(
-                value = secret,
-                onValueChange = { secret = it; localError = "" },
-                label = { Text("Password") },
-                singleLine = true,
-                enabled = !Desk.busy,
-                visualTransformation = PasswordVisualTransformation(),
-                shape = RoundedCornerShape(14.dp),
-                modifier = Modifier.fillMaxWidth()
-            )
-            if (create) {
-                Spacer(Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = confirm,
-                    onValueChange = { confirm = it; localError = "" },
-                    label = { Text("Repeat password") },
-                    singleLine = true,
-                    enabled = !Desk.busy,
-                    visualTransformation = PasswordVisualTransformation(),
-                    shape = RoundedCornerShape(14.dp),
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-            if (!create) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = { Shortcuts.openUrl("https://accounts.firefox.com/reset_password") }) {
-                        Text("Forgot password?", style = MaterialTheme.typography.labelMedium)
-                    }
-                }
-            } else {
-                Spacer(Modifier.height(8.dp))
-            }
-        } else if (!link) {
-            OutlinedTextField(
-                value = code,
-                onValueChange = { code = it },
-                label = { Text("6-digit code") },
-                singleLine = true,
-                enabled = !Desk.busy,
-                shape = RoundedCornerShape(14.dp),
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-        Spacer(Modifier.height(14.dp))
-        Button(
-            onClick = {
-                if (Desk.busy) return@Button
-                localError = ""
-                when {
-                    step && link -> Desk.confirmLink()
-                    step -> Desk.submitCode(code.trim())
-                    mail.isBlank() || secret.isEmpty() -> localError = "Enter your email and password."
-                    create && confirm != secret -> localError = "The two passwords do not match."
-                    else -> {
-                        if (create) Desk.signUp(mail.trim(), secret) else Desk.signIn(mail.trim(), secret)
-                        secret = ""
-                        confirm = ""
-                    }
-                }
-            },
-            enabled = !Desk.busy,
-            shape = RoundedCornerShape(28.dp),
-            modifier = Modifier.fillMaxWidth().height(54.dp)
+        Column(
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 22.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                when {
-                    step && link -> "Confirm"
-                    step -> "Continue"
-                    create -> "Create account"
-                    else -> "Sign in"
-                },
-                style = MaterialTheme.typography.titleMedium
-            )
+            Spacer(Modifier.height(96.dp))
+            Surface(
+                color = cardBg,
+                shape = RoundedCornerShape(28.dp),
+                border = BorderStroke(1.dp, cardLine),
+                modifier = Modifier.fillMaxWidth().widthIn(max = 460.dp)
+            ) {
+                Column(Modifier.padding(horizontal = 24.dp, vertical = 24.dp)) {
+                    Text(
+                        when {
+                            step -> "Check your email"
+                            create -> "Create account"
+                            else -> "Sign in"
+                        },
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = textMain
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        when {
+                            step && link -> "Mozilla sent a confirmation link. Open it once, then press Confirm."
+                            step -> "Mozilla emailed a 6-digit code. Enter it below."
+                            create -> "One Firefox account gives you 50 GB every month on every device."
+                            else -> "Use your Firefox account to unlock 50 GB every month."
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = textDim
+                    )
+                    Spacer(Modifier.height(20.dp))
+                    if (!step) {
+                        OutlinedTextField(
+                            value = mail,
+                            onValueChange = { mail = it; localError = "" },
+                            label = { Text("Email") },
+                            singleLine = true,
+                            enabled = !Desk.busy,
+                            shape = RoundedCornerShape(14.dp),
+                            colors = fieldColors,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        OutlinedTextField(
+                            value = secret,
+                            onValueChange = { secret = it; localError = "" },
+                            label = { Text("Password") },
+                            singleLine = true,
+                            enabled = !Desk.busy,
+                            visualTransformation = PasswordVisualTransformation(),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = fieldColors,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        if (create) {
+                            Spacer(Modifier.height(12.dp))
+                            OutlinedTextField(
+                                value = confirm,
+                                onValueChange = { confirm = it; localError = "" },
+                                label = { Text("Repeat password") },
+                                singleLine = true,
+                                enabled = !Desk.busy,
+                                visualTransformation = PasswordVisualTransformation(),
+                                shape = RoundedCornerShape(14.dp),
+                                colors = fieldColors,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                        if (!create) {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                                TextButton(
+                                    onClick = { Shortcuts.openUrl("https://accounts.firefox.com/reset_password") },
+                                    colors = ButtonDefaults.textButtonColors(contentColor = accent)
+                                ) {
+                                    Text("Forgot password?", style = MaterialTheme.typography.labelMedium)
+                                }
+                            }
+                        } else {
+                            Spacer(Modifier.height(8.dp))
+                        }
+                    } else if (!link) {
+                        OutlinedTextField(
+                            value = code,
+                            onValueChange = { code = it },
+                            label = { Text("6-digit code") },
+                            singleLine = true,
+                            enabled = !Desk.busy,
+                            shape = RoundedCornerShape(14.dp),
+                            colors = fieldColors,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    Button(
+                        onClick = {
+                            if (Desk.busy) return@Button
+                            localError = ""
+                            when {
+                                step && link -> Desk.confirmLink()
+                                step -> Desk.submitCode(code.trim())
+                                mail.isBlank() || secret.isEmpty() -> localError = "Enter your email and password."
+                                create && confirm != secret -> localError = "The two passwords do not match."
+                                else -> {
+                                    if (create) Desk.signUp(mail.trim(), secret) else Desk.signIn(mail.trim(), secret)
+                                    secret = ""
+                                    confirm = ""
+                                }
+                            }
+                        },
+                        enabled = !Desk.busy,
+                        shape = RoundedCornerShape(28.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = primaryFill, contentColor = Color.White),
+                        modifier = Modifier.fillMaxWidth().height(54.dp)
+                    ) {
+                        Text(
+                            when {
+                                step && link -> "Confirm"
+                                step -> "Continue"
+                                create -> "Create account"
+                                else -> "Log in"
+                            },
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
+                    val trouble = localError.ifEmpty { if (Desk.message != "code" && Desk.message != "link") Desk.message else "" }
+                    if (Desk.busy) {
+                        Spacer(Modifier.height(12.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(modifier = Modifier.size(15.dp), strokeWidth = 2.dp, color = accent)
+                            Spacer(Modifier.width(9.dp))
+                            Text(
+                                Desk.stage.ifEmpty { "Working…" },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = textDim
+                            )
+                        }
+                    } else if (trouble.isNotEmpty()) {
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            trouble,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = accent,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    if (!step) {
+                        Spacer(Modifier.height(20.dp))
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.weight(1f).height(1.dp).background(line))
+                            Text(
+                                "or continue with",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = textDim,
+                                modifier = Modifier.padding(horizontal = 12.dp)
+                            )
+                            Box(Modifier.weight(1f).height(1.dp).background(line))
+                        }
+                        Spacer(Modifier.height(16.dp))
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            OutlinedButton(
+                                onClick = {
+                                    Shortcuts.openUrl("https://accounts.firefox.com/signin")
+                                    socialNote = true
+                                },
+                                shape = RoundedCornerShape(26.dp),
+                                border = BorderStroke(1.dp, line),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = textMain),
+                                modifier = Modifier.weight(1f).height(50.dp)
+                            ) {
+                                Image(
+                                    painter = painterResource("google_mark.png"),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text("Google", style = MaterialTheme.typography.labelLarge)
+                            }
+                            OutlinedButton(
+                                onClick = {
+                                    Shortcuts.openUrl("https://accounts.firefox.com/signin")
+                                    socialNote = true
+                                },
+                                shape = RoundedCornerShape(26.dp),
+                                border = BorderStroke(1.dp, line),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = textMain),
+                                modifier = Modifier.weight(1f).height(50.dp)
+                            ) {
+                                Image(
+                                    painter = painterResource("apple_mark.png"),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text("Apple", style = MaterialTheme.typography.labelLarge)
+                            }
+                        }
+                        if (socialNote) {
+                            Spacer(Modifier.height(10.dp))
+                            Text(
+                                "Google and Apple sign-in opens accounts.firefox.com in your browser. Mozilla accounts created that way need a password before Gozar can use them.",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = textDim,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                        Spacer(Modifier.height(14.dp))
+                        TextButton(
+                            onClick = { create = !create; localError = "" },
+                            colors = ButtonDefaults.textButtonColors(contentColor = accent),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(if (create) "Already have an account? Log in" else "New here? Create an account")
+                        }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        "Gozar never sees your password. Sign-in happens on Mozilla servers.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = textDim,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+            Spacer(Modifier.height(24.dp))
         }
-        val trouble = localError.ifEmpty { if (Desk.message != "code" && Desk.message != "link") Desk.message else "" }
-        if (Desk.busy) {
-            Spacer(Modifier.height(12.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                CircularProgressIndicator(modifier = Modifier.size(15.dp), strokeWidth = 2.dp, color = Palette.primary)
-                Spacer(Modifier.width(9.dp))
-                Text(
-                    Desk.stage.ifEmpty { "Working…" },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Palette.onSurfaceSoft
-                )
-            }
-        } else if (trouble.isNotEmpty()) {
-            Spacer(Modifier.height(12.dp))
-            Text(
-                trouble,
-                style = MaterialTheme.typography.bodySmall,
-                color = Palette.error,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-        if (!step) {
-            Spacer(Modifier.height(22.dp))
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.weight(1f).height(1.dp).background(Palette.surfaceHighest))
-                Text(
-                    "or continue with",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Palette.onSurfaceSoft,
-                    modifier = Modifier.padding(horizontal = 12.dp)
-                )
-                Box(Modifier.weight(1f).height(1.dp).background(Palette.surfaceHighest))
-            }
-            Spacer(Modifier.height(16.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedButton(
-                    onClick = { Shortcuts.openUrl("https://accounts.firefox.com/signin") },
-                    shape = RoundedCornerShape(26.dp),
-                    modifier = Modifier.weight(1f).height(50.dp)
-                ) { Text("Google") }
-                OutlinedButton(
-                    onClick = { Shortcuts.openUrl("https://accounts.firefox.com/signin") },
-                    shape = RoundedCornerShape(26.dp),
-                    modifier = Modifier.weight(1f).height(50.dp)
-                ) { Text("Apple") }
-            }
-            Spacer(Modifier.height(18.dp))
-            TextButton(onClick = { create = !create; localError = "" }, modifier = Modifier.fillMaxWidth()) {
-                Text(if (create) "Already have an account? Sign in" else "New here? Create an account")
-            }
-        }
-        Spacer(Modifier.height(12.dp))
-        Text(
-            "Gozar never sees your password. Sign-in happens on Mozilla servers.",
-            style = MaterialTheme.typography.labelSmall,
-            color = Palette.onSurfaceSoft,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
-        )
     }
 }
 

@@ -7,7 +7,9 @@ import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.view.WindowCompat
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 
@@ -42,6 +44,11 @@ class LoginActivity : BaseActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.setBackgroundDrawableResource(R.color.login_bg)
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = false
+            isAppearanceLightNavigationBars = false
+        }
         setContentView(R.layout.activity_login)
         title = findViewById(R.id.loginTitle)
         subtitle = findViewById(R.id.loginSubtitle)
@@ -69,8 +76,8 @@ class LoginActivity : BaseActivity() {
             error.visibility = View.GONE
             render()
         }
-        findViewById<View>(R.id.loginGoogle).setOnClickListener { web(ACCOUNT_PAGE) }
-        findViewById<View>(R.id.loginApple).setOnClickListener { web(ACCOUNT_PAGE) }
+        findViewById<View>(R.id.loginGoogle).setOnClickListener { openSocial() }
+        findViewById<View>(R.id.loginApple).setOnClickListener { openSocial() }
         secret.setOnEditorActionListener { _, action, _ ->
             if (action == EditorInfo.IME_ACTION_DONE) {
                 act()
@@ -103,6 +110,16 @@ class LoginActivity : BaseActivity() {
     override fun onDestroy() {
         Fox.unwatch(listener)
         super.onDestroy()
+    }
+
+    private fun openSocial() {
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.login_browser_title)
+            .setMessage(R.string.login_browser_body)
+            .setPositiveButton(R.string.login_browser_open) { _, _ -> web(ACCOUNT_PAGE) }
+            .setNeutralButton(R.string.login_browser_password) { _, _ -> web(RESET_PAGE) }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
     }
 
     private fun web(url: String) {

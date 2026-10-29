@@ -326,4 +326,11 @@ AGPL-3.0-or-later</string>
     <string name="login_signin_sub">Use your Firefox account to unlock 50 GB every month.</string>
     <string name="login_forgot">Forgot password?</string>
     <string name="login_terms">Gozar never sees your password. Sign-in happens on Mozilla servers.</string>
+    <string name="usage_month">Monthly usage</string>
+    <string name="usage_left">%1$s left</string>
+    <string name="login_social_hint">Google and Apple sign-in continues on accounts.firefox.com.</string>
+    <string name="login_browser_title">Sign in on mozilla.org</string>
+    <string name="login_browser_body">Google and Apple sign-in only works in the browser, on accounts.firefox.com. A Mozilla account created that way has no password, so Gozar cannot sign in with it until you set one.</string>
+    <string name="login_browser_open">Open sign-in page</string>
+    <string name="login_browser_password">Set a password</string>
 </resources>

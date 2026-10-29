@@ -1,275 +1,264 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/loginRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?android:attr/colorBackground"
-    android:fillViewport="true">
+    android:background="@color/login_bg">
 
-    <LinearLayout
+    <ImageView
+        android:id="@+id/loginFox"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center_horizontal"
-        android:orientation="vertical"
-        android:paddingStart="24dp"
-        android:paddingTop="44dp"
-        android:paddingEnd="24dp"
-        android:paddingBottom="28dp">
+        android:layout_gravity="top"
+        android:adjustViewBounds="true"
+        android:contentDescription="@null"
+        android:scaleType="fitCenter"
+        android:src="@drawable/login_fox" />
 
-        <ImageView
-            android:id="@+id/loginMark"
-            android:layout_width="76dp"
-            android:layout_height="76dp"
-            android:contentDescription="@string/app_name"
-            android:src="@drawable/firefox_logo" />
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="240dp"
+        android:layout_gravity="bottom"
+        android:background="@drawable/bg_login_fade" />
 
-        <TextView
-            android:id="@+id/loginTitle"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="26dp"
-            android:text="@string/login_signin_title"
-            android:textAppearance="@style/TextAppearance.Gozar.HeadlineMedium"
-            android:textColor="?attr/colorOnSurface" />
-
-        <TextView
-            android:id="@+id/loginSubtitle"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:text="@string/login_signin_sub"
-            android:textAppearance="@style/TextAppearance.Gozar.BodyMedium"
-            android:textColor="?attr/colorOnSurfaceVariant" />
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/loginMailBox"
-            style="@style/Widget.Material3.TextInputLayout.FilledBox"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="28dp"
-            android:hint="@string/login_email"
-            app:boxCornerRadiusBottomEnd="14dp"
-            app:boxCornerRadiusBottomStart="14dp"
-            app:boxCornerRadiusTopEnd="14dp"
-            app:boxCornerRadiusTopStart="14dp"
-            app:startIconDrawable="@drawable/ic_mail">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/loginMail"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:imeOptions="actionNext"
-                android:inputType="textEmailAddress"
-                android:maxLines="1" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/loginSecretBox"
-            style="@style/Widget.Material3.TextInputLayout.FilledBox"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
-            android:hint="@string/login_password"
-            app:boxCornerRadiusBottomEnd="14dp"
-            app:boxCornerRadiusBottomStart="14dp"
-            app:boxCornerRadiusTopEnd="14dp"
-            app:boxCornerRadiusTopStart="14dp"
-            app:endIconMode="password_toggle"
-            app:startIconDrawable="@drawable/ic_lock">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/loginSecret"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:imeOptions="actionDone"
-                android:inputType="textPassword"
-                android:maxLines="1" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/loginConfirmBox"
-            style="@style/Widget.Material3.TextInputLayout.FilledBox"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
-            android:hint="@string/login_confirm"
-            android:visibility="gone"
-            app:boxCornerRadiusBottomEnd="14dp"
-            app:boxCornerRadiusBottomStart="14dp"
-            app:boxCornerRadiusTopEnd="14dp"
-            app:boxCornerRadiusTopStart="14dp"
-            app:endIconMode="password_toggle"
-            app:startIconDrawable="@drawable/ic_lock">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/loginConfirm"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:imeOptions="actionDone"
-                android:inputType="textPassword"
-                android:maxLines="1" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/loginCodeBox"
-            style="@style/Widget.Material3.TextInputLayout.FilledBox"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="28dp"
-            android:hint="@string/login_code"
-            android:visibility="gone"
-            app:boxCornerRadiusBottomEnd="14dp"
-            app:boxCornerRadiusBottomStart="14dp"
-            app:boxCornerRadiusTopEnd="14dp"
-            app:boxCornerRadiusTopStart="14dp"
-            app:startIconDrawable="@drawable/ic_key">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/loginCode"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:imeOptions="actionDone"
-                android:inputType="number"
-                android:maxLines="1" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/loginForgot"
-            style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="end"
-            android:layout_marginTop="4dp"
-            android:text="@string/login_forgot" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/loginPrimary"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:layout_marginTop="10dp"
-            android:text="@string/login_action"
-            android:textSize="16sp"
-            app:cornerRadius="28dp" />
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:fillViewport="true"
+        android:scrollbars="none">
 
         <LinearLayout
-            android:id="@+id/loginBusy"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:visibility="gone">
+            android:orientation="vertical"
+            android:paddingStart="18dp"
+            android:paddingTop="200dp"
+            android:paddingEnd="18dp"
+            android:paddingBottom="26dp">
 
-            <com.google.android.material.progressindicator.CircularProgressIndicator
-                android:layout_width="16dp"
-                android:layout_height="16dp"
-                android:indeterminate="true"
-                app:indicatorSize="16dp"
-                app:trackThickness="2dp" />
-
-            <TextView
-                android:id="@+id/loginNotice"
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="10dp"
-                android:textAppearance="@style/TextAppearance.Gozar.BodyMedium"
-                android:textColor="?attr/colorOnSurfaceVariant" />
+                android:background="@drawable/bg_login_card"
+                android:orientation="vertical"
+                android:paddingStart="22dp"
+                android:paddingTop="24dp"
+                android:paddingEnd="22dp"
+                android:paddingBottom="22dp">
+
+                <TextView
+                    android:id="@+id/loginTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:includeFontPadding="false"
+                    android:text="@string/login_signin_title"
+                    android:textAppearance="@style/TextAppearance.Gozar.HeadlineMedium"
+                    android:textColor="@color/login_text" />
+
+                <TextView
+                    android:id="@+id/loginSubtitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:lineSpacingExtra="3dp"
+                    android:text="@string/login_signin_sub"
+                    android:textAppearance="@style/TextAppearance.Gozar.BodyMedium"
+                    android:textColor="@color/login_text_dim" />
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/loginMailBox"
+                    style="@style/Gozar.Login.Field"
+                    android:layout_marginTop="22dp"
+                    android:hint="@string/login_email"
+                    app:startIconDrawable="@drawable/ic_mail">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/loginMail"
+                        style="@style/Gozar.Login.Input"
+                        android:imeOptions="actionNext"
+                        android:inputType="textEmailAddress"
+                        android:maxLines="1" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/loginSecretBox"
+                    style="@style/Gozar.Login.Field"
+                    android:layout_marginTop="12dp"
+                    android:hint="@string/login_password"
+                    app:endIconMode="password_toggle"
+                    app:startIconDrawable="@drawable/ic_lock">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/loginSecret"
+                        style="@style/Gozar.Login.Input"
+                        android:imeOptions="actionDone"
+                        android:inputType="textPassword"
+                        android:maxLines="1" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/loginConfirmBox"
+                    style="@style/Gozar.Login.Field"
+                    android:layout_marginTop="12dp"
+                    android:hint="@string/login_confirm"
+                    android:visibility="gone"
+                    app:endIconMode="password_toggle"
+                    app:startIconDrawable="@drawable/ic_lock">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/loginConfirm"
+                        style="@style/Gozar.Login.Input"
+                        android:imeOptions="actionDone"
+                        android:inputType="textPassword"
+                        android:maxLines="1" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/loginCodeBox"
+                    style="@style/Gozar.Login.Field"
+                    android:layout_marginTop="12dp"
+                    android:hint="@string/login_code"
+                    android:visibility="gone"
+                    app:startIconDrawable="@drawable/ic_key">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/loginCode"
+                        style="@style/Gozar.Login.Input"
+                        android:imeOptions="actionDone"
+                        android:inputType="number"
+                        android:maxLines="1" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/loginForgot"
+                    style="@style/Gozar.Login.Link"
+                    android:layout_gravity="end"
+                    android:layout_marginTop="6dp"
+                    android:text="@string/login_forgot" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/loginPrimary"
+                    style="@style/Gozar.Login.Primary"
+                    android:layout_marginTop="14dp"
+                    android:text="@string/login_action" />
+
+                <LinearLayout
+                    android:id="@+id/loginBusy"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:gravity="center"
+                    android:orientation="horizontal"
+                    android:visibility="gone">
+
+                    <com.google.android.material.progressindicator.CircularProgressIndicator
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:indeterminate="true"
+                        app:indicatorColor="@color/login_accent"
+                        app:indicatorSize="16dp"
+                        app:trackThickness="2dp" />
+
+                    <TextView
+                        android:id="@+id/loginNotice"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="10dp"
+                        android:textAppearance="@style/TextAppearance.Gozar.BodySmall"
+                        android:textColor="@color/login_text_dim" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/loginError"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:gravity="center"
+                    android:textAppearance="@style/TextAppearance.Gozar.BodySmall"
+                    android:textColor="@color/login_accent"
+                    android:visibility="gone" />
+
+                <LinearLayout
+                    android:id="@+id/loginDivider"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="22dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <View
+                        android:layout_width="0dp"
+                        android:layout_height="1dp"
+                        android:layout_weight="1"
+                        android:background="@color/login_card_line" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_marginEnd="12dp"
+                        android:text="@string/login_or"
+                        android:textAppearance="@style/TextAppearance.Gozar.LabelMedium"
+                        android:textColor="@color/login_text_dim" />
+
+                    <View
+                        android:layout_width="0dp"
+                        android:layout_height="1dp"
+                        android:layout_weight="1"
+                        android:background="@color/login_card_line" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/loginSocial"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/loginGoogle"
+                        style="@style/Gozar.Login.Social"
+                        android:layout_weight="1"
+                        android:text="@string/login_google"
+                        app:icon="@drawable/ic_google_mark" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/loginApple"
+                        style="@style/Gozar.Login.Social"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:text="@string/login_apple"
+                        app:icon="@drawable/ic_apple_mark" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/loginSocialHint"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:gravity="center"
+                    android:text="@string/login_social_hint"
+                    android:textAppearance="@style/TextAppearance.Gozar.LabelSmall"
+                    android:textColor="@color/login_text_dim" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/loginSwitch"
+                    style="@style/Gozar.Login.Switch"
+                    android:layout_marginTop="14dp"
+                    android:text="@string/login_no_account" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:gravity="center"
+                    android:lineSpacingExtra="2dp"
+                    android:text="@string/login_terms"
+                    android:textAppearance="@style/TextAppearance.Gozar.LabelSmall"
+                    android:textColor="@color/login_text_dim" />
+            </LinearLayout>
         </LinearLayout>
-
-        <TextView
-            android:id="@+id/loginError"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:gravity="center"
-            android:textAppearance="@style/TextAppearance.Gozar.BodyMedium"
-            android:textColor="?attr/colorError"
-            android:visibility="gone" />
-
-        <LinearLayout
-            android:id="@+id/loginDivider"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="26dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <View
-                android:layout_width="0dp"
-                android:layout_height="1dp"
-                android:layout_weight="1"
-                android:background="?attr/colorOutlineVariant" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="14dp"
-                android:layout_marginEnd="14dp"
-                android:text="@string/login_or"
-                android:textAppearance="@style/TextAppearance.Gozar.LabelMedium"
-                android:textColor="?attr/colorOnSurfaceVariant" />
-
-            <View
-                android:layout_width="0dp"
-                android:layout_height="1dp"
-                android:layout_weight="1"
-                android:background="?attr/colorOutlineVariant" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/loginSocial"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="18dp"
-            android:orientation="horizontal">
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/loginGoogle"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="0dp"
-                android:layout_height="52dp"
-                android:layout_weight="1"
-                android:text="@string/login_google"
-                android:textSize="14sp"
-                app:cornerRadius="26dp"
-                app:icon="@drawable/ic_google_mark"
-                app:iconGravity="textStart"
-                app:iconPadding="8dp"
-                app:iconSize="18dp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/loginApple"
-                style="@style/Widget.Material3.Button.OutlinedButton"
-                android:layout_width="0dp"
-                android:layout_height="52dp"
-                android:layout_marginStart="12dp"
-                android:layout_weight="1"
-                android:text="@string/login_apple"
-                android:textSize="14sp"
-                app:cornerRadius="26dp"
-                app:icon="@drawable/ic_apple_mark"
-                app:iconGravity="textStart"
-                app:iconPadding="8dp"
-                app:iconSize="18dp" />
-        </LinearLayout>
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/loginSwitch"
-            style="@style/Widget.Material3.Button.TextButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="22dp"
-            android:text="@string/login_no_account" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="18dp"
-            android:gravity="center"
-            android:text="@string/login_terms"
-            android:textAppearance="@style/TextAppearance.Gozar.LabelSmall"
-            android:textColor="?attr/colorOnSurfaceVariant" />
-
-    </LinearLayout>
-</ScrollView>
+    </ScrollView>
+</FrameLayout>

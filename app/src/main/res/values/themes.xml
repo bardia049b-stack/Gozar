@@ -75,14 +75,5 @@
         <item name="windowNoTitle">true</item>
     </style>
 
-    <style name="AppTheme.Fox" parent="AppTheme">
-        <item name="colorPrimary">@color/fox_red</item>
-        <item name="colorOnPrimary">@color/fox_on_red</item>
-        <item name="colorPrimaryContainer">@color/fox_red_dark</item>
-        <item name="colorOnPrimaryContainer">@color/fox_cream</item>
-        <item name="colorSecondary">@color/fox_orange</item>
-        <item name="colorOnSecondary">@color/fox_cream</item>
-        <item name="colorSecondaryContainer">@color/fox_red</item>
-        <item name="colorOnSecondaryContainer">@color/fox_cream</item>
-    </style>
+    <style name="AppTheme.Fox" parent="AppTheme" />
 </resources>

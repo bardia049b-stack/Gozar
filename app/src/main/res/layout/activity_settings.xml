@@ -56,7 +56,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="@dimen/sp_l">
+                android:padding="18dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -68,10 +68,9 @@
                         android:id="@+id/tvAccountInitial"
                         android:layout_width="52dp"
                         android:layout_height="52dp"
-                        android:background="@drawable/circle_soft"
-                        android:backgroundTint="?attr/colorPrimary"
+                        android:background="@drawable/bg_avatar_red"
                         android:gravity="center"
-                        android:textColor="?attr/colorOnPrimary"
+                        android:textColor="#FFFFFF"
                         android:textSize="20sp"
                         android:textStyle="bold" />
 
@@ -80,45 +79,100 @@
                         <TextView
                             android:id="@+id/tvAccountEmail"
                             style="@style/Gozar.Row.Title"
-                            android:maxLines="1"
-                            android:ellipsize="end" />
+                            android:ellipsize="end"
+                            android:maxLines="1" />
 
                         <TextView
                             android:id="@+id/tvAccountPlan"
                             style="@style/Gozar.Row.Subtitle" />
                     </LinearLayout>
+
+
                 </LinearLayout>
 
-                <com.google.android.material.progressindicator.LinearProgressIndicator
-                    android:id="@+id/pbAccountUsage"
+                <View
                     android:layout_width="match_parent"
-                    android:layout_height="6dp"
-                    android:layout_marginTop="@dimen/sp_m"
-                    app:trackCornerRadius="3dp"
-                    app:trackThickness="6dp" />
+                    android:layout_height="1dp"
+                    android:layout_marginTop="16dp"
+                    android:background="?attr/colorOutlineVariant" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/sp_m"
+                    android:layout_marginTop="14dp"
+                    android:baselineAligned="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/usage_month"
+                        android:textAppearance="@style/TextAppearance.Gozar.LabelMedium"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
+
+                    <TextView
+                        android:id="@+id/tvUsagePercent"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:includeFontPadding="false"
+                        android:text="0%"
+                        android:textAppearance="@style/TextAppearance.Gozar.TitleLarge"
+                        android:textColor="?attr/colorPrimary"
+                        android:textDirection="ltr" />
+                </LinearLayout>
+
+                <com.gozar.UsageMeterView
+                    android:id="@+id/usageMeter"
+                    android:layout_width="match_parent"
+                    android:layout_height="26dp"
+                    android:layout_marginTop="10dp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/tvUsageUsed"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:textAppearance="@style/TextAppearance.Gozar.BodySmall"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
+
+                    <TextView
+                        android:id="@+id/tvUsageLeft"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="@style/TextAppearance.Gozar.BodySmall"
+                        android:textColor="?attr/colorPrimary" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
                     android:orientation="horizontal">
 
                     <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnAccountRefresh"
+                        android:id="@+id/btnSignOut"
                         style="@style/Widget.Material3.Button.TonalButton"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="@string/account_refresh" />
+                        android:text="@string/fox_sign_out" />
 
                     <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnSignOut"
+                        android:id="@+id/btnAccountRefresh"
                         style="@style/Widget.Material3.Button.OutlinedButton"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="@dimen/sp_m"
                         android:layout_weight="1"
-                        android:text="@string/fox_sign_out" />
+                        android:text="@string/account_refresh" />
                 </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>

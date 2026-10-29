@@ -326,4 +326,11 @@ AGPL-3.0-or-later</string>
     <string name="login_signin_sub">با حساب فایرفاکس خود هر ماه ۵۰ گیگابایت دریافت کنید.</string>
     <string name="login_forgot">رمز عبور را فراموش کرده‌اید؟</string>
     <string name="login_terms">گز‌ار رمز شما را نمی‌بیند. ورود روی سرورهای موزیلا انجام می‌شود.</string>
+    <string name="usage_month">مصرف ماهانه</string>
+    <string name="usage_left">%1$s باقی‌مانده</string>
+    <string name="login_social_hint">ورود با گوگل و اپل در accounts.firefox.com ادامه پیدا می‌کند.</string>
+    <string name="login_browser_title">ورود در mozilla.org</string>
+    <string name="login_browser_body">ورود با گوگل و اپل فقط در مرورگر و روی accounts.firefox.com انجام می‌شود. حسابی که این‌طور ساخته شود رمز عبور ندارد، پس گز‌ار تا زمانی که رمز تعیین نکنید نمی‌تواند با آن وارد شود.</string>
+    <string name="login_browser_open">باز کردن صفحه ورود</string>
+    <string name="login_browser_password">تعیین رمز عبور</string>
 </resources>

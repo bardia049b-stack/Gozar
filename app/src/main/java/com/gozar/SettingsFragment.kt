@@ -11,7 +11,6 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.fragment.app.Fragment
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.materialswitch.MaterialSwitch
-import com.google.android.material.progressindicator.LinearProgressIndicator
 
 class SettingsFragment : Fragment() {
 
@@ -75,12 +74,18 @@ class SettingsFragment : Fragment() {
             if (signed && mail.isNotEmpty()) mail.substring(0, 1).uppercase() else "?"
         val limit = Fox.limit
         val used = (limit - Fox.remaining).coerceAtLeast(0)
+        val left = Fox.remaining.coerceAtLeast(0)
+        val percent = if (limit > 0) ((used * 100) / limit).toInt().coerceIn(0, 100) else 0
         find<TextView>(R.id.tvAccountPlan).text = when {
             limit <= 0 -> getString(R.string.account_free)
             else -> getString(R.string.account_usage, plain(used), plain(limit))
         }
-        val bar = find<LinearProgressIndicator>(R.id.pbAccountUsage)
-        bar.progress = if (limit > 0) ((used * 100) / limit).toInt().coerceIn(0, 100) else 0
+        find<TextView>(R.id.tvUsagePercent).text = "$percent%"
+        find<TextView>(R.id.tvUsageUsed).text =
+            if (limit > 0) getString(R.string.account_usage, plain(used), plain(limit)) else getString(R.string.account_free)
+        find<TextView>(R.id.tvUsageLeft).text =
+            if (limit > 0) getString(R.string.usage_left, plain(left)) else ""
+        find<UsageMeterView>(R.id.usageMeter).setProgress(percent)
         find<View>(R.id.btnAccountRefresh).isEnabled = signed
 
         find<TextView>(R.id.tvLang).text = when (Store.lang(context)) {
