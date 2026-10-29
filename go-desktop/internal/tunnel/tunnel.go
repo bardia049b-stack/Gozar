@@ -2,16 +2,19 @@ package tunnel
 
 import (
 	"bufio"
+	"context"
 	"crypto/tls"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
 	"net"
+	"net/http"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"golang.org/x/net/http2"
 )
 
 const agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:149.0) Gecko/20100101 Firefox/149.0"
@@ -152,247 +155,82 @@ func reason(code int) error {
 	return fmt.Errorf("the proxy answered %d", code)
 }
 
-func status(payload []byte) int {
-	if len(payload) < 3 {
-		return 0
-	}
-	return int(payload[0])<<8 | int(payload[1])
-}
-
-func frame(ftype, flags byte, id uint32, payload []byte) []byte {
-	out := make([]byte, 9+len(payload))
-	out[0] = byte(len(payload) >> 16)
-	out[1] = byte(len(payload) >> 8)
-	out[2] = byte(len(payload))
-	out[3] = ftype
-	out[4] = flags
-	binary.BigEndian.PutUint32(out[5:9], id&0x7FFFFFFF)
-	copy(out[9:], payload)
-	return out
-}
-
-func pair(name, value string) []byte {
-	block := []byte{0}
-	block = append(block, []byte(name)...)
-	block = append(block, []byte(value)...)
-	return append(block, 0)
-}
-
-func settings() []byte {
-	payload := make([]byte, 6)
-	binary.BigEndian.PutUint16(payload[0:2], 0x0003)
-	binary.BigEndian.PutUint32(payload[2:6], 1<<20)
-	return payload
-}
-
 func openH2(target Target, host string, port int, pass string, timeout time.Duration) (Dup, error) {
 	conn, err := dialTLS(target, []string{"h2"}, timeout)
 	if err != nil {
 		return nil, err
 	}
-	authority := net.JoinHostPort(host, strconv.Itoa(port))
-	var block []byte
-	block = append(block, pair(":method", "CONNECT")...)
-	block = append(block, pair(":authority", authority)...)
-	block = append(block, pair("proxy-authorization", "Bearer "+pass)...)
-	block = append(block, pair("user-agent", agent)...)
+	if conn.ConnectionState().NegotiatedProtocol != "h2" {
+		conn.Close()
+		return nil, errors.New("the proxy does not support HTTP/2")
+	}
+	return connectH2(conn, host, port, pass, timeout)
+}
 
-	intro := append([]byte("PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n"), frame(0x04, 0, 0, settings())...)
-	intro = append(intro, frame(0x01, 0x04, 1, block)...)
-	if _, err := conn.Write(intro); err != nil {
+func connectH2(conn net.Conn, host string, port int, pass string, timeout time.Duration) (Dup, error) {
+	conn.SetDeadline(time.Now().Add(timeout))
+	transport := &http2.Transport{DisableCompression: true}
+	client, err := transport.NewClientConn(conn)
+	if err != nil {
 		conn.Close()
 		return nil, err
 	}
-
-	reader := bufio.NewReader(conn)
-	conn.SetDeadline(time.Now().Add(timeout))
-	header := make([]byte, 9)
-	for {
-		if _, err := io.ReadFull(reader, header); err != nil {
-			conn.Close()
-			return nil, errors.New("the proxy closed the connection")
-		}
-		size := int(header[0])<<16 | int(header[1])<<8 | int(header[2])
-		ftype := header[3]
-		flags := header[4]
-		id := binary.BigEndian.Uint32(header[5:9]) & 0x7FFFFFFF
-		payload := make([]byte, size)
-		if size > 0 {
-			if _, err := io.ReadFull(reader, payload); err != nil {
-				conn.Close()
-				return nil, errors.New("the proxy closed the connection")
-			}
-		}
-		switch ftype {
-		case 0x04:
-			if flags&0x01 == 0 {
-				conn.Write(frame(0x04, 0x01, 0, nil))
-			}
-		case 0x06:
-			if flags&0x01 == 0 {
-				conn.Write(frame(0x06, 0x01, 0, payload))
-			}
-		case 0x01:
-			if id != 1 {
-				continue
-			}
-			code := status(payload)
-			if code == 200 {
-				conn.SetDeadline(time.Time{})
-				return newH2Stream(conn, reader, 1), nil
-			}
-			conn.Close()
-			return nil, reason(code)
-		case 0x03:
-			conn.Close()
-			return nil, errors.New("the proxy reset the tunnel")
-		case 0x07:
-			conn.Close()
-			return nil, errors.New("the proxy closed the connection")
-		}
+	reader, writer := io.Pipe()
+	authority := net.JoinHostPort(host, strconv.Itoa(port))
+	request, err := http.NewRequest(http.MethodConnect, "https://"+authority, reader)
+	if err != nil {
+		reader.Close()
+		writer.Close()
+		client.Close()
+		return nil, err
 	}
+	request.Host = authority
+	request.Header.Set("Proxy-Authorization", "Bearer "+pass)
+	request.Header.Set("User-Agent", agent)
+	ctx, cancel := context.WithCancel(request.Context())
+	response, err := client.RoundTrip(request.WithContext(ctx))
+	if err != nil {
+		cancel()
+		writer.CloseWithError(err)
+		client.Close()
+		return nil, err
+	}
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		response.Body.Close()
+		cancel()
+		writer.Close()
+		client.Close()
+		return nil, reason(response.StatusCode)
+	}
+	conn.SetDeadline(time.Time{})
+	return &h2Stream{body: response.Body, writer: writer, client: client, cancel: cancel}, nil
 }
 
 type h2Stream struct {
-	conn    *tls.Conn
-	reader  *bufio.Reader
-	id      uint32
-	write   sync.Mutex
-	window  sync.Mutex
-	cond    *sync.Cond
-	sendW   int64
-	connW   int64
-	pending []byte
-	eof     bool
-}
-
-func newH2Stream(conn *tls.Conn, reader *bufio.Reader, id uint32) *h2Stream {
-	s := &h2Stream{conn: conn, reader: reader, id: id, sendW: 65535, connW: 65535}
-	s.cond = sync.NewCond(&s.window)
-	return s
-}
-
-func (s *h2Stream) send(bytes []byte) error {
-	s.write.Lock()
-	defer s.write.Unlock()
-	_, err := s.conn.Write(bytes)
-	return err
+	body   io.ReadCloser
+	writer *io.PipeWriter
+	client *http2.ClientConn
+	cancel context.CancelFunc
+	once   sync.Once
 }
 
 func (s *h2Stream) Read(p []byte) (int, error) {
-	if len(s.pending) > 0 {
-		n := copy(p, s.pending)
-		s.pending = s.pending[n:]
-		return n, nil
-	}
-	if s.eof {
-		return 0, io.EOF
-	}
-	header := make([]byte, 9)
-	for {
-		if _, err := io.ReadFull(s.reader, header); err != nil {
-			return 0, err
-		}
-		size := int(header[0])<<16 | int(header[1])<<8 | int(header[2])
-		ftype := header[3]
-		flags := header[4]
-		id := binary.BigEndian.Uint32(header[5:9]) & 0x7FFFFFFF
-		payload := make([]byte, size)
-		if size > 0 {
-			if _, err := io.ReadFull(s.reader, payload); err != nil {
-				return 0, err
-			}
-		}
-		switch ftype {
-		case 0x00:
-			if id != s.id || size == 0 {
-				continue
-			}
-			s.grow(size)
-			if len(p) >= size {
-				copy(p, payload)
-				return size, nil
-			}
-			copy(p, payload[:len(p)])
-			s.pending = append([]byte{}, payload[len(p):]...)
-			return len(p), nil
-		case 0x01:
-			if id == s.id && flags&0x01 != 0 {
-				s.eof = true
-				return 0, io.EOF
-			}
-		case 0x03, 0x07:
-			return 0, io.EOF
-		case 0x04:
-			if flags&0x01 == 0 {
-				s.send(frame(0x04, 0x01, 0, nil))
-			}
-		case 0x06:
-			if flags&0x01 == 0 {
-				s.send(frame(0x06, 0x01, 0, payload))
-			}
-		case 0x08:
-			if len(payload) >= 4 {
-				amount := int64(binary.BigEndian.Uint32(payload[:4]) & 0x7FFFFFFF)
-				s.window.Lock()
-				if id == 0 {
-					s.connW += amount
-				} else if id == s.id {
-					s.sendW += amount
-				}
-				s.cond.Broadcast()
-				s.window.Unlock()
-			}
-		}
-	}
-}
-
-func (s *h2Stream) grow(size int) {
-	update := make([]byte, 4)
-	binary.BigEndian.PutUint32(update, uint32(size)&0x7FFFFFFF)
-	s.send(frame(0x08, 0, 0, update))
-	s.send(frame(0x08, 0, s.id, update))
+	return s.body.Read(p)
 }
 
 func (s *h2Stream) Write(p []byte) (int, error) {
-	written := 0
-	for written < len(p) {
-		size := len(p) - written
-		if size > 16384 {
-			size = 16384
-		}
-		if !s.waitWindow(int64(size)) {
-			return written, errors.New("upload stalled")
-		}
-		if err := s.send(frame(0x00, 0, s.id, p[written:written+size])); err != nil {
-			return written, err
-		}
-		s.window.Lock()
-		s.sendW -= int64(size)
-		s.connW -= int64(size)
-		s.window.Unlock()
-		written += size
-	}
-	return written, nil
-}
-
-func (s *h2Stream) waitWindow(size int64) bool {
-	deadline := time.Now().Add(25 * time.Second)
-	s.window.Lock()
-	defer s.window.Unlock()
-	for s.sendW < size || s.connW < size {
-		if time.Now().After(deadline) {
-			return false
-		}
-		s.cond.Wait()
-	}
-	return true
+	return s.writer.Write(p)
 }
 
 func (s *h2Stream) Close() error {
-	s.send(frame(0x03, 0, s.id, []byte{0, 0, 0, 0x08}))
-	s.send(frame(0x07, 0, 0, nil))
-	return s.conn.Close()
+	var err error
+	s.once.Do(func() {
+		s.writer.Close()
+		s.body.Close()
+		s.cancel()
+		err = s.client.Close()
+	})
+	return err
 }
 
 func Probe(target Target, pass string, timeout time.Duration) (string, error) {

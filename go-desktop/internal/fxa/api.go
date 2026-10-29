@@ -32,6 +32,7 @@ type Error struct {
 	Message string
 	Status  int
 	Errno   int
+	Email   string
 }
 
 func (e *Error) Error() string { return e.Message }
@@ -70,6 +71,7 @@ func failure(reply *Reply) error {
 		Message string `json:"message"`
 		Code    string `json:"code"`
 		Errno   int    `json:"errno"`
+		Email   string `json:"email"`
 	}
 	json.Unmarshal(reply.Body, &data)
 	message := data.Message
@@ -82,7 +84,7 @@ func failure(reply *Reply) error {
 	if reply.Code == 406 {
 		message = "Mozilla's anti-bot check needs another try"
 	}
-	return &Error{Message: message, Status: reply.Code, Errno: data.Errno}
+	return &Error{Message: message, Status: reply.Code, Errno: data.Errno, Email: data.Email}
 }
 
 func decode(reply *Reply, target any) error {
@@ -96,10 +98,12 @@ func decode(reply *Reply, target any) error {
 }
 
 type Session struct {
-	UID      string
-	Token    string
-	NeedsOTP bool
-	ByLink   bool
+	UID                string
+	Token              string
+	Email              string
+	NeedsOTP           bool
+	ByLink             bool
+	VerificationMethod string
 }
 
 type Tokens struct {
@@ -123,26 +127,65 @@ type signInReply struct {
 }
 
 func SignIn(email, password string) (*Session, error) {
-	authPw := fmt.Sprintf("%x", AuthPW(email, password))
-	body, _ := json.Marshal(map[string]any{
-		"email":              strings.TrimSpace(email),
-		"authPW":             authPw,
+	return signIn(email, password, "")
+}
+
+func SignInWithUnblockCode(email, password, code string) (*Session, error) {
+	code = strings.ToUpper(strings.Join(strings.Fields(code), ""))
+	return signIn(email, password, code)
+}
+
+func signIn(email, password, unblock string) (*Session, error) {
+	email = strings.TrimSpace(email)
+	session, err := signInAs(email, password, "", unblock)
+	var apiError *Error
+	if errors.As(err, &apiError) && apiError.Errno == 120 && apiError.Email != "" && apiError.Email != email {
+		return signInAs(apiError.Email, password, email, unblock)
+	}
+	return session, err
+}
+
+func signInAs(email, password, original, unblock string) (*Session, error) {
+	body := map[string]any{
+		"email":              email,
+		"authPW":             fmt.Sprintf("%x", AuthPW(email, password)),
 		"verificationMethod": "email-2fa",
-	})
-	reply, err := call("POST", authBase+"/account/login", string(body), nil)
+	}
+	if original != "" {
+		body["originalLoginEmail"] = original
+	}
+	if unblock != "" {
+		body["unblockCode"] = unblock
+	}
+	payload, _ := json.Marshal(body)
+	reply, err := call("POST", authBase+"/account/login", string(payload), nil)
 	if err != nil {
 		return nil, err
 	}
 	if reply.Code == 400 && replyCode(reply.Body) == 107 {
-		body, _ := json.Marshal(map[string]any{
-			"email":  strings.TrimSpace(email),
-			"authPW": authPw,
-		})
-		if reply, err = call("POST", authBase+"/account/login", string(body), nil); err != nil {
+		delete(body, "verificationMethod")
+		payload, _ = json.Marshal(body)
+		if reply, err = call("POST", authBase+"/account/login", string(payload), nil); err != nil {
 			return nil, err
 		}
 	}
-	return readSession(reply)
+	session, err := readSession(reply)
+	if err == nil {
+		session.Email = email
+	}
+	return session, err
+}
+
+func SendUnblockCode(email string) error {
+	body, _ := json.Marshal(map[string]string{"email": strings.TrimSpace(email)})
+	reply, err := call("POST", authBase+"/account/login/send_unblock_code", string(body), nil)
+	if err != nil {
+		return err
+	}
+	if reply.Code < 200 || reply.Code > 299 {
+		return failure(reply)
+	}
+	return nil
 }
 
 func replyCode(body []byte) int {
@@ -159,10 +202,11 @@ func readSession(reply *Reply) (*Session, error) {
 		return nil, err
 	}
 	return &Session{
-		UID:      data.UID,
-		Token:    data.SessionToken,
-		NeedsOTP: !data.Verified,
-		ByLink:   data.VerificationMethod == "email",
+		UID:                data.UID,
+		Token:              data.SessionToken,
+		NeedsOTP:           !data.Verified,
+		ByLink:             data.VerificationMethod == "email",
+		VerificationMethod: data.VerificationMethod,
 	}, nil
 }
 
@@ -180,31 +224,46 @@ func Register(email, password string) (*Session, error) {
 	return readSession(reply)
 }
 
-func VerifyCode(sessionToken, uid, code string) error {
-	signed, _ := json.Marshal(map[string]string{"code": code})
-	url := authBase + "/recovery_email/verify_code"
-	header := HawkHeader("POST", url, sessionToken, string(signed))
-	reply, err := call("POST", url, string(signed), map[string]string{"Authorization": header})
-	if err == nil && reply.Code >= 200 && reply.Code <= 299 {
-		return nil
+func VerifyCode(sessionToken, code, method string) error {
+	body, _ := json.Marshal(map[string]string{"code": strings.TrimSpace(code)})
+	url := authBase + "/session/verify_code"
+	if method == "totp-2fa" {
+		url = authBase + "/session/verify/totp"
 	}
-	plain, _ := json.Marshal(map[string]string{"uid": uid, "code": code})
-	reply, err = call("POST", authBase+"/recovery_email/verify_code", string(plain), nil)
-	if err == nil && reply.Code >= 200 && reply.Code <= 299 {
-		return nil
+	header := HawkHeader("POST", url, sessionToken, string(body))
+	if header == "" {
+		return errors.New("invalid session token")
 	}
-	return errors.New("The code was not accepted")
+	reply, err := call("POST", url, string(body), map[string]string{"Authorization": header})
+	if err != nil {
+		return err
+	}
+	if reply.Code < 200 || reply.Code > 299 {
+		return failure(reply)
+	}
+	if method == "totp-2fa" {
+		var result struct {
+			Success bool `json:"success"`
+		}
+		if err := json.Unmarshal(reply.Body, &result); err != nil || !result.Success {
+			return errors.New("The code was not accepted")
+		}
+	}
+	return nil
 }
 
 func SessionTokens(sessionToken string) (*Tokens, error) {
 	body, _ := json.Marshal(map[string]string{
-		"client_id":    clientID,
-		"grant_type":   "fxa-credentials",
-		"scope":        scope,
-		"access_type":  "offline",
+		"client_id":   clientID,
+		"grant_type":  "fxa-credentials",
+		"scope":       scope,
+		"access_type": "offline",
 	})
 	url := authBase + "/oauth/token"
 	header := HawkHeader("POST", url, sessionToken, string(body))
+	if header == "" {
+		return nil, errors.New("invalid session token")
+	}
 	reply, err := call("POST", url, string(body), map[string]string{"Authorization": header})
 	if err != nil {
 		return nil, err

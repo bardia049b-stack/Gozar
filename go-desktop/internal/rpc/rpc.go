@@ -109,7 +109,9 @@ func (s *Server) handle(request Request) Response {
 			Tunnel bool `json:"tunnel"`
 		}
 		json.Unmarshal(request.Params, &body)
-		s.app.SetMode(body.Tunnel)
+		if err := s.app.SetMode(body.Tunnel); err != nil {
+			response.Error = err.Error()
+		}
 	case "quit":
 		s.app.Close()
 		response.State = statePointer(s.app.State())

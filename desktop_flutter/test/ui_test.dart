@@ -4,9 +4,11 @@ import 'package:gozar/core.dart';
 import 'package:gozar/main.dart';
 
 class FakeCore extends Core {
-  FakeCore({this.signedIn = false, this.language = ''});
+  FakeCore({this.signedIn = false, this.language = '', this.twoStep = false});
 
   bool signedIn;
+  final bool twoStep;
+  int loginCalls = 0;
   String language;
   bool isRunning = false;
   String? selectedHost;
@@ -57,7 +59,8 @@ class FakeCore extends Core {
     }
     if (method == 'server') selectedHost = params!['host'] as String;
     if (method == 'login') {
-      if ((params!['code'] as String).isEmpty) {
+      loginCalls++;
+      if ((params!['code'] as String).isEmpty || (twoStep && loginCalls == 2)) {
         return CoreReply(state: current, error: 'code needed', needsCode: true);
       }
       signedIn = true;
@@ -158,6 +161,31 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Sign in'));
     await tester.pumpAndSettle();
     expect(find.text('Verification code'), findsOneWidget);
+    await tester.enterText(find.byType(TextField).at(2), '123456');
+    await tester.tap(find.widgetWithText(FilledButton, 'Verify and sign in'));
+    await tester.pumpAndSettle();
+    expect(find.text('Firefox VPN'), findsOneWidget);
+    expect(core.requests, isNot(contains('connect')));
+  });
+  testWidgets('a second verification step clears the previous code',
+      (tester) async {
+    tester.view.physicalSize = const Size(480, 740);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final core = FakeCore(language: 'en', twoStep: true);
+    await tester.pumpWidget(GozarApp(core: core));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).at(0), 'person@example.com');
+    await tester.enterText(find.byType(TextField).at(1), 'fake-password');
+    await tester.tap(find.widgetWithText(FilledButton, 'Sign in'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).at(2), 'ABC123');
+    await tester.tap(find.widgetWithText(FilledButton, 'Verify and sign in'));
+    await tester.pumpAndSettle();
+    expect(
+        tester.widget<TextField>(find.byType(TextField).at(2)).controller!.text,
+        isEmpty);
     await tester.enterText(find.byType(TextField).at(2), '123456');
     await tester.tap(find.widgetWithText(FilledButton, 'Verify and sign in'));
     await tester.pumpAndSettle();

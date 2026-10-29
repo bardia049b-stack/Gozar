@@ -39,6 +39,12 @@ ZXing
 Source: https://github.com/zxing/zxing
 License: Apache License 2.0
 
+Desktop protocol reference
+--------------------------
+The account and tunnel protocols were checked against armanlife/firefox-vpn-client.
+Source: https://github.com/armanlife/firefox-vpn-client
+Upstream license: GNU General Public License, version 3.
+
 Wintun
 ------
 The Windows tunnel uses Wintun, embedded in the Windows build.

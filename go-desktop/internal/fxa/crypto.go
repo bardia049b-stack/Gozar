@@ -4,6 +4,7 @@ import (
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"net/url"
 	"strconv"
@@ -52,14 +53,14 @@ func hkdf(ikm, salt, info []byte, length int) []byte {
 }
 
 func AuthPW(email, password string) []byte {
-	salt := []byte(prefix + "quickStretch:" + strings.ToLower(email))
+	salt := []byte(prefix + "quickStretch:" + email)
 	stretched := pbkdf2([]byte(password), salt, 1000, 32)
 	return hkdf(stretched, []byte{0}, []byte(prefix+"authPW"), 32)
 }
 
 func sessionKeys(tokenHex string) (id, key []byte) {
 	raw, err := hex.DecodeString(strings.TrimSpace(tokenHex))
-	if err != nil {
+	if err != nil || len(raw) != 32 {
 		return nil, nil
 	}
 	keys := hkdf(raw, nil, []byte(prefix+"sessionToken"), 96)
@@ -72,25 +73,36 @@ func HawkHeader(method, rawURL, tokenHex, payload string) string {
 		return ""
 	}
 	parsed, err := url.Parse(rawURL)
-	if err != nil {
+	if err != nil || parsed.Hostname() == "" {
 		return ""
 	}
 	nonceBytes := make([]byte, 6)
-	rand.Read(nonceBytes)
+	if _, err := rand.Read(nonceBytes); err != nil {
+		return ""
+	}
 	nonce := hex.EncodeToString(nonceBytes)
 	ts := strconv.FormatInt(time.Now().Unix(), 10)
 	port := parsed.Port()
 	if port == "" {
-		port = "443"
+		if parsed.Scheme == "https" {
+			port = "443"
+		} else if parsed.Scheme == "http" {
+			port = "80"
+		} else {
+			return ""
+		}
 	}
-	path := parsed.Path
+	path := parsed.EscapedPath()
+	if path == "" {
+		path = "/"
+	}
 	if parsed.RawQuery != "" {
 		path += "?" + parsed.RawQuery
 	}
 	payloadHash := ""
 	if payload != "" {
 		sum := sha256.Sum256([]byte("hawk.1.payload\napplication/json\n" + payload + "\n"))
-		payloadHash = hex.EncodeToString(sum[:])
+		payloadHash = base64.StdEncoding.EncodeToString(sum[:])
 	}
 	normalized := strings.Join([]string{
 		"hawk.1.header",
@@ -98,13 +110,13 @@ func HawkHeader(method, rawURL, tokenHex, payload string) string {
 		nonce,
 		strings.ToUpper(method),
 		path,
-		parsed.Hostname(),
+		strings.ToLower(parsed.Hostname()),
 		port,
 		payloadHash,
 		"",
 		"",
 	}, "\n")
-	mac := hex.EncodeToString(hmacSHA256(key, []byte(normalized)))
+	mac := base64.StdEncoding.EncodeToString(hmacSHA256(key, []byte(normalized)))
 	header := `Hawk id="` + hex.EncodeToString(id) + `", ts="` + ts + `", nonce="` + nonce + `", mac="` + mac + `"`
 	if payloadHash != "" {
 		header += `, hash="` + payloadHash + `"`

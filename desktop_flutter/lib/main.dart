@@ -225,6 +225,7 @@ class _GozarScreenState extends State<GozarScreen> {
       _apply(reply);
       if (!mounted) return;
       if (reply.needsCode) {
+        _code.clear();
         setState(() {
           _needsCode = true;
           _error = null;
@@ -312,6 +313,7 @@ class _GozarScreenState extends State<GozarScreen> {
     final lower = error.toLowerCase();
     if (error == '@credentials') return words.credentialsRequired;
     if (error == '@code') return words.codeRequired;
+    if (lower.contains('verification link required')) return words.verifyLink;
     if (error == '@servers') return words.serverError;
     if (error == '@browser') return words.browserError;
     if (lower.contains('core not found')) return words.coreMissing;
@@ -571,7 +573,8 @@ class _GozarScreenState extends State<GozarScreen> {
                           controller: _code,
                           enabled: !_busy,
                           textDirection: TextDirection.ltr,
-                          keyboardType: TextInputType.number,
+                          keyboardType: TextInputType.text,
+                          autocorrect: false,
                           onSubmitted: (_) => _login(),
                           decoration: InputDecoration(
                             labelText: words.verificationCode,

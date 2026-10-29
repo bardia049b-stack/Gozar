@@ -13,6 +13,7 @@ import (
 	"github.com/bardia049b-stack/gozar/go-desktop/internal/app"
 	"github.com/bardia049b-stack/gozar/go-desktop/internal/fxa"
 	"github.com/bardia049b-stack/gozar/go-desktop/internal/rpc"
+	"github.com/bardia049b-stack/gozar/go-desktop/internal/sysproxy"
 	"github.com/bardia049b-stack/gozar/go-desktop/internal/tundev"
 )
 
@@ -27,7 +28,7 @@ func main() {
 	listServers := flag.Bool("servers", false, "")
 	selftest := flag.Bool("selftest", false, "")
 	showVersion := flag.Bool("version", false, "")
-	clearProxy := flag.Bool("clear-proxy", false, "")
+	clearProxy := flag.Bool("clear-proxy", false, "explicitly clear system proxy settings")
 	flag.Parse()
 
 	switch {
@@ -99,10 +100,10 @@ func signIn(email, password, code string) {
 }
 
 func clearProxyState() string {
-	current := app.New(version)
-	defer current.Close()
-	current.Disconnect()
-	return "cleared"
+	if err := sysproxy.Clear(); err != nil {
+		return "failed to clear system proxy settings: " + err.Error()
+	}
+	return "system proxy settings cleared"
 }
 
 func report(headless bool) string {

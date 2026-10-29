@@ -3,9 +3,6 @@ package app
 import (
 	"errors"
 	"io"
-	"net"
-	"net/netip"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -14,8 +11,6 @@ import (
 	"github.com/bardia049b-stack/gozar/go-desktop/internal/config"
 	"github.com/bardia049b-stack/gozar/go-desktop/internal/engine"
 	"github.com/bardia049b-stack/gozar/go-desktop/internal/fxa"
-	"github.com/bardia049b-stack/gozar/go-desktop/internal/socks"
-	"github.com/bardia049b-stack/gozar/go-desktop/internal/sysproxy"
 	"github.com/bardia049b-stack/gozar/go-desktop/internal/tundev"
 	"github.com/bardia049b-stack/gozar/go-desktop/internal/tunnel"
 	"github.com/bardia049b-stack/gozar/go-desktop/internal/wintun"
@@ -53,8 +48,10 @@ type App struct {
 	cfg        config.Config
 	servers    []fxa.Location
 	pass       *fxa.Pass
+	pending    *fxa.Session
+	pendingFor string
+	unblockFor string
 	engine     *engine.Engine
-	proxy      *socks.Server
 	stage      string
 	fault      string
 	live       bool
@@ -71,10 +68,9 @@ type App struct {
 }
 
 func New(version string) *App {
-	created := &App{cfg: config.Load(), version: version, admin: tundev.Privileged()}
-	if sysproxy.Stale() {
-		sysproxy.Clear()
-	}
+	cfg := config.Load()
+	cfg.FullTunnel = true
+	created := &App{cfg: cfg, version: version, admin: tundev.Privileged()}
 	go created.sampler()
 	return created
 }
@@ -115,9 +111,6 @@ func (a *App) State() State {
 	if a.engine != nil {
 		state.Down, state.Up = a.engine.Counters()
 		state.Device = a.engine.Device()
-	} else if a.proxy != nil {
-		state.Down = a.lastDown
-		state.Up = a.lastUp
 	}
 	return state
 }
@@ -184,11 +177,14 @@ func (a *App) SetServer(key string) error {
 	return errors.New("server not found")
 }
 
-func (a *App) SetMode(tunMode bool) {
+func (a *App) SetMode(tunMode bool) error {
+	if !tunMode {
+		return errors.New("only TUN mode is supported")
+	}
 	a.mu.Lock()
-	a.cfg.FullTunnel = tunMode
-	config.Save(a.cfg)
-	a.mu.Unlock()
+	defer a.mu.Unlock()
+	a.cfg.FullTunnel = true
+	return config.Save(a.cfg)
 }
 
 func (a *App) SetLanguage(language string) error {
@@ -205,20 +201,75 @@ func (a *App) SetLanguage(language string) error {
 }
 
 func (a *App) SignIn(email, password, code string) error {
+	email = strings.TrimSpace(email)
+	code = strings.TrimSpace(code)
 	a.setStage("در حال ورود…")
-	session, err := fxa.SignIn(email, password)
-	if err != nil {
-		a.setStage("")
-		return err
+	a.mu.Lock()
+	session := a.pending
+	if !strings.EqualFold(a.pendingFor, email) {
+		session = nil
+		a.pending = nil
+		a.pendingFor = ""
 	}
-	if session.NeedsOTP {
-		if code == "" {
-			a.setStage("کد تأیید را از ایمیل وارد کنید")
-			return errCode
+	usingUnblock := code != "" && a.unblockFor != "" && strings.EqualFold(a.unblockFor, email)
+	a.mu.Unlock()
+	fromPending := session != nil
+	var err error
+	if session == nil {
+		if usingUnblock {
+			session, err = fxa.SignInWithUnblockCode(email, password, code)
+		} else {
+			session, err = fxa.SignIn(email, password)
 		}
-		if err := fxa.VerifyCode(session.Token, session.UID, code); err != nil {
+		if err != nil {
+			var apiError *fxa.Error
+			if !usingUnblock && errors.As(err, &apiError) && apiError.Errno == 125 {
+				address := email
+				if apiError.Email != "" {
+					address = apiError.Email
+				}
+				if err := fxa.SendUnblockCode(address); err != nil {
+					a.setStage("")
+					return err
+				}
+				a.mu.Lock()
+				a.unblockFor = email
+				a.mu.Unlock()
+				a.setStage("")
+				return errCode
+			}
 			a.setStage("")
 			return err
+		}
+		if usingUnblock {
+			a.mu.Lock()
+			a.unblockFor = ""
+			a.mu.Unlock()
+			code = ""
+		}
+	}
+	if session.NeedsOTP {
+		a.mu.Lock()
+		a.pending = session
+		a.pendingFor = email
+		a.mu.Unlock()
+		if session.ByLink {
+			if !fromPending {
+				a.setStage("")
+				return errLink
+			}
+		} else {
+			if code == "" {
+				a.setStage("")
+				return errCode
+			}
+			if err := fxa.VerifyCode(session.Token, code, session.VerificationMethod); err != nil {
+				a.setStage("")
+				return err
+			}
+			a.mu.Lock()
+			session.NeedsOTP = false
+			a.mu.Unlock()
 		}
 	}
 	a.setStage("در حال دریافت مجوز…")
@@ -228,12 +279,20 @@ func (a *App) SignIn(email, password, code string) error {
 		return err
 	}
 	a.mu.Lock()
-	a.cfg.Email = strings.TrimSpace(email)
+	a.cfg.Email = session.Email
+	if a.cfg.Email == "" {
+		a.cfg.Email = email
+	}
 	a.cfg.UID = session.UID
 	a.cfg.Access = tokens.Access
 	a.cfg.Refresh = tokens.Refresh
 	a.cfg.ExpiresAt = time.Now().Add(time.Duration(tokens.ExpiresIn-60) * time.Second).Unix()
 	saveErr := config.Save(a.cfg)
+	if saveErr == nil {
+		a.pending = nil
+		a.pendingFor = ""
+		a.unblockFor = ""
+	}
 	a.mu.Unlock()
 	if saveErr != nil {
 		a.setStage("")
@@ -245,6 +304,7 @@ func (a *App) SignIn(email, password, code string) error {
 }
 
 var errCode = errors.New("code needed")
+var errLink = errors.New("verification link required")
 
 func NeedsCode(err error) bool { return errors.Is(err, errCode) }
 
@@ -257,6 +317,9 @@ func (a *App) SignOut() {
 	a.cfg.Refresh = ""
 	a.cfg.ExpiresAt = 0
 	a.pass = nil
+	a.pending = nil
+	a.pendingFor = ""
+	a.unblockFor = ""
 	config.Save(a.cfg)
 	a.mu.Unlock()
 }
@@ -350,8 +413,6 @@ func (a *App) connect() error {
 	}
 	a.mu.Lock()
 	code := a.cfg.Server
-	full := a.cfg.FullTunnel
-	port := a.cfg.Port
 	servers := a.servers
 	a.mu.Unlock()
 	target, err := pick(servers, code)
@@ -359,15 +420,12 @@ func (a *App) connect() error {
 		return err
 	}
 
-	var keep []netip.Addr
-	if full {
-		keep = tundev.Neighbours(target.Host)
-		if len(keep) == 0 {
-			return errors.New("could not resolve the proxy server before starting the tunnel")
-		}
-		target.DialHost = keep[0].String()
-		keep = keep[:1]
+	keep := tundev.Neighbours(target.Host)
+	if len(keep) == 0 {
+		return errors.New("could not resolve the proxy server before starting the tunnel")
 	}
+	target.DialHost = keep[0].String()
+	keep = keep[:1]
 	dial := func(host string, remotePort int) (io.ReadWriteCloser, error) {
 		return tunnel.Open(target, host, remotePort, pass.Token, 15*time.Second)
 	}
@@ -376,36 +434,18 @@ func (a *App) connect() error {
 	a.stage = "برقراری تونل…"
 	a.mu.Unlock()
 
-	if full {
-		if err := wintun.Ensure(); err != nil {
-			return err
-		}
-		created, err := engine.Start(target.Host, dial, keep)
-		if err != nil {
-			return err
-		}
-		a.mu.Lock()
-		a.engine = created
-		a.live = true
-		a.since = time.Now().Unix()
-		a.mu.Unlock()
-	} else {
-		server, err := socks.Listen(net.JoinHostPort("127.0.0.1", strconv.Itoa(port)), func(host string, remotePort int) (io.ReadWriteCloser, error) {
-			return dial(host, remotePort)
-		})
-		if err != nil {
-			return err
-		}
-		a.mu.Lock()
-		a.proxy = server
-		a.cfg.Port = server.Port()
-		a.live = true
-		a.since = time.Now().Unix()
-		a.mu.Unlock()
-		if err := sysproxy.Set(server.Port()); err != nil {
-			return err
-		}
+	if err := wintun.Ensure(); err != nil {
+		return err
 	}
+	created, err := engine.Start(target.Host, dial, keep)
+	if err != nil {
+		return err
+	}
+	a.mu.Lock()
+	a.engine = created
+	a.live = true
+	a.since = time.Now().Unix()
+	a.mu.Unlock()
 	a.mu.Lock()
 	a.stage = ""
 	a.mu.Unlock()
@@ -420,19 +460,13 @@ func (a *App) connect() error {
 func (a *App) teardown() {
 	a.mu.Lock()
 	engineNow := a.engine
-	proxyNow := a.proxy
 	a.engine = nil
-	a.proxy = nil
 	a.live = false
 	a.exit = ""
 	a.since = 0
 	a.mu.Unlock()
 	if engineNow != nil {
 		engineNow.Stop()
-	}
-	if proxyNow != nil {
-		proxyNow.Close()
-		sysproxy.Clear()
 	}
 }
 

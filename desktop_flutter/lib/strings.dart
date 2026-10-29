@@ -55,6 +55,10 @@ class Words {
       pick('ایمیل و گذرواژه را وارد کنید.', 'Enter your email and password.');
   String get codeRequired =>
       pick('کد تأیید را وارد کنید.', 'Enter your verification code.');
+  String get verifyLink => pick(
+        'پیوند تأیید Mozilla را در ایمیل باز کنید، سپس دوباره ورود را بزنید.',
+        'Open the Mozilla verification link in your email, then select Sign in again.',
+      );
   String get serverError => pick(
       'دریافت فهرست سرورها ناموفق بود.', 'Could not load the server list.');
   String get browserError =>

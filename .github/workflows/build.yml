@@ -105,6 +105,11 @@ jobs:
         working-directory: go-desktop
         shell: bash
         run: go vet ./...
+      - name: Test core without tunnel
+        if: matrix.platform == 'linux'
+        working-directory: go-desktop
+        shell: bash
+        run: go test ./...
       - name: Inspect Flutter code
         working-directory: desktop_flutter
         shell: bash
@@ -137,6 +142,7 @@ jobs:
           flutter build windows --release
           RUNNER=$(find build/windows -path '*/runner/Release/gozar.exe' -print -quit)
           test -n "$RUNNER"
+          pwsh -NoProfile -File ../scripts/check-windows-manifest.ps1 -Exe "$RUNNER"
           FOLDER=$(dirname "$RUNNER")
           (cd ../go-desktop && CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags='-s -w -H=windowsgui' -o "../desktop_flutter/$FOLDER/gozar-core.exe" ./cmd/gozar)
           mkdir -p "$RUNNER_TEMP/gozar-ipc"
