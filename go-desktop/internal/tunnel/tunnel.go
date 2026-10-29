@@ -17,8 +17,9 @@ import (
 const agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:149.0) Gecko/20100101 Firefox/149.0"
 
 type Target struct {
-	Host string
-	Port int
+	Host     string
+	Port     int
+	DialHost string
 }
 
 type Dup interface {
@@ -63,7 +64,11 @@ func markH2Broken() {
 }
 
 func dialTLS(target Target, protocols []string, timeout time.Duration) (*tls.Conn, error) {
-	raw, err := net.DialTimeout("tcp", net.JoinHostPort(target.Host, strconv.Itoa(target.Port)), timeout)
+	host := target.Host
+	if target.DialHost != "" {
+		host = target.DialHost
+	}
+	raw, err := net.DialTimeout("tcp", net.JoinHostPort(host, strconv.Itoa(target.Port)), timeout)
 	if err != nil {
 		return nil, err
 	}
@@ -249,16 +254,16 @@ func openH2(target Target, host string, port int, pass string, timeout time.Dura
 }
 
 type h2Stream struct {
-	conn   *tls.Conn
-	reader *bufio.Reader
-	id     uint32
-	write  sync.Mutex
-	window sync.Mutex
-	cond   *sync.Cond
-	sendW  int64
-	connW  int64
+	conn    *tls.Conn
+	reader  *bufio.Reader
+	id      uint32
+	write   sync.Mutex
+	window  sync.Mutex
+	cond    *sync.Cond
+	sendW   int64
+	connW   int64
 	pending []byte
-	eof    bool
+	eof     bool
 }
 
 func newH2Stream(conn *tls.Conn, reader *bufio.Reader, id uint32) *h2Stream {

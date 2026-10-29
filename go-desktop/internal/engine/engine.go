@@ -52,6 +52,16 @@ func Start(proxyHost string, dial Dialer, protect []netip.Addr) (*Engine, error)
 		device.Close()
 		return nil, errors.New(err.String())
 	}
+	if err := created.SetPromiscuousMode(1, true); err != nil {
+		device.Close()
+		created.Close()
+		return nil, errors.New(err.String())
+	}
+	if err := created.SetSpoofing(1, true); err != nil {
+		device.Close()
+		created.Close()
+		return nil, errors.New(err.String())
+	}
 	address := tcpip.AddrFrom4([4]byte{10, 111, 0, 2})
 	if err := created.AddProtocolAddress(1, tcpip.ProtocolAddress{
 		Protocol:          ipv4.ProtocolNumber,
@@ -76,9 +86,8 @@ func Start(proxyHost string, dial Dialer, protect []netip.Addr) (*Engine, error)
 	created.SetTransportProtocolHandler(udp.ProtocolNumber, udpForwarder.HandlePacket)
 
 	keep := append([]netip.Addr{}, protect...)
-	keep = append(keep, netip.MustParseAddr(dnsproxy.Address))
 	engine.config = tundev.Config{Interface: device.Name(), DNS: dnsproxy.Address, Keep: keep}
-	if err := tundev.Configure(engine.config); err != nil {
+	if err := tundev.Configure(&engine.config); err != nil {
 		device.Close()
 		created.Close()
 		return nil, err
@@ -99,6 +108,7 @@ func (e *Engine) handleTCP(request *tcp.ForwarderRequest) {
 				request.Complete(true)
 				return
 			}
+			request.Complete(false)
 			e.serveDNS(gonet.NewTCPConn(queue, endpoint))
 			return
 		}
@@ -114,6 +124,7 @@ func (e *Engine) handleTCP(request *tcp.ForwarderRequest) {
 			request.Complete(true)
 			return
 		}
+		request.Complete(false)
 		e.relay(gonet.NewTCPConn(queue, endpoint), remote)
 	}()
 }
@@ -197,7 +208,7 @@ func (e *Engine) Device() string {
 
 func (e *Engine) Stop() {
 	e.once.Do(func() {
-		tundev.Restore(e.config)
+		tundev.Restore(&e.config)
 		if e.device != nil {
 			e.device.Close()
 		}

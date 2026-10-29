@@ -12,13 +12,14 @@ import (
 
 	"github.com/bardia049b-stack/gozar/go-desktop/internal/app"
 	"github.com/bardia049b-stack/gozar/go-desktop/internal/fxa"
+	"github.com/bardia049b-stack/gozar/go-desktop/internal/rpc"
 	"github.com/bardia049b-stack/gozar/go-desktop/internal/tundev"
-	"github.com/bardia049b-stack/gozar/go-desktop/internal/ui"
 )
 
 const version = "1.9.0"
 
 func main() {
+	rpcMode := flag.Bool("rpc", false, "")
 	headless := flag.Bool("headless", false, "")
 	email := flag.String("email", "", "")
 	password := flag.String("password", "", "")
@@ -40,27 +41,19 @@ func main() {
 		printServers()
 	case *email != "" && *password != "":
 		signIn(*email, *password, *code)
+	case *rpcMode:
+		runRPC()
 	case *headless:
 		runHeadless()
 	default:
-		runUI()
+		runRPC()
 	}
 }
 
-func runUI() {
+func runRPC() {
 	current := app.New(version)
-	defer current.Close()
-	address, err := ui.Run(current)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-	go current.LoadServers()
-	go current.RefreshUsage()
-	ui.Open(address)
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
-	<-stop
+	rpc.Run(current)
+	current.Close()
 }
 
 func runHeadless() {

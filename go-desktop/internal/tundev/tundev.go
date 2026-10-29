@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"runtime"
 	"sync"
 
 	wtun "golang.zx2c4.com/wireguard/tun"
@@ -17,17 +18,21 @@ import (
 const Name = "Gozar"
 
 type Device struct {
-	link  wtun.Device
-	end   *channel.Endpoint
-	name  string
-	mtu   int
-	ctx   context.Context
-	stop  context.CancelFunc
-	pump  sync.WaitGroup
+	link wtun.Device
+	end  *channel.Endpoint
+	name string
+	mtu  int
+	ctx  context.Context
+	stop context.CancelFunc
+	pump sync.WaitGroup
 }
 
 func Open(mtu int) (*Device, error) {
-	created, err := wtun.CreateTUN(Name, mtu)
+	name := Name
+	if runtime.GOOS == "darwin" {
+		name = "utun"
+	}
+	created, err := wtun.CreateTUN(name, mtu)
 	if err != nil {
 		return nil, err
 	}

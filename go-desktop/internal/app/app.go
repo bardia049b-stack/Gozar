@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"net"
+	"net/netip"
 	"strconv"
 	"strings"
 	"sync"
@@ -21,52 +22,56 @@ import (
 )
 
 type State struct {
-	SignedIn  bool           `json:"signed_in"`
-	Email     string         `json:"email"`
-	Stage     string         `json:"stage"`
-	Live      bool           `json:"live"`
-	Connecting bool          `json:"connecting"`
-	Mode      string         `json:"mode"`
-	Exit      string         `json:"exit"`
-	Server    fxa.Location   `json:"server"`
-	Servers   []fxa.Location `json:"servers"`
-	Down      int64          `json:"down"`
-	Up        int64          `json:"up"`
-	Since     int64          `json:"since"`
-	Fault     string         `json:"fault"`
-	NeedsAdmin bool          `json:"needs_admin"`
-	Limit     int64          `json:"limit"`
-	Remaining int64          `json:"remaining"`
-	Reset     string         `json:"reset"`
-	Port      int            `json:"port"`
-	Device    string         `json:"device"`
-	Version   string         `json:"version"`
-	Admin     bool           `json:"admin"`
+	SignedIn   bool           `json:"signed_in"`
+	Email      string         `json:"email"`
+	Language   string         `json:"language"`
+	Stage      string         `json:"stage"`
+	Live       bool           `json:"live"`
+	Connecting bool           `json:"connecting"`
+	Mode       string         `json:"mode"`
+	Exit       string         `json:"exit"`
+	Server     fxa.Location   `json:"server"`
+	Servers    []fxa.Location `json:"servers"`
+	Down       int64          `json:"down"`
+	Up         int64          `json:"up"`
+	RateDown   int64          `json:"rate_down"`
+	RateUp     int64          `json:"rate_up"`
+	Since      int64          `json:"since"`
+	Fault      string         `json:"fault"`
+	NeedsAdmin bool           `json:"needs_admin"`
+	Limit      int64          `json:"limit"`
+	Remaining  int64          `json:"remaining"`
+	Reset      string         `json:"reset"`
+	Port       int            `json:"port"`
+	Device     string         `json:"device"`
+	Version    string         `json:"version"`
+	Admin      bool           `json:"admin"`
 }
 
 type App struct {
-	mu        sync.Mutex
-	cfg       config.Config
-	servers   []fxa.Location
-	pass      *fxa.Pass
-	engine    *engine.Engine
-	proxy     *socks.Server
-	stage     string
-	fault     string
-	live      bool
+	mu         sync.Mutex
+	cfg        config.Config
+	servers    []fxa.Location
+	pass       *fxa.Pass
+	engine     *engine.Engine
+	proxy      *socks.Server
+	stage      string
+	fault      string
+	live       bool
 	connecting bool
-	needAdmin bool
-	exit      string
-	since     int64
-	rateDown  atomic.Int64
-	rateUp    atomic.Int64
-	lastDown  int64
-	lastUp    int64
-	version   string
+	needAdmin  bool
+	exit       string
+	since      int64
+	rateDown   atomic.Int64
+	rateUp     atomic.Int64
+	lastDown   int64
+	lastUp     int64
+	version    string
+	admin      bool
 }
 
 func New(version string) *App {
-	created := &App{cfg: config.Load(), version: version}
+	created := &App{cfg: config.Load(), version: version, admin: tundev.Privileged()}
 	if sysproxy.Stale() {
 		sysproxy.Clear()
 	}
@@ -80,17 +85,20 @@ func (a *App) State() State {
 	state := State{
 		SignedIn:   a.cfg.SignedIn(),
 		Email:      a.cfg.Email,
+		Language:   a.cfg.Language,
 		Stage:      a.stage,
 		Live:       a.live,
 		Connecting: a.connecting,
 		Mode:       a.mode(),
 		Exit:       a.exit,
-		Servers:    a.servers,
+		Servers:    append([]fxa.Location(nil), a.servers...),
 		Fault:      a.fault,
 		NeedsAdmin: a.needAdmin,
 		Port:       a.cfg.Port,
 		Version:    a.version,
-		Admin:      tundev.Privileged(),
+		Admin:      a.admin,
+		RateDown:   a.rateDown.Load(),
+		RateUp:     a.rateUp.Load(),
 	}
 	if a.pass != nil {
 		state.Limit = a.pass.Limit
@@ -99,7 +107,7 @@ func (a *App) State() State {
 	}
 	state.Since = a.since
 	for _, place := range a.servers {
-		if place.Code == a.cfg.Server {
+		if strings.EqualFold(place.Host, a.cfg.Server) || strings.EqualFold(place.Code, a.cfg.Server) {
 			state.Server = place
 			break
 		}
@@ -156,23 +164,44 @@ func (a *App) LoadServers() ([]fxa.Location, error) {
 			}
 		}
 	}
+	err = config.Save(a.cfg)
 	a.mu.Unlock()
-	config.Save(a.cfg)
-	return servers, nil
+	return servers, err
 }
 
-func (a *App) SetServer(code string) {
+func (a *App) SetServer(key string) error {
 	a.mu.Lock()
-	a.cfg.Server = code
-	a.mu.Unlock()
-	config.Save(a.cfg)
+	defer a.mu.Unlock()
+	if a.live || a.connecting {
+		return errors.New("disconnect before changing the server")
+	}
+	for _, place := range a.servers {
+		if strings.EqualFold(place.Host, key) || strings.EqualFold(place.Code, key) {
+			a.cfg.Server = place.Host
+			return config.Save(a.cfg)
+		}
+	}
+	return errors.New("server not found")
 }
 
 func (a *App) SetMode(tunMode bool) {
 	a.mu.Lock()
 	a.cfg.FullTunnel = tunMode
-	a.mu.Unlock()
 	config.Save(a.cfg)
+	a.mu.Unlock()
+}
+
+func (a *App) SetLanguage(language string) error {
+	if language != "" && language != "system" && language != "fa" && language != "en" {
+		return errors.New("unsupported language")
+	}
+	if language == "system" {
+		language = ""
+	}
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.cfg.Language = language
+	return config.Save(a.cfg)
 }
 
 func (a *App) SignIn(email, password, code string) error {
@@ -204,8 +233,12 @@ func (a *App) SignIn(email, password, code string) error {
 	a.cfg.Access = tokens.Access
 	a.cfg.Refresh = tokens.Refresh
 	a.cfg.ExpiresAt = time.Now().Add(time.Duration(tokens.ExpiresIn-60) * time.Second).Unix()
+	saveErr := config.Save(a.cfg)
 	a.mu.Unlock()
-	config.Save(a.cfg)
+	if saveErr != nil {
+		a.setStage("")
+		return saveErr
+	}
 	a.setStage("")
 	go a.RefreshUsage()
 	return nil
@@ -224,8 +257,8 @@ func (a *App) SignOut() {
 	a.cfg.Refresh = ""
 	a.cfg.ExpiresAt = 0
 	a.pass = nil
-	a.mu.Unlock()
 	config.Save(a.cfg)
+	a.mu.Unlock()
 }
 
 func (a *App) access() (string, error) {
@@ -244,8 +277,8 @@ func (a *App) access() (string, error) {
 		a.cfg.Access = tokens.Access
 		a.cfg.Refresh = tokens.Refresh
 		a.cfg.ExpiresAt = time.Now().Add(time.Duration(tokens.ExpiresIn-60) * time.Second).Unix()
-		a.mu.Unlock()
 		config.Save(a.cfg)
+		a.mu.Unlock()
 		return tokens.Access, nil
 	}
 	return access, nil
@@ -326,6 +359,15 @@ func (a *App) connect() error {
 		return err
 	}
 
+	var keep []netip.Addr
+	if full {
+		keep = tundev.Neighbours(target.Host)
+		if len(keep) == 0 {
+			return errors.New("could not resolve the proxy server before starting the tunnel")
+		}
+		target.DialHost = keep[0].String()
+		keep = keep[:1]
+	}
 	dial := func(host string, remotePort int) (io.ReadWriteCloser, error) {
 		return tunnel.Open(target, host, remotePort, pass.Token, 15*time.Second)
 	}
@@ -338,7 +380,6 @@ func (a *App) connect() error {
 		if err := wintun.Ensure(); err != nil {
 			return err
 		}
-		keep := tundev.Neighbours(target.Host)
 		created, err := engine.Start(target.Host, dial, keep)
 		if err != nil {
 			return err
@@ -405,7 +446,6 @@ func (a *App) Disconnect() {
 
 func (a *App) Close() {
 	a.teardown()
-	sysproxy.Clear()
 }
 
 func (a *App) setStage(text string) {
@@ -419,7 +459,7 @@ func pick(servers []fxa.Location, code string) (tunnel.Target, error) {
 		return tunnel.Target{}, errors.New("no servers")
 	}
 	for _, place := range servers {
-		if code != "" && strings.EqualFold(place.Code, code) {
+		if code != "" && (strings.EqualFold(place.Code, code) || strings.EqualFold(place.Host, code)) {
 			return tunnel.Target{Host: place.Host, Port: place.Port}, nil
 		}
 	}

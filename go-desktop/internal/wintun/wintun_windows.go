@@ -3,6 +3,7 @@
 package wintun
 
 import (
+	"bytes"
 	_ "embed"
 	"os"
 	"path/filepath"
@@ -17,7 +18,7 @@ func Ensure() error {
 	executable, err := os.Executable()
 	if err == nil {
 		target := filepath.Join(filepath.Dir(executable), "wintun.dll")
-		if current, err := os.ReadFile(target); err != nil || len(current) != len(library) {
+		if current, err := os.ReadFile(target); err != nil || !bytes.Equal(current, library) {
 			if err := os.WriteFile(target, library, 0o644); err == nil {
 				return nil
 			}

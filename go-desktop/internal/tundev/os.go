@@ -11,16 +11,26 @@ import (
 )
 
 type Config struct {
-	Interface string
-	DNS       string
-	Keep      []netip.Addr
+	Interface       string
+	DNS             string
+	Keep            []netip.Addr
+	AddedKeep       []netip.Addr
+	Routes          [2]bool
+	DNSBefore       []byte
+	DNSChanged      bool
+	ServiceDNS      map[string][]string
+	ChangedServices []string
 }
 
-func Configure(cfg Config) error {
-	return configure(cfg)
+func Configure(cfg *Config) error {
+	if err := configure(cfg); err != nil {
+		restore(cfg)
+		return err
+	}
+	return nil
 }
 
-func Restore(cfg Config) {
+func Restore(cfg *Config) {
 	restore(cfg)
 }
 

@@ -1,5 +1,3 @@
-//go:build linux
-
 package tundev
 
 import (
@@ -9,9 +7,8 @@ import (
 )
 
 const resolvConf = "/etc/resolv.conf"
-const resolvBackup = "/etc/gozar-resolv.conf"
 
-func configure(cfg Config) error {
+func configure(cfg *Config) error {
 	if !isRoot() {
 		return errors.New("the tunnel needs root")
 	}
@@ -21,45 +18,66 @@ func configure(cfg Config) error {
 	if err := mustRun("ip", "addr", "add", Address.String()+"/32", "dev", cfg.Interface); err != nil {
 		return err
 	}
-	out, _ := command("sh", "-c", "ip route show default | head -n1")
-	fields := strings.Fields(strings.TrimSpace(out))
-	var gate, device string
+	out, err := command("ip", "route", "show", "default")
+	if err != nil {
+		return err
+	}
+	fields := strings.Fields(strings.SplitN(out, "\n", 2)[0])
+	var gateway, device string
 	for index, field := range fields {
 		if field == "via" && index+1 < len(fields) {
-			gate = fields[index+1]
+			gateway = fields[index+1]
 		}
 		if field == "dev" && index+1 < len(fields) {
 			device = fields[index+1]
 		}
 	}
+	if gateway == "" || device == "" {
+		return errors.New("no usable default gateway")
+	}
 	for _, keep := range cfg.Keep {
-		if gate != "" && device != "" {
-			mustRun("ip", "route", "add", keep.String()+"/32", "via", gate, "dev", device)
+		if err := mustRun("ip", "route", "add", keep.String()+"/32", "via", gateway, "dev", device); err != nil {
+			return err
 		}
+		cfg.AddedKeep = append(cfg.AddedKeep, keep)
 	}
 	if err := mustRun("ip", "route", "add", "0.0.0.0/1", "dev", cfg.Interface); err != nil {
 		return err
 	}
+	cfg.Routes[0] = true
 	if err := mustRun("ip", "route", "add", "128.0.0.0/1", "dev", cfg.Interface); err != nil {
 		return err
 	}
-	if data, err := os.ReadFile(resolvConf); err == nil {
-		os.WriteFile(resolvBackup, data, 0o644)
+	cfg.Routes[1] = true
+	before, err := os.ReadFile(resolvConf)
+	if err != nil {
+		return err
 	}
-	os.WriteFile(resolvConf, []byte("nameserver "+cfg.DNS+"\n"), 0o644)
+	cfg.DNSBefore = before
+	cfg.DNSChanged = true
+	if err := os.WriteFile(resolvConf, []byte("nameserver "+cfg.DNS+"\n"), 0o644); err != nil {
+		return err
+	}
 	return nil
 }
 
-func restore(cfg Config) {
-	mustRun("ip", "route", "delete", "0.0.0.0/1", "dev", cfg.Interface)
-	mustRun("ip", "route", "delete", "128.0.0.0/1", "dev", cfg.Interface)
-	for _, keep := range cfg.Keep {
+func restore(cfg *Config) {
+	if cfg.DNSChanged {
+		os.WriteFile(resolvConf, cfg.DNSBefore, 0o644)
+		cfg.DNSChanged = false
+	}
+	if cfg.Routes[0] {
+		mustRun("ip", "route", "delete", "0.0.0.0/1", "dev", cfg.Interface)
+		cfg.Routes[0] = false
+	}
+	if cfg.Routes[1] {
+		mustRun("ip", "route", "delete", "128.0.0.0/1", "dev", cfg.Interface)
+		cfg.Routes[1] = false
+	}
+	for _, keep := range cfg.AddedKeep {
 		mustRun("ip", "route", "delete", keep.String()+"/32")
 	}
-	if data, err := os.ReadFile(resolvBackup); err == nil {
-		os.WriteFile(resolvConf, data, 0o644)
-		os.Remove(resolvBackup)
-	}
+	cfg.AddedKeep = nil
 }
 
 func privileged() bool { return isRoot() }

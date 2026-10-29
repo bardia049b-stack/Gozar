@@ -1,9 +1,8 @@
-//go:build windows
-
 package tundev
 
 import (
 	"errors"
+	"net"
 	"strconv"
 	"strings"
 
@@ -31,14 +30,31 @@ func gateway() (string, string) {
 	}
 	for _, line := range strings.Split(out, "\n") {
 		fields := strings.Fields(line)
-		if len(fields) >= 5 && fields[0] == "0.0.0.0" && fields[1] == "0.0.0.0" {
-			return fields[2], fields[3]
+		if len(fields) < 5 || fields[0] != "0.0.0.0" || fields[1] != "0.0.0.0" {
+			continue
+		}
+		ip := net.ParseIP(fields[3])
+		interfaces, err := net.Interfaces()
+		if ip == nil || err != nil {
+			continue
+		}
+		for _, iface := range interfaces {
+			addresses, err := iface.Addrs()
+			if err != nil {
+				continue
+			}
+			for _, address := range addresses {
+				candidate, _, err := net.ParseCIDR(address.String())
+				if err == nil && candidate.Equal(ip) {
+					return fields[2], strconv.Itoa(iface.Index)
+				}
+			}
 		}
 	}
 	return "", ""
 }
 
-func configure(cfg Config) error {
+func configure(cfg *Config) error {
 	if !isWindowsAdmin() {
 		return errors.New("the tunnel needs administrator rights")
 	}
@@ -51,30 +67,42 @@ func configure(cfg Config) error {
 		return err
 	}
 	gate, index := gateway()
-	for _, keep := range cfg.Keep {
-		if gate == "" || index == "" {
-			break
-		}
-		mustRun("route", "add", keep.String(), "mask", "255.255.255.255", gate, "metric", "1", "if", index)
+	if gate == "" || index == "" {
+		return errors.New("no usable default gateway")
 	}
-	mustRun("netsh", "interface", "ipv4", "set", "interface", cfg.Interface, "metric=1")
+	for _, keep := range cfg.Keep {
+		if err := mustRun("route", "add", keep.String(), "mask", "255.255.255.255", gate, "metric", "1", "if", index); err != nil {
+			return err
+		}
+		cfg.AddedKeep = append(cfg.AddedKeep, keep)
+	}
+	if err := mustRun("netsh", "interface", "ipv4", "set", "interface", cfg.Interface, "metric=1"); err != nil {
+		return err
+	}
 	if err := mustRun("netsh", "interface", "ipv4", "add", "route", "0.0.0.0/1", cfg.Interface); err != nil {
 		return err
 	}
+	cfg.Routes[0] = true
 	if err := mustRun("netsh", "interface", "ipv4", "add", "route", "128.0.0.0/1", cfg.Interface); err != nil {
 		return err
 	}
+	cfg.Routes[1] = true
 	return nil
 }
 
-func restore(cfg Config) {
-	mustRun("netsh", "interface", "ipv4", "delete", "route", "0.0.0.0/1", cfg.Interface)
-	mustRun("netsh", "interface", "ipv4", "delete", "route", "128.0.0.0/1", cfg.Interface)
-	for _, keep := range cfg.Keep {
+func restore(cfg *Config) {
+	if cfg.Routes[0] {
+		mustRun("netsh", "interface", "ipv4", "delete", "route", "0.0.0.0/1", cfg.Interface)
+		cfg.Routes[0] = false
+	}
+	if cfg.Routes[1] {
+		mustRun("netsh", "interface", "ipv4", "delete", "route", "128.0.0.0/1", cfg.Interface)
+		cfg.Routes[1] = false
+	}
+	for _, keep := range cfg.AddedKeep {
 		mustRun("route", "delete", keep.String())
 	}
+	cfg.AddedKeep = nil
 }
-
-var _ = strconv.Itoa
 
 func privileged() bool { return isWindowsAdmin() }

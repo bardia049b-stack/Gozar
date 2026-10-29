@@ -1,13 +1,33 @@
-Gozar is a Firefox VPN client for Android, Windows, macOS and Linux.
+Gozar is a Firefox VPN client for Android, Windows, macOS, and Linux.
 
-It signs in with a Firefox account, opens the Mozilla proxy tunnel and routes the whole machine
-through it.
+Android uses its existing Kotlin application and its shared core. Desktop has a native Flutter
+Material 3 interface and a Go core. It does not use Kotlin, a JVM, a browser-based interface, or
+an HTTP API for the interface. The Flutter process communicates with the Go process through a
+private standard-input/output pipe. The interface supports Persian, English, and the system
+language, and keeps the selected language between launches.
 
-Android keeps the Kotlin app. The desktop apps are Go only: one self-contained binary for Windows,
-macOS and Linux, about 9 MB each, with no Java and no runtime to install. The tunnel is a real
-kernel tunnel: a network adapter carries every packet, the Go TCP/UDP stack answers inside the app,
-DNS is resolved over the tunnel, and only the tunnel's own traffic to the proxy goes out directly.
-A small window opens in the browser for the account, the server list, the connection and the
-counters, and a system proxy mode is kept for machines without administrator rights.
+Desktop builds are archives containing the application and its runtime libraries; they are not
+MSI, DMG, or DEB installers. The Windows build contains Wintun. The desktop tunnel configures a
+TUN interface and uses a userspace network stack; it needs administrator privileges. On Windows,
+the application requests elevation when it starts. On Linux and macOS, launch the application
+with appropriate administrator privileges to use the tunnel.
+
+The desktop tunnel is experimental. It has not been verified in a live connection in this
+revision. IPv6 is not routed through the tunnel and may bypass it. UDP other than DNS is not
+supported. Do not rely on this build for privacy or as a complete device-wide VPN. Routing,
+per-application rules, proxy chains, tunnel-in-tunnel, update checking, and the route map are not
+implemented in the new desktop interface.
+
+Linux build, from the repository root:
+
+    cd desktop_flutter
+    flutter pub get
+    flutter build linux --release
+    cd ../go-desktop
+    CGO_ENABLED=0 go build -trimpath -ldflags='-s -w' -o ../desktop_flutter/build/linux/x64/release/bundle/gozar-core ./cmd/gozar
+
+The desktop build needs Flutter 3.24.5, Go 1.24, and the platform's native build dependencies.
+On Linux, the built app requires GTK 3 and a graphical desktop. A Flutter bundle contains
+multiple files: keep the Go core, the executable, and the bundled data and libraries together.
 
 Source code is licensed under GNU AGPL-3.0-or-later. See LICENSE and NOTICE.

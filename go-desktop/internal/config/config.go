@@ -13,6 +13,7 @@ type Config struct {
 	Refresh    string   `json:"refresh"`
 	ExpiresAt  int64    `json:"expires_at"`
 	Server     string   `json:"server"`
+	Language   string   `json:"language"`
 	FullTunnel bool     `json:"full_tunnel"`
 	BypassLAN  bool     `json:"bypass_lan"`
 	Bypass     []string `json:"bypass"`

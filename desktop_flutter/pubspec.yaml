@@ -1,0 +1,35 @@
+name: gozar
+description: Gozar desktop
+publish_to: 'none'
+version: 1.9.0+25
+
+environment:
+  sdk: ^3.5.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_lints: ^4.0.0
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/firefox.png
+    - assets/gozar.png
+  fonts:
+    - family: Vazirmatn
+      fonts:
+        - asset: assets/fonts/vazirmatn_regular.ttf
+          weight: 400
+        - asset: assets/fonts/vazirmatn_medium.ttf
+          weight: 500
+        - asset: assets/fonts/vazirmatn_semibold.ttf
+          weight: 600
+        - asset: assets/fonts/vazirmatn_bold.ttf
+          weight: 700
