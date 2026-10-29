@@ -14,8 +14,8 @@ android {
         applicationId 'com.gozarwg'
         minSdk 24
         targetSdk 35
-        versionCode 15
-        versionName '1.5.0'
+        versionCode 16
+        versionName '1.6.0'
         resourceConfigurations += ['en', 'fa']
     }
 
@@ -84,6 +84,7 @@ android {
 }
 
 dependencies {
+    implementation project(':core')
     implementation 'com.zaneschepke:amneziawg-android:2.3.7'
     implementation 'com.google.zxing:core:3.5.3'
     implementation 'androidx.appcompat:appcompat:1.7.1'

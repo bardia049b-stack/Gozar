@@ -12,3 +12,5 @@ app/build
 *.jks
 *.keystore
 .kotlin/
+core/build
+desktop/build

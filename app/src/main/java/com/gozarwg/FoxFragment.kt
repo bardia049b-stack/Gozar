@@ -218,29 +218,17 @@ class FoxFragment : Fragment() {
     private fun accountMenu() {
         val c = requireContext()
         if (!Fox.signedIn(c)) {
-            MaterialAlertDialogBuilder(c)
-                .setItems(arrayOf(getString(R.string.fox_sign_in), getString(R.string.fox_logs))) { _, which ->
-                    if (which == 0) focusSignIn() else showLogs()
-                }
-                .show()
+            focusSignIn()
             return
         }
         MaterialAlertDialogBuilder(c)
             .setTitle(FoxStore.email(c))
-            .setItems(
-                arrayOf(
-                    getString(R.string.fox_refresh),
-                    getString(R.string.fox_logs),
-                    getString(R.string.fox_sign_out)
-                )
-            ) { _, which ->
-                when (which) {
-                    0 -> Fox.refreshUsage(c)
-                    1 -> showLogs()
-                    else -> {
-                        FoxVpnService.stop(c)
-                        Fox.signOut(c)
-                    }
+            .setItems(arrayOf(getString(R.string.fox_refresh), getString(R.string.fox_sign_out))) { _, which ->
+                if (which == 0) {
+                    Fox.refreshUsage(c)
+                } else {
+                    FoxVpnService.stop(c)
+                    Fox.signOut(c)
                 }
             }
             .show()
@@ -385,40 +373,6 @@ class FoxFragment : Fragment() {
             signError.visibility = View.GONE
         }
         if (mail.isNotEmpty() && emailInput.text.isNullOrEmpty()) emailInput.setText(mail)
-    }
-
-    private fun showLogs() {
-        val c = context ?: return
-        val view = TextView(c).apply {
-            text = FoxLog.dump().ifEmpty { getString(R.string.fox_log_empty) }
-            typeface = android.graphics.Typeface.MONOSPACE
-            textSize = 10f
-            setTextIsSelectable(true)
-            val pad = (16 * resources.displayMetrics.density).toInt()
-            setPadding(pad, pad, pad, pad)
-        }
-        val scroll = android.widget.ScrollView(c).apply { addView(view) }
-        MaterialAlertDialogBuilder(c)
-            .setTitle(getString(R.string.fox_logs))
-            .setView(scroll)
-            .setPositiveButton(R.string.fox_copy, null)
-            .setNeutralButton(R.string.fox_clear, null)
-            .setNegativeButton(R.string.cancel, null)
-            .create()
-            .apply {
-                setOnShowListener {
-                    getButton(android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                        val clipboard = c.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                        clipboard.setPrimaryClip(android.content.ClipData.newPlainText("gozarwg", FoxLog.dump()))
-                        dismiss()
-                    }
-                    getButton(android.app.AlertDialog.BUTTON_NEUTRAL).setOnClickListener {
-                        FoxLog.clear()
-                        dismiss()
-                    }
-                }
-                show()
-            }
     }
 
     private fun resetText(raw: String): String {

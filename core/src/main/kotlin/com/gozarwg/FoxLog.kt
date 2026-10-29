@@ -46,12 +46,26 @@ object FoxLog {
     fun count(): Int = synchronized(lines) { lines.size }
 
     private fun decode(part: String): String {
-        return try {
-            val raw = android.util.Base64.decode(part, android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP)
-            val text = String(raw, Charsets.UTF_8)
-            text.take(260)
-        } catch (e: Exception) {
-            "unreadable"
+        val text = StringBuilder()
+        var buffer = 0
+        var bits = 0
+        for (mark in part) {
+            val value = when (mark) {
+                in 'A'..'Z' -> mark - 'A'
+                in 'a'..'z' -> mark - 'a' + 26
+                in '0'..'9' -> mark - '0' + 52
+                '-' -> 62
+                '_' -> 63
+                '=' -> break
+                else -> return "unreadable"
+            }
+            buffer = (buffer shl 6) or value
+            bits += 6
+            if (bits >= 8) {
+                bits -= 8
+                text.append(((buffer shr bits) and 0xFF).toChar())
+            }
         }
+        return text.toString().take(260)
     }
 }

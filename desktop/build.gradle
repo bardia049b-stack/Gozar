@@ -1,0 +1,73 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'org.jetbrains.compose'
+    id 'org.jetbrains.kotlin.plugin.compose'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+    }
+}
+
+dependencies {
+    implementation project(':core')
+    implementation compose.desktop.currentOs
+    implementation compose.material3
+    implementation 'org.json:json:20240303'
+}
+
+compose.desktop {
+    application {
+        mainClass = 'com.gozarwg.desk.MainKt'
+
+
+        nativeDistributions {
+            targetFormats(
+                org.jetbrains.compose.desktop.application.dsl.TargetFormat.Deb,
+                org.jetbrains.compose.desktop.application.dsl.TargetFormat.Msi,
+                org.jetbrains.compose.desktop.application.dsl.TargetFormat.Dmg
+            )
+            modules(
+                'java.base',
+                'java.desktop',
+                'java.logging',
+                'java.management',
+                'java.naming',
+                'java.prefs',
+                'java.security.jgss',
+                'java.instrument',
+                'jdk.crypto.ec',
+                'jdk.unsupported'
+            )
+            packageName = 'GozarWG'
+            packageVersion = '1.6.0'
+            description = 'GozarWG desktop'
+            vendor = 'GozarWG'
+
+            linux {
+                menuGroup = 'Network'
+                appCategory = 'Network'
+                debMaintainer = 'dev@gozarwg.local'
+                iconFile.set(file('icons/fox-256.png'))
+            }
+
+            windows {
+                menuGroup = 'GozarWG'
+                upgradeUuid = '8f9f0b34-4cb6-4b6a-9a2e-6c4f1e8a6d51'
+                iconFile.set(file('icons/fox.ico'))
+            }
+
+            macOS {
+                bundleID = 'com.gozarwg.desktop'
+                dockName = 'GozarWG'
+                iconFile.set(file('icons/fox.icns'))
+            }
+        }
+    }
+}
