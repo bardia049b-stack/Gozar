@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"strings"
-	"time"
 )
 
 const (
@@ -20,7 +19,7 @@ const (
 	serversURL  = "https://firefox.settings.services.mozilla.com/v1/buckets/main/collections/vpn-serverlist/records"
 )
 
-var client = &http.Client{Timeout: 25 * time.Second}
+var client = newHTTPClient()
 
 type Reply struct {
 	Code    int
@@ -38,6 +37,19 @@ type Error struct {
 func (e *Error) Error() string { return e.Message }
 
 func call(method, url, body string, headers map[string]string) (*Reply, error) {
+	for attempt := 0; attempt < 3; attempt++ {
+		reply, err := callOnce(method, url, body, headers)
+		if err != nil || reply.Code != http.StatusNotAcceptable || !strings.HasPrefix(url, authBase+"/") {
+			return reply, err
+		}
+		if err := solveChallenge(); err != nil {
+			return nil, err
+		}
+	}
+	return nil, errors.New("Mozilla security check was not accepted; try again")
+}
+
+func callOnce(method, url, body string, headers map[string]string) (*Reply, error) {
 	var reader io.Reader
 	if body != "" {
 		reader = strings.NewReader(body)
@@ -82,7 +94,7 @@ func failure(reply *Reply) error {
 		message = fmt.Sprintf("HTTP %d", reply.Code)
 	}
 	if reply.Code == 406 {
-		message = "Mozilla's anti-bot check needs another try"
+		message = "Mozilla security check was not accepted; try again"
 	}
 	return &Error{Message: message, Status: reply.Code, Errno: data.Errno, Email: data.Email}
 }
@@ -122,7 +134,9 @@ type Pass struct {
 type signInReply struct {
 	UID                string `json:"uid"`
 	SessionToken       string `json:"sessionToken"`
-	Verified           bool   `json:"verified"`
+	Verified           *bool  `json:"verified"`
+	EmailVerified      *bool  `json:"emailVerified"`
+	SessionVerified    *bool  `json:"sessionVerified"`
 	VerificationMethod string `json:"verificationMethod"`
 }
 
@@ -201,18 +215,26 @@ func readSession(reply *Reply) (*Session, error) {
 	if err := decode(reply, &data); err != nil {
 		return nil, err
 	}
+	if data.UID == "" || data.SessionToken == "" {
+		return nil, errors.New("Mozilla did not return a valid session")
+	}
+	verified := data.Verified != nil && *data.Verified
+	if data.Verified == nil && data.EmailVerified != nil {
+		verified = *data.EmailVerified && (data.SessionVerified == nil || *data.SessionVerified)
+	}
 	return &Session{
 		UID:                data.UID,
 		Token:              data.SessionToken,
-		NeedsOTP:           !data.Verified,
+		NeedsOTP:           !verified,
 		ByLink:             data.VerificationMethod == "email",
 		VerificationMethod: data.VerificationMethod,
 	}, nil
 }
 
 func Register(email, password string) (*Session, error) {
+	email = strings.TrimSpace(email)
 	body, _ := json.Marshal(map[string]any{
-		"email":              strings.TrimSpace(email),
+		"email":              email,
 		"authPW":             fmt.Sprintf("%x", AuthPW(email, password)),
 		"service":            "sync",
 		"verificationMethod": "email-otp",
@@ -221,7 +243,24 @@ func Register(email, password string) (*Session, error) {
 	if err != nil {
 		return nil, err
 	}
-	return readSession(reply)
+	session, err := readSession(reply)
+	if err != nil {
+		return nil, err
+	}
+	session.Email = email
+	return session, nil
+}
+
+func VerifySignup(uid, code string) error {
+	body, _ := json.Marshal(map[string]string{"uid": uid, "code": strings.TrimSpace(code)})
+	reply, err := call("POST", authBase+"/recovery_email/verify_code", string(body), nil)
+	if err != nil {
+		return err
+	}
+	if reply.Code < 200 || reply.Code > 299 {
+		return failure(reply)
+	}
+	return nil
 }
 
 func VerifyCode(sessionToken, code, method string) error {

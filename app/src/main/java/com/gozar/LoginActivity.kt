@@ -8,6 +8,8 @@ import android.view.inputmethod.EditorInfo
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.view.WindowCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.button.MaterialButton
 import android.text.InputType
 import android.widget.EditText
@@ -35,6 +37,7 @@ class LoginActivity : BaseActivity() {
     private lateinit var primary: MaterialButton
     private lateinit var forgot: MaterialButton
     private lateinit var switchButton: MaterialButton
+    private lateinit var languageButton: MaterialButton
     private lateinit var busyRow: LinearLayout
     private lateinit var notice: TextView
     private lateinit var error: TextView
@@ -50,6 +53,15 @@ class LoginActivity : BaseActivity() {
             isAppearanceLightNavigationBars = false
         }
         setContentView(R.layout.activity_login)
+        create = savedInstanceState?.getBoolean("create", false) ?: false
+        languageButton = findViewById(R.id.loginLanguage)
+        languageButton.setOnClickListener { if (!Fox.busy) showLanguagePicker(this) }
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.loginRoot)) { _, insets ->
+            val params = languageButton.layoutParams as android.widget.FrameLayout.LayoutParams
+            params.topMargin = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
+            languageButton.layoutParams = params
+            insets
+        }
         title = findViewById(R.id.loginTitle)
         subtitle = findViewById(R.id.loginSubtitle)
         mailBox = findViewById(R.id.loginMailBox)
@@ -109,6 +121,11 @@ class LoginActivity : BaseActivity() {
         Fox.watch(listener)
         Fox.load(this)
         render()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putBoolean("create", create)
+        super.onSaveInstanceState(outState)
     }
 
     override fun onDestroy() {
@@ -189,6 +206,7 @@ class LoginActivity : BaseActivity() {
         busyRow.visibility = if (Fox.busy) View.VISIBLE else View.GONE
         primary.text = if (Fox.busy) stage else action
         primary.isEnabled = !Fox.busy
+        languageButton.isEnabled = !Fox.busy
         mail.isEnabled = !Fox.busy
         secret.isEnabled = !Fox.busy
         confirm.isEnabled = !Fox.busy

@@ -10,6 +10,36 @@ class Words {
         'برای استفاده از Gozar، وارد حساب Firefox خود شوید.',
         'Use your Firefox account to continue with Gozar.',
       );
+  String get createTitle => pick('ساخت حساب', 'Create account');
+  String get createDescription => pick(
+        'برای ساخت حساب Firefox اطلاعات زیر را وارد کنید.',
+        'Enter your details to create a Firefox account.',
+      );
+  String get createAction => pick('ساخت حساب', 'Create account');
+  String get haveAccount =>
+      pick('حساب دارید؟ وارد شوید', 'Already have an account? Sign in');
+  String get repeatPassword => pick('تکرار گذرواژه', 'Repeat password');
+  String get passwordMismatch =>
+      pick('دو گذرواژه یکسان نیستند.', 'The passwords do not match.');
+  String get checkEmail => pick(
+        'کد تأیید ارسال‌شده به ایمیل را وارد کنید.',
+        'Enter the verification code sent to your email.',
+      );
+  String get verifyAndCreate =>
+      pick('تأیید و ساخت حساب', 'Verify and create account');
+  String get securityCheck =>
+      pick('بررسی امنیتی Mozilla', 'Mozilla security check');
+  String get securityInstruction => pick(
+        'متن تصویر را وارد کنید.',
+        'Enter the text shown in the image.',
+      );
+  String get securityAnswer => pick('متن تصویر', 'Image text');
+  String get securityRequired =>
+      pick('متن تصویر امنیتی را وارد کنید.', 'Enter the security image text.');
+  String get securityFailed => pick(
+        'بررسی امنیتی Mozilla کامل نشد؛ دوباره تلاش کنید.',
+        'Mozilla’s security check could not be completed. Please try again.',
+      );
   String get email => pick('ایمیل', 'Email');
   String get password => pick('گذرواژه', 'Password');
   String get verificationCode => pick('کد تأیید', 'Verification code');

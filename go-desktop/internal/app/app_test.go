@@ -156,3 +156,55 @@ func TestBlockedSignInRequestsNewCodesWithoutStartingNewSessions(t *testing.T) {
 		t.Fatalf("login=%d sent=%d verify=%d", loginCount, sentCount, verifyCount)
 	}
 }
+
+func TestRegistrationRetainsSessionForEmailAndTokenRetries(t *testing.T) {
+	root := t.TempDir()
+	t.Setenv("HOME", root)
+	t.Setenv("XDG_CONFIG_HOME", root)
+	previous := http.DefaultTransport
+	defer func() { http.DefaultTransport = previous }()
+	createCount, verificationCount, tokenCount := 0, 0, 0
+	response := func(code int, body string) *http.Response {
+		return &http.Response{StatusCode: code, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(body))}
+	}
+	http.DefaultTransport = fakeHTTP(func(request *http.Request) (*http.Response, error) {
+		switch request.URL.Path {
+		case "/v1/account/create":
+			createCount++
+			return response(200, `{"uid":"example","sessionToken":"a0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebf","verified":false}`), nil
+		case "/v1/recovery_email/verify_code":
+			verificationCount++
+			var body map[string]string
+			if json.NewDecoder(request.Body).Decode(&body) != nil || body["uid"] != "example" {
+				t.Fatal("registration used the wrong account")
+			}
+			if body["code"] != "123456" {
+				return response(400, `{"message":"code rejected"}`), nil
+			}
+			return response(200, `{}`), nil
+		case "/v1/oauth/token":
+			tokenCount++
+			return response(503, `{"message":"mock server stopped"}`), nil
+		default:
+			t.Fatalf("unexpected request to %s", request.URL.Path)
+			return nil, nil
+		}
+	})
+	current := New("test")
+	defer current.Close()
+	if err := current.Authenticate("person@example.org", "fake-password", "", "", true); !NeedsCode(err) {
+		t.Fatalf("expected a registration code, got %v", err)
+	}
+	if err := current.Authenticate("person@example.org", "fake-password", "111111", "", true); err == nil {
+		t.Fatal("wrong registration code should fail")
+	}
+	if err := current.Authenticate("person@example.org", "fake-password", "123456", "", true); err == nil {
+		t.Fatal("mock token request should fail")
+	}
+	if err := current.Authenticate("person@example.org", "fake-password", "123456", "", true); err == nil {
+		t.Fatal("mock token retry should fail")
+	}
+	if createCount != 1 || verificationCount != 2 || tokenCount != 2 {
+		t.Fatalf("create=%d verify=%d token=%d", createCount, verificationCount, tokenCount)
+	}
+}

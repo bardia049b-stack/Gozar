@@ -255,17 +255,7 @@ class SettingsFragment : Fragment() {
     }
 
     private fun pickLanguage() {
-        val items = arrayOf(getString(R.string.lang_system), getString(R.string.lang_fa), getString(R.string.lang_en))
-        val values = arrayOf("", "fa", "en")
-        val current = values.indexOf(Store.lang(requireContext())).coerceAtLeast(0)
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle(R.string.language)
-            .setSingleChoiceItems(items, current) { dialog, which ->
-                Store.setLang(requireContext(), values[which])
-                dialog.dismiss()
-                activity?.recreate()
-            }
-            .show()
+        showLanguagePicker(requireActivity())
     }
 
     private fun pickTheme() {

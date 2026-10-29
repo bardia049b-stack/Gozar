@@ -1,11 +1,13 @@
 package com.gozar
 
+import android.app.Activity
 import android.content.Context
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.view.WindowCompat
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 abstract class BaseActivity : AppCompatActivity() {
     override fun attachBaseContext(newBase: Context) {
@@ -62,4 +64,18 @@ fun fmtTime(sec: Long): String {
     val m = (sec % 3600) / 60
     val s = sec % 60
     return String.format("%02d:%02d:%02d", h, m, s)
+}
+
+fun showLanguagePicker(activity: Activity) {
+    val items = arrayOf(activity.getString(R.string.lang_system), activity.getString(R.string.lang_fa), activity.getString(R.string.lang_en))
+    val values = arrayOf("", "fa", "en")
+    val current = values.indexOf(Store.lang(activity)).coerceAtLeast(0)
+    MaterialAlertDialogBuilder(activity)
+        .setTitle(R.string.language)
+        .setSingleChoiceItems(items, current) { dialog, which ->
+            Store.setLang(activity, values[which])
+            dialog.dismiss()
+            activity.recreate()
+        }
+        .show()
 }

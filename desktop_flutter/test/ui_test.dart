@@ -4,11 +4,19 @@ import 'package:gozar/core.dart';
 import 'package:gozar/main.dart';
 
 class FakeCore extends Core {
-  FakeCore({this.signedIn = false, this.language = '', this.twoStep = false});
+  FakeCore({
+    this.signedIn = false,
+    this.language = '',
+    this.twoStep = false,
+    this.requiresCaptcha = false,
+  });
 
   bool signedIn;
   final bool twoStep;
+  final bool requiresCaptcha;
+  bool captchaDone = false;
   int loginCalls = 0;
+  Map<String, dynamic>? lastAuth;
   String language;
   bool isRunning = false;
   String? selectedHost;
@@ -58,9 +66,21 @@ class FakeCore extends Core {
       language = choice == 'system' ? '' : choice;
     }
     if (method == 'server') selectedHost = params!['host'] as String;
-    if (method == 'login') {
+    if (method == 'login' || method == 'register') {
       loginCalls++;
-      if ((params!['code'] as String).isEmpty || (twoStep && loginCalls == 2)) {
+      lastAuth = Map<String, dynamic>.from(params!);
+      if (requiresCaptcha && !captchaDone) {
+        if (params['captcha'] != 'human') {
+          return CoreReply(
+            state: current,
+            error: 'security check required',
+            captchaImage: 'data:image/png;base64,'
+                'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVR4nGP89esXAwMDEwMDAwMDAwAjUgLyJQhtpgAAAABJRU5ErkJggg==',
+          );
+        }
+        captchaDone = true;
+      }
+      if ((params['code'] as String).isEmpty || (twoStep && loginCalls == 2)) {
         return CoreReply(state: current, error: 'code needed', needsCode: true);
       }
       signedIn = true;
@@ -190,6 +210,71 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Verify and sign in'));
     await tester.pumpAndSettle();
     expect(find.text('Firefox VPN'), findsOneWidget);
+    expect(core.requests, isNot(contains('connect')));
+  });
+  testWidgets('create account stays in the app and verifies the email',
+      (tester) async {
+    tester.view.physicalSize = const Size(480, 740);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final core = FakeCore(language: 'en');
+    await tester.pumpWidget(GozarApp(core: core));
+    await tester.pumpAndSettle();
+    final create = find.text('New here? Create a Firefox account');
+    await tester.ensureVisible(create);
+    await tester.tap(create);
+    await tester.pumpAndSettle();
+    expect(find.text('Repeat password'), findsOneWidget);
+    expect(find.text('Already have an account? Sign in'), findsOneWidget);
+    await tester.enterText(find.byType(TextField).at(0), 'person@example.com');
+    await tester.enterText(find.byType(TextField).at(1), 'fake-password');
+    await tester.enterText(find.byType(TextField).at(2), 'wrong-password');
+    final submit = find.widgetWithText(FilledButton, 'Create account');
+    await tester.ensureVisible(submit);
+    await tester.tap(submit);
+    await tester.pumpAndSettle();
+    expect(find.text('The passwords do not match.'), findsOneWidget);
+    expect(core.requests, isNot(contains('register')));
+    await tester.enterText(find.byType(TextField).at(2), 'fake-password');
+    await tester.ensureVisible(submit);
+    await tester.tap(submit);
+    await tester.pumpAndSettle();
+    expect(core.requests, contains('register'));
+    expect(find.text('Verification code'), findsOneWidget);
+    await tester.enterText(find.byType(TextField).at(3), '123456');
+    final verify =
+        find.widgetWithText(FilledButton, 'Verify and create account');
+    await tester.ensureVisible(verify);
+    await tester.tap(verify);
+    await tester.pumpAndSettle();
+    expect(find.text('Firefox VPN'), findsOneWidget);
+    expect(core.lastAuth!['code'], '123456');
+    expect(core.requests, isNot(contains('connect')));
+  });
+
+  testWidgets('interactive security image stays in the app', (tester) async {
+    tester.view.physicalSize = const Size(480, 740);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final core = FakeCore(language: 'en', requiresCaptcha: true);
+    await tester.pumpWidget(GozarApp(core: core));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).at(0), 'person@example.com');
+    await tester.enterText(find.byType(TextField).at(1), 'fake-password');
+    final login = find.widgetWithText(FilledButton, 'Sign in');
+    await tester.ensureVisible(login);
+    await tester.tap(login);
+    await tester.pumpAndSettle();
+    expect(find.text('Mozilla security check'), findsOneWidget);
+    expect(find.text('Image text'), findsOneWidget);
+    await tester.enterText(find.byType(TextField).at(2), 'human');
+    await tester.ensureVisible(login);
+    await tester.tap(login);
+    await tester.pumpAndSettle();
+    expect(find.text('Verification code'), findsOneWidget);
+    expect(core.lastAuth!['captcha'], 'human');
     expect(core.requests, isNot(contains('connect')));
   });
 }

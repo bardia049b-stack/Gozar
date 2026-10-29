@@ -3,11 +3,13 @@ package rpc
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"io"
 	"os"
 	"sync"
 
 	"github.com/bardia049b-stack/gozar/go-desktop/internal/app"
+	"github.com/bardia049b-stack/gozar/go-desktop/internal/fxa"
 )
 
 type Request struct {
@@ -60,19 +62,26 @@ func (s *Server) handle(request Request) Response {
 		} else {
 			response.Reply = servers
 		}
-	case "login":
+	case "login", "register":
 		var body struct {
 			Email    string `json:"email"`
 			Password string `json:"password"`
 			Code     string `json:"code"`
+			Captcha  string `json:"captcha"`
 		}
 		json.Unmarshal(request.Params, &body)
-		if err := s.app.SignIn(body.Email, body.Password, body.Code); err != nil {
+		if err := s.app.Authenticate(body.Email, body.Password, body.Code, body.Captcha, request.Method == "register"); err != nil {
 			response.Error = err.Error()
-			if app.NeedsCode(err) {
-				response.Reply = map[string]bool{"needs_code": true}
+			var challenge *fxa.ChallengeRequired
+			switch {
+			case app.NeedsCode(err):
+				response.Reply = map[string]any{"needs_code": true}
+			case errors.As(err, &challenge):
+				response.Reply = map[string]any{"captcha_image": challenge.Image}
 			}
 		}
+	case "cancel_auth":
+		s.app.CancelAuthentication()
 	case "logout":
 		s.app.SignOut()
 	case "usage":

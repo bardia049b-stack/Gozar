@@ -44,27 +44,28 @@ type State struct {
 }
 
 type App struct {
-	mu         sync.Mutex
-	cfg        config.Config
-	servers    []fxa.Location
-	pass       *fxa.Pass
-	pending    *fxa.Session
-	pendingFor string
-	unblockFor string
-	engine     *engine.Engine
-	stage      string
-	fault      string
-	live       bool
-	connecting bool
-	needAdmin  bool
-	exit       string
-	since      int64
-	rateDown   atomic.Int64
-	rateUp     atomic.Int64
-	lastDown   int64
-	lastUp     int64
-	version    string
-	admin      bool
+	mu          sync.Mutex
+	cfg         config.Config
+	servers     []fxa.Location
+	pass        *fxa.Pass
+	pending     *fxa.Session
+	pendingFor  string
+	pendingKind string
+	unblockFor  string
+	engine      *engine.Engine
+	stage       string
+	fault       string
+	live        bool
+	connecting  bool
+	needAdmin   bool
+	exit        string
+	since       int64
+	rateDown    atomic.Int64
+	rateUp      atomic.Int64
+	lastDown    int64
+	lastUp      int64
+	version     string
+	admin       bool
 }
 
 func New(version string) *App {
@@ -201,36 +202,56 @@ func (a *App) SetLanguage(language string) error {
 }
 
 func (a *App) SignIn(email, password, code string) error {
+	return a.Authenticate(email, password, code, "", false)
+}
+
+func (a *App) Authenticate(email, password, code, captcha string, create bool) error {
 	email = strings.TrimSpace(email)
 	code = strings.TrimSpace(code)
+	if email == "" || password == "" {
+		return errors.New("email and password are required")
+	}
+	if captcha != "" {
+		if err := fxa.SubmitChallenge(captcha); err != nil {
+			return err
+		}
+	}
+	kind := "login"
+	if create {
+		kind = "signup"
+	}
 	a.setStage("در حال ورود…")
 	a.mu.Lock()
 	session := a.pending
-	if !strings.EqualFold(a.pendingFor, email) {
+	if !strings.EqualFold(a.pendingFor, email) || a.pendingKind != kind {
 		session = nil
 		a.pending = nil
 		a.pendingFor = ""
+		a.pendingKind = ""
 	}
-	usingUnblock := code != "" && a.unblockFor != "" && strings.EqualFold(a.unblockFor, email)
+	usingUnblock := !create && code != "" && a.unblockFor != "" && strings.EqualFold(a.unblockFor, email)
 	a.mu.Unlock()
 	fromPending := session != nil
 	var err error
 	if session == nil {
-		if usingUnblock {
+		switch {
+		case create:
+			session, err = fxa.Register(email, password)
+		case usingUnblock:
 			session, err = fxa.SignInWithUnblockCode(email, password, code)
-		} else {
+		default:
 			session, err = fxa.SignIn(email, password)
 		}
 		if err != nil {
 			var apiError *fxa.Error
-			if !usingUnblock && errors.As(err, &apiError) && apiError.Errno == 125 {
+			if !create && !usingUnblock && errors.As(err, &apiError) && apiError.Errno == 125 {
 				address := email
 				if apiError.Email != "" {
 					address = apiError.Email
 				}
-				if err := fxa.SendUnblockCode(address); err != nil {
+				if sendErr := fxa.SendUnblockCode(address); sendErr != nil {
 					a.setStage("")
-					return err
+					return sendErr
 				}
 				a.mu.Lock()
 				a.unblockFor = email
@@ -241,18 +262,17 @@ func (a *App) SignIn(email, password, code string) error {
 			a.setStage("")
 			return err
 		}
-		if usingUnblock {
-			a.mu.Lock()
-			a.unblockFor = ""
-			a.mu.Unlock()
-			code = ""
-		}
-	}
-	if session.NeedsOTP {
 		a.mu.Lock()
 		a.pending = session
 		a.pendingFor = email
+		a.pendingKind = kind
+		if usingUnblock {
+			a.unblockFor = ""
+			code = ""
+		}
 		a.mu.Unlock()
+	}
+	if session.NeedsOTP {
 		if session.ByLink {
 			if !fromPending {
 				a.setStage("")
@@ -263,7 +283,12 @@ func (a *App) SignIn(email, password, code string) error {
 				a.setStage("")
 				return errCode
 			}
-			if err := fxa.VerifyCode(session.Token, code, session.VerificationMethod); err != nil {
+			if create {
+				err = fxa.VerifySignup(session.UID, code)
+			} else {
+				err = fxa.VerifyCode(session.Token, code, session.VerificationMethod)
+			}
+			if err != nil {
 				a.setStage("")
 				return err
 			}
@@ -291,6 +316,7 @@ func (a *App) SignIn(email, password, code string) error {
 	if saveErr == nil {
 		a.pending = nil
 		a.pendingFor = ""
+		a.pendingKind = ""
 		a.unblockFor = ""
 	}
 	a.mu.Unlock()
@@ -301,6 +327,16 @@ func (a *App) SignIn(email, password, code string) error {
 	a.setStage("")
 	go a.RefreshUsage()
 	return nil
+}
+
+func (a *App) CancelAuthentication() {
+	a.mu.Lock()
+	a.pending = nil
+	a.pendingFor = ""
+	a.pendingKind = ""
+	a.unblockFor = ""
+	a.mu.Unlock()
+	fxa.CancelChallenge()
 }
 
 var errCode = errors.New("code needed")
@@ -319,6 +355,7 @@ func (a *App) SignOut() {
 	a.pass = nil
 	a.pending = nil
 	a.pendingFor = ""
+	a.pendingKind = ""
 	a.unblockFor = ""
 	config.Save(a.cfg)
 	a.mu.Unlock()

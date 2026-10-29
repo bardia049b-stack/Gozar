@@ -99,11 +99,17 @@ class CoreState {
 }
 
 class CoreReply {
-  const CoreReply({this.state, this.error, this.needsCode = false});
+  const CoreReply({
+    this.state,
+    this.error,
+    this.needsCode = false,
+    this.captchaImage,
+  });
 
   final CoreState? state;
   final String? error;
   final bool needsCode;
+  final String? captchaImage;
 
   factory CoreReply.fromJson(Map<String, dynamic> json) {
     final state = json['state'];
@@ -113,6 +119,9 @@ class CoreReply {
       state: state is Map<String, dynamic> ? CoreState.fromJson(state) : null,
       error: error is String && error.isNotEmpty ? error : null,
       needsCode: result is Map && result['needs_code'] == true,
+      captchaImage: result is Map && result['captcha_image'] is String
+          ? result['captcha_image'] as String
+          : null,
     );
   }
 }
@@ -190,7 +199,7 @@ class Core {
     try {
       process.stdin.writeln(jsonEncode(message));
       await process.stdin.flush();
-      return await waiter.future.timeout(const Duration(seconds: 90));
+      return await waiter.future.timeout(const Duration(seconds: 180));
     } finally {
       _pending.remove(id);
     }

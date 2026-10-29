@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
 
@@ -95,7 +96,9 @@ class _GozarScreenState extends State<GozarScreen> {
   late final Core _core;
   final _email = TextEditingController();
   final _password = TextEditingController();
+  final _confirm = TextEditingController();
   final _code = TextEditingController();
+  final _captcha = TextEditingController();
   CoreState _state = const CoreState();
   Timer? _timer;
   bool _starting = true;
@@ -104,7 +107,9 @@ class _GozarScreenState extends State<GozarScreen> {
   bool _refreshing = false;
   bool _loadingServers = false;
   bool _needsCode = false;
+  bool _creating = false;
   bool _showPassword = false;
+  String? _captchaImage;
   String? _error;
   String? _fatal;
 
@@ -126,7 +131,9 @@ class _GozarScreenState extends State<GozarScreen> {
     _core.stop();
     _email.dispose();
     _password.dispose();
+    _confirm.dispose();
     _code.dispose();
+    _captcha.dispose();
     super.dispose();
   }
 
@@ -208,8 +215,16 @@ class _GozarScreenState extends State<GozarScreen> {
       setState(() => _error = '@credentials');
       return;
     }
+    if (_creating && _password.text != _confirm.text) {
+      setState(() => _error = '@passwordMismatch');
+      return;
+    }
     if (_needsCode && _code.text.trim().isEmpty) {
       setState(() => _error = '@code');
+      return;
+    }
+    if (_captchaImage != null && _captcha.text.trim().isEmpty) {
+      setState(() => _error = '@captcha');
       return;
     }
     setState(() {
@@ -217,32 +232,68 @@ class _GozarScreenState extends State<GozarScreen> {
       _error = null;
     });
     try {
-      final reply = await _core.call('login', {
+      final reply = await _core.call(_creating ? 'register' : 'login', {
         'email': _email.text.trim(),
         'password': _password.text,
         'code': _code.text.trim(),
+        'captcha': _captcha.text.trim(),
       });
       _apply(reply);
       if (!mounted) return;
-      if (reply.needsCode) {
-        _code.clear();
+      if (reply.captchaImage != null) {
+        _captcha.clear();
         setState(() {
-          _needsCode = true;
+          _captchaImage = reply.captchaImage;
           _error = null;
         });
-      } else if (reply.error != null) {
-        setState(() => _error = reply.error);
-      } else if (_state.signedIn) {
-        _password.clear();
-        _code.clear();
-        _needsCode = false;
-        unawaited(_loadServers());
-        unawaited(_usage());
+      } else {
+        _captcha.clear();
+        _captchaImage = null;
+        if (reply.needsCode) {
+          _code.clear();
+          setState(() {
+            _needsCode = true;
+            _error = null;
+          });
+        } else if (reply.error != null) {
+          setState(() => _error = reply.error);
+        } else if (_state.signedIn) {
+          _password.clear();
+          _confirm.clear();
+          _code.clear();
+          _needsCode = false;
+          _creating = false;
+          unawaited(_loadServers());
+          unawaited(_usage());
+        }
       }
     } on Object catch (error) {
       if (mounted) setState(() => _error = error.toString());
     } finally {
       if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _switchAuthentication() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await _core.call('cancel_auth');
+    } on Object {
+      return;
+    } finally {
+      if (mounted) {
+        _code.clear();
+        _confirm.clear();
+        _captcha.clear();
+        setState(() {
+          _creating = !_creating;
+          _needsCode = false;
+          _captchaImage = null;
+          _error = null;
+          _busy = false;
+        });
+      }
     }
   }
 
@@ -299,8 +350,12 @@ class _GozarScreenState extends State<GozarScreen> {
         setState(() => _error = reply.error);
       } else {
         _password.clear();
+        _confirm.clear();
         _code.clear();
+        _captcha.clear();
+        _captchaImage = null;
         _needsCode = false;
+        _creating = false;
       }
     } on Object catch (error) {
       if (mounted) setState(() => _error = error.toString());
@@ -313,6 +368,11 @@ class _GozarScreenState extends State<GozarScreen> {
     final lower = error.toLowerCase();
     if (error == '@credentials') return words.credentialsRequired;
     if (error == '@code') return words.codeRequired;
+    if (error == '@passwordMismatch') return words.passwordMismatch;
+    if (error == '@captcha') return words.securityRequired;
+    if (lower.contains('security check') || lower.contains('security-check')) {
+      return words.securityFailed;
+    }
     if (lower.contains('verification link required')) return words.verifyLink;
     if (error == '@servers') return words.serverError;
     if (error == '@browser') return words.browserError;
@@ -519,7 +579,7 @@ class _GozarScreenState extends State<GozarScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Text(
-                        words.signIn,
+                        _creating ? words.createTitle : words.signIn,
                         style: Theme.of(context)
                             .textTheme
                             .headlineMedium
@@ -528,8 +588,12 @@ class _GozarScreenState extends State<GozarScreen> {
                             ),
                       ),
                       const SizedBox(height: 12),
-                      Text(words.signInDescription,
-                          style: const TextStyle(color: dim)),
+                      Text(
+                        _creating
+                            ? words.createDescription
+                            : words.signInDescription,
+                        style: const TextStyle(color: dim),
+                      ),
                       const SizedBox(height: 28),
                       TextField(
                         controller: _email,
@@ -567,8 +631,27 @@ class _GozarScreenState extends State<GozarScreen> {
                           ),
                         ),
                       ),
+                      if (_creating) ...[
+                        const SizedBox(height: 14),
+                        TextField(
+                          controller: _confirm,
+                          enabled: !_busy,
+                          textDirection: TextDirection.ltr,
+                          obscureText: !_showPassword,
+                          autofillHints: const [AutofillHints.newPassword],
+                          onSubmitted: (_) => _login(),
+                          decoration: InputDecoration(
+                            labelText: words.repeatPassword,
+                            prefixIcon:
+                                const Icon(Icons.lock_outline, color: dim),
+                          ),
+                        ),
+                      ],
                       if (_needsCode) ...[
                         const SizedBox(height: 14),
+                        Text(words.checkEmail,
+                            style: const TextStyle(color: dim)),
+                        const SizedBox(height: 8),
                         TextField(
                           controller: _code,
                           enabled: !_busy,
@@ -583,16 +666,47 @@ class _GozarScreenState extends State<GozarScreen> {
                           ),
                         ),
                       ],
-                      Align(
-                        alignment: AlignmentDirectional.centerEnd,
-                        child: TextButton(
-                          onPressed: _busy
-                              ? null
-                              : () => _openPage(
-                                  'https://accounts.firefox.com/reset_password'),
-                          child: Text(words.forgotPassword),
+                      if (_captchaImage != null) ...[
+                        const SizedBox(height: 14),
+                        Text(words.securityCheck,
+                            style: Theme.of(context).textTheme.titleSmall),
+                        const SizedBox(height: 6),
+                        Text(words.securityInstruction,
+                            style: const TextStyle(color: dim)),
+                        const SizedBox(height: 8),
+                        Semantics(
+                          label: words.securityCheck,
+                          child: Image.memory(
+                            base64Decode(_captchaImage!.split(',').last),
+                            height: 88,
+                            fit: BoxFit.contain,
+                          ),
                         ),
-                      ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: _captcha,
+                          enabled: !_busy,
+                          textDirection: TextDirection.ltr,
+                          autocorrect: false,
+                          onSubmitted: (_) => _login(),
+                          decoration: InputDecoration(
+                            labelText: words.securityAnswer,
+                            prefixIcon:
+                                const Icon(Icons.shield_outlined, color: dim),
+                          ),
+                        ),
+                      ],
+                      if (!_creating)
+                        Align(
+                          alignment: AlignmentDirectional.centerEnd,
+                          child: TextButton(
+                            onPressed: _busy
+                                ? null
+                                : () => _openPage(
+                                    'https://accounts.firefox.com/reset_password'),
+                            child: Text(words.forgotPassword),
+                          ),
+                        ),
                       if (_error != null) ...[
                         ErrorText(_message(_error!)),
                         const SizedBox(height: 12),
@@ -603,18 +717,22 @@ class _GozarScreenState extends State<GozarScreen> {
                         child: _busy
                             ? const SmallProgress()
                             : Text(_needsCode
-                                ? words.verifyAndSignIn
-                                : words.signIn),
+                                ? (_creating
+                                    ? words.verifyAndCreate
+                                    : words.verifyAndSignIn)
+                                : (_creating
+                                    ? words.createAction
+                                    : words.signIn)),
                       ),
                       const SizedBox(height: 12),
                       TextButton(
-                        onPressed: _busy
-                            ? null
-                            : () => _openPage(
-                                'https://accounts.firefox.com/signup'),
+                        onPressed: _busy ? null : _switchAuthentication,
                         child: FittedBox(
                           fit: BoxFit.scaleDown,
-                          child: Text(words.createAccount, maxLines: 1),
+                          child: Text(
+                            _creating ? words.haveAccount : words.createAccount,
+                            maxLines: 1,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 12),

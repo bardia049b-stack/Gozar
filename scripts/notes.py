@@ -6,48 +6,64 @@ android = sys.argv[3] if len(sys.argv) > 3 else version
 tag = sys.argv[4] if len(sys.argv) > 4 else f'v{version}'
 base = f'https://github.com/{repo}/releases/download/{tag}/'
 
-files = [
-    ('Android · universal', f'Gozar_{android}_universal.apk'),
-    ('Android · ARM64', f'Gozar_{android}_arm64-v8a.apk'),
-    ('Android · ARMv7', f'Gozar_{android}_armeabi-v7a.apk'),
-    ('Android · x64', f'Gozar_{android}_x86_64.apk'),
-    ('Android · x86', f'Gozar_{android}_x86.apk'),
-    ('Windows · x64', 'Gozar-Windows-x64.zip'),
-    ('macOS · Apple Silicon', 'Gozar-macOS-ARM.tar.xz'),
-    ('macOS · Intel', 'Gozar-macOS-Intel.tar.xz'),
-    ('Linux · amd64', 'Gozar-Linux-amd64.tar.xz'),
+
+def badge(label, value, colour, logo, filename):
+    return f'[![{label} {value}](https://img.shields.io/badge/{label}-{value}-{colour}?logo={logo}&logoColor=white)]({base}{filename})'
+
+
+def stack(*items):
+    return '<br>'.join(items)
+
+
+apk = f'Gozar_{android}_'
+rows = [
+    ('**Android**', stack(
+        badge('APK', 'Universal', '1a7f37', 'android', apk + 'universal.apk'),
+        badge('APK', 'ARM64', '2da44e', 'android', apk + 'arm64-v8a.apk'),
+        badge('APK', 'ARMv7', '2da44e', 'android', apk + 'armeabi-v7a.apk'),
+        badge('APK', 'x86__64', '2da44e', 'android', apk + 'x86_64.apk'),
+        badge('APK', 'x86', '2da44e', 'android', apk + 'x86.apk'))),
+    ('**Windows**', badge('ZIP', 'x64', '0550ae', 'windows', 'Gozar-Windows-x64.zip')),
+    ('**macOS**', stack(
+        badge('TAR.XZ', 'Apple__Silicon', '24292f', 'apple', 'Gozar-macOS-ARM.tar.xz'),
+        badge('TAR.XZ', 'Intel', '24292f', 'apple', 'Gozar-macOS-Intel.tar.xz'))),
+    ('**Linux**', badge('TAR.XZ', 'amd64', 'e36209', 'linux', 'Gozar-Linux-amd64.tar.xz')),
 ]
 
 print(f'# Gozar Desktop {version}')
 print()
-print(f'Desktop uses a native Flutter Material 3 interface and a Go core. The Android app remains at {android} and its source is unchanged.')
-print('رابط دسکتاپ بومی Flutter و هستهٔ آن Go است؛ نسخه و سورس اندروید تغییری نکرده‌اند.')
+print(f'Firefox-only Gozar for Android {android}, Windows, macOS and Linux.')
 print()
-print('| Platform | Download |')
-print('| --- | --- |')
-for label, name in files:
-    print(f'| {label} | [{name}]({base}{name}) |')
+print('| System | Download |')
+print('|:--:|:--:|')
+for name, downloads in rows:
+    print(f'| {name} | {downloads} |')
 print()
-print('**Experimental:** The desktop tunnel and sign-in with a real Firefox account were not tested live. '
-      'IPv6 may bypass the tunnel; UDP other than DNS is not supported. '
-      'Do not rely on this build for privacy or as a complete device-wide VPN.')
+print('### What changed')
 print()
-print('**هشدار:** تونل واقعی و ورود با حساب واقعی تست نشده‌اند. IPv6 ممکن است خارج از تونل برود و '
-      'UDP به‌جز DNS پشتیبانی نمی‌شود؛ برای حفظ حریم خصوصی به این نسخه اتکا نکنید.')
+print('- Desktop sign-in handles supported Mozilla security challenges and can show an image challenge in the app.')
+print('- Firefox account creation and email verification are available in the desktop app.')
+print('- Android has a language picker on the sign-in and home screens, with Persian, English and system language.')
+print('- Desktop keeps its native Flutter Material 3 interface and Go core; no JVM is bundled.')
 print()
-print('Desktop features not yet implemented: routing rules, per-app routing, proxy chains, '
-      'tunnel-in-tunnel, the route map and automatic updates.')
-print('قابلیت‌های مسیریابی، انتخاب برنامه‌ها، زنجیرهٔ پروکسی، تونل‌در‌تونل، نقشه و به‌روزرسانی '
-      'خودکار در دسکتاپ هنوز پیاده‌سازی نشده‌اند.')
+print('### Install')
 print()
-print('The account password is not saved; access and refresh tokens are stored in a local '
-      'configuration file rather than an OS keychain. Mozilla anti-bot challenges may prevent sign-in.')
+print('- **Android**: install the universal APK or the file named for your device. The APKs contain no native ABI-specific libraries and may be identical.')
+print('- **Windows**: extract the ZIP and run `gozar.exe`. Keep all extracted files together. Administrator permission is requested for TUN.')
+print('- **macOS**: extract with `tar -xJf ARCHIVE.tar.xz` and open `Gozar.app`. The app is ad-hoc signed, not notarized.')
+print('- **Linux**: extract the archive, keep the bundle together, and launch with the permissions needed for TUN.')
 print()
-print('Windows requests administrator privileges at launch. Linux and macOS require administrator '
-      'privileges for the tunnel. Keep the extracted application files together. The macOS build is '
-      'ad-hoc signed, not notarized; Windows is not Authenticode-signed.')
+print('### Important limitations')
 print()
-print('macOS archives can be extracted with tar -xJf ARCHIVE.tar.xz in Terminal. '
-      'The 17 MB limit applies to download size, not extracted size.')
+print('The desktop tunnel and real Firefox account login and registration have not been verified live in this build. '
+      'Mozilla may present an unsupported challenge or refuse a request. IPv6 can bypass the tunnel, and UDP other than DNS is not supported. '
+      'Do not rely on this experimental tunnel for privacy or complete device-wide coverage.')
 print()
-print('Every archive and APK has a detached OpenPGP signature; use gozar-public-key.asc to verify it.')
+print('Desktop routing rules, per-app routing, proxy chains, tunnel-in-tunnel, the route map and automatic updates are not implemented. '
+      'Access and refresh tokens are stored in a local configuration file, not the OS keychain. '
+      'The Windows executable is not Authenticode-signed.')
+print()
+print('### Signatures')
+print()
+print('Each APK and desktop archive has a separate OpenPGP `.sig` file. Import `gozar-public-key.asc` and verify the downloaded file with GPG. '
+      'These detached signatures are not Windows Authenticode or Apple notarization.')

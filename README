@@ -4,8 +4,11 @@ Android uses its existing Kotlin application and its shared core. Desktop has a 
 Material 3 interface and a Go core. It does not use Kotlin, a JVM, a browser-based interface, or
 an HTTP API for the interface. The Flutter process communicates with the Go process through a
 private standard-input/output pipe. The interface supports Persian, English, and the system
-language, and keeps the selected language between launches. The account password is not saved;
-access and refresh tokens are kept in a local configuration file rather than an OS keychain.
+language, and keeps the selected language between launches. Android also offers the language
+picker at the top of the sign-in and home screens. Desktop registration and email verification
+use native forms; supported Mozilla security checks and image challenges appear in the app. The
+account password is not saved; access and refresh tokens are kept in a local configuration file
+rather than an OS keychain.
 
 Desktop builds are archives containing the application and its runtime libraries; they are not
 MSI, DMG, or DEB installers. The Windows build contains Wintun. The desktop tunnel configures a
@@ -16,8 +19,9 @@ or automatically clear a system proxy. If an older version left a proxy behind, 
 proxy settings manually rather than assuming that a proxy belongs to Gozar.
 
 The desktop tunnel is experimental. It has not been verified in a live connection in this
-revision. Firefox account sign-in was checked with mock responses, not a real account. Mozilla's
-anti-bot challenges may prevent sign-in. IPv6 is not routed through the tunnel and may bypass it.
+revision. Firefox account sign-in and registration were checked with mock responses, not a real
+account. The non-interactive security check was also probed without account credentials. Mozilla
+may present an unsupported security challenge or refuse a request. IPv6 is not routed through the tunnel and may bypass it.
 UDP other than DNS is not supported. Do not rely on this build for privacy or as a complete device-wide VPN. Routing,
 per-application rules, proxy chains, tunnel-in-tunnel, update checking, and the route map are not
 implemented in the new desktop interface.
