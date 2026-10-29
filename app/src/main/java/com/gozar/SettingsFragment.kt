@@ -180,33 +180,7 @@ class SettingsFragment : Fragment() {
     }
 
     private fun pickApps() {
-        val context = requireContext()
-        val manager = context.packageManager
-        val intent = android.content.Intent(android.content.Intent.ACTION_MAIN).addCategory(android.content.Intent.CATEGORY_LAUNCHER)
-        val found = manager.queryIntentActivities(intent, 0)
-            .map { it.activityInfo.packageName to it.loadLabel(manager).toString() }
-            .filter { it.first != context.packageName }
-            .distinctBy { it.first }
-            .sortedBy { it.second.lowercase() }
-        if (found.isEmpty()) return
-        val labels = found.map { it.second }.toTypedArray()
-        val names = found.map { it.first }
-        val chosen = Store.apps(context)
-        val checked = BooleanArray(names.size) { names[it] in chosen }
-        MaterialAlertDialogBuilder(context)
-            .setTitle(R.string.apps)
-            .setMultiChoiceItems(labels, checked) { _, which, isChecked -> checked[which] = isChecked }
-            .setNeutralButton(R.string.apps_all) { _, _ ->
-                Store.setApps(context, emptySet())
-                applyApps()
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .setPositiveButton(R.string.routing_save) { _, _ ->
-                val picked = names.filterIndexed { index, _ -> checked[index] }.toSet()
-                Store.setApps(context, picked)
-                applyApps()
-            }
-            .show()
+        AppPicker(requireContext()) { applyApps() }.open()
     }
 
     private fun applyApps() {

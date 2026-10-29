@@ -567,6 +567,19 @@ private fun SettingsScreen() {
                 "Everything goes through the tunnel"
         ) { routingOpen = true }
         Spacer(Modifier.height(10.dp))
+        var fullTunnel by remember { mutableStateOf(Store.fullTunnel()) }
+        SettingRow(
+            "Full tunnel (TUN)",
+            when {
+                Desk.tunActive -> "Every app is tunnelled · " + (TunService.last().ifEmpty { "on" })
+                fullTunnel -> "Needs administrator rights · falls back to system proxy"
+                else -> "Off · only apps that follow the system proxy"
+            }
+        ) {
+            fullTunnel = !fullTunnel
+            Store.setFullTunnel(fullTunnel)
+        }
+        Spacer(Modifier.height(10.dp))
         SettingRow(
             "Proxy chain",
             if (FoxUpstream.parse(chainText).isNotEmpty())

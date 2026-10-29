@@ -14,8 +14,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.textfield.TextInputEditText
-import com.google.android.material.textfield.TextInputLayout
 
 class FoxFragment : Fragment() {
 
@@ -41,18 +39,8 @@ class FoxFragment : Fragment() {
     private lateinit var serverMeta: TextView
     private lateinit var signInCard: View
     private lateinit var signInTitle: TextView
-    private lateinit var emailBox: TextInputLayout
-    private lateinit var emailInput: TextInputEditText
-    private lateinit var passwordBox: TextInputLayout
-    private lateinit var passwordInput: TextInputEditText
     private lateinit var signInButton: MaterialButton
     private lateinit var signUpButton: MaterialButton
-    private lateinit var codeBox: View
-    private lateinit var codeFrame: TextInputLayout
-    private lateinit var codeInput: TextInputEditText
-    private lateinit var codeHint: TextView
-    private lateinit var verifyButton: MaterialButton
-    private lateinit var resendButton: MaterialButton
     private lateinit var busyRow: View
     private lateinit var busyText: TextView
     private lateinit var signError: TextView
@@ -90,18 +78,8 @@ class FoxFragment : Fragment() {
         serverMeta = view.findViewById(R.id.foxServerMeta)
         signInCard = view.findViewById(R.id.foxSignIn)
         signInTitle = view.findViewById(R.id.foxSignInTitle)
-        emailBox = view.findViewById(R.id.foxEmailBox)
-        emailInput = view.findViewById(R.id.foxEmailInput)
-        passwordBox = view.findViewById(R.id.foxPasswordBox)
-        passwordInput = view.findViewById(R.id.foxPasswordInput)
         signInButton = view.findViewById(R.id.foxSignInButton)
         signUpButton = view.findViewById(R.id.foxSignUpButton)
-        codeBox = view.findViewById(R.id.foxCodeBox)
-        codeFrame = view.findViewById(R.id.foxCodeFrame)
-        codeInput = view.findViewById(R.id.foxCodeInput)
-        codeHint = view.findViewById(R.id.foxCodeHint)
-        verifyButton = view.findViewById(R.id.foxVerifyButton)
-        resendButton = view.findViewById(R.id.foxResendButton)
         busyRow = view.findViewById(R.id.foxBusyRow)
         busyText = view.findViewById(R.id.foxBusyText)
         signError = view.findViewById(R.id.foxSignError)
@@ -119,10 +97,8 @@ class FoxFragment : Fragment() {
         connect.setOnClickListener { toggle() }
         map.setOnClickListener { startActivity(Intent(requireContext(), RouteMapActivity::class.java)) }
         view.findViewById<View>(R.id.foxServerRow).setOnClickListener { pickServer() }
-        signInButton.setOnClickListener { submitAccount(false) }
-        signUpButton.setOnClickListener { submitAccount(true) }
-        verifyButton.setOnClickListener { submitCode() }
-        resendButton.setOnClickListener { Fox.resend(requireContext()) }
+        signInButton.setOnClickListener { openLogin() }
+        signUpButton.setOnClickListener { openLogin() }
         return view
     }
 
@@ -130,8 +106,6 @@ class FoxFragment : Fragment() {
         super.onViewCreated(view, saved)
         Fox.onChange = { if (isAdded) render() }
         FoxLink.onChange = { if (isAdded) render() }
-        val stored = FoxStore.email(requireContext())
-        if (stored.isNotEmpty() && emailInput.text.isNullOrEmpty()) emailInput.setText(stored)
         Fox.load(requireContext())
         Fox.loadServers(requireContext())
         render()
@@ -147,7 +121,7 @@ class FoxFragment : Fragment() {
         val c = requireContext()
         when {
             !Fox.signedIn(c) -> {
-                focusSignIn()
+                openLogin()
                 return
             }
             FoxLink.connected || FoxLink.connecting || FoxVpnService.isAlive() -> disconnect()
@@ -166,47 +140,11 @@ class FoxFragment : Fragment() {
         render()
     }
 
-    private fun focusSignIn() {
-        signInCard.visibility = View.VISIBLE
-        if (emailInput.text.isNullOrEmpty()) emailInput.requestFocus() else passwordInput.requestFocus()
-        val manager = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
-        manager?.showSoftInput(if (emailInput.text.isNullOrEmpty()) emailInput else passwordInput, 0)
-    }
-
-    private fun submitAccount(create: Boolean) {
-        val address = emailInput.text?.toString()?.trim().orEmpty()
-        val secret = passwordInput.text?.toString().orEmpty()
-        emailBox.error = null
-        passwordBox.error = null
-        signError.visibility = View.GONE
-        if (!address.contains("@")) {
-            emailBox.error = getString(R.string.fox_email_bad)
-            return
-        }
-        if (secret.length < 8) {
-            passwordBox.error = getString(R.string.fox_password_bad)
-            return
-        }
-        hideKeyboard(passwordInput)
-        passwordInput.setText("")
-        if (create) Fox.signUp(requireContext(), address, secret) else Fox.signIn(requireContext(), address, secret)
-    }
-
-    private fun submitCode() {
-        val c = requireContext()
-        if (Fox.isLinkStep()) {
-            Fox.confirmLink(c)
-            return
-        }
-        val code = codeInput.text?.toString()?.trim().orEmpty()
-        if (code.isEmpty()) {
-            codeFrame.error = getString(R.string.fox_code)
-            return
-        }
-        codeFrame.error = null
-        codeInput.setText("")
-        hideKeyboard(codeInput)
-        Fox.submitCode(c, code)
+    private fun openLogin() {
+        val intent = Intent(requireContext(), LoginActivity::class.java)
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+        startActivity(intent)
+        activity?.finish()
     }
 
     private fun pickServer() {
@@ -218,7 +156,7 @@ class FoxFragment : Fragment() {
     private fun accountMenu() {
         val c = requireContext()
         if (!Fox.signedIn(c)) {
-            focusSignIn()
+            openLogin()
             return
         }
         MaterialAlertDialogBuilder(c)
@@ -228,7 +166,9 @@ class FoxFragment : Fragment() {
                     Fox.refreshUsage(c)
                 } else {
                     FoxVpnService.stop(c)
+                    FoxLink.stop()
                     Fox.signOut(c)
+                    openLogin()
                 }
             }
             .show()
@@ -245,11 +185,6 @@ class FoxFragment : Fragment() {
         if (Fox.servers.isEmpty()) return
         measured = true
         if (!Fox.hasDelays()) Fox.measure(requireContext())
-    }
-
-    private fun hideKeyboard(view: View) {
-        val manager = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
-        manager?.hideSoftInputFromWindow(view.windowToken, 0)
     }
 
     private fun render() {
@@ -342,24 +277,12 @@ class FoxFragment : Fragment() {
     }
 
     private fun paintAccount(c: Context, signed: Boolean, mail: String) {
-        signInCard.visibility = if (signed && !Fox.needsStep()) View.GONE else View.VISIBLE
-        val step = Fox.needsStep()
-        val link = Fox.isLinkStep()
-        signInTitle.text = if (step) getString(R.string.fox_code_title) else getString(R.string.fox_auth_title)
-        emailInput.isEnabled = !step && !Fox.busy
-        passwordInput.isEnabled = !step && !Fox.busy
-        signInButton.isEnabled = !step && !Fox.busy
-        signUpButton.isEnabled = !step && !Fox.busy
-        codeBox.visibility = if (step) View.VISIBLE else View.GONE
-        codeFrame.visibility = if (link) View.GONE else View.VISIBLE
-        codeHint.text = if (link) getString(R.string.fox_link_hint) else getString(R.string.fox_code_hint)
-        verifyButton.text = if (link) getString(R.string.fox_confirm) else getString(R.string.fox_continue)
-        verifyButton.isEnabled = !Fox.busy
-        resendButton.visibility = if (link) View.GONE else View.VISIBLE
-        resendButton.isEnabled = !Fox.busy
+        signInCard.visibility = if (signed) View.GONE else View.VISIBLE
+        signInTitle.text = getString(R.string.fox_auth_title)
+        signInButton.isEnabled = !Fox.busy
+        signUpButton.isEnabled = !Fox.busy
         signInButton.text = when {
             Fox.busy && Fox.stage.isNotEmpty() -> Fox.stage
-            step -> getString(R.string.fox_continue)
             else -> getString(R.string.fox_sign_in)
         }
         busyRow.visibility = if (Fox.busy) View.VISIBLE else View.GONE
@@ -372,7 +295,6 @@ class FoxFragment : Fragment() {
         } else {
             signError.visibility = View.GONE
         }
-        if (mail.isNotEmpty() && emailInput.text.isNullOrEmpty()) emailInput.setText(mail)
     }
 
     private fun resetText(raw: String): String {

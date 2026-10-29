@@ -32,6 +32,8 @@ class LocalProxy(private val port: Int, private val tunnel: (String, Int) -> com
 
     fun stop() {
         running = false
+        TunEngine.stop()
+        Desk.tunActive = false
         try {
             server?.close()
         } catch (e: Exception) {
@@ -281,7 +283,12 @@ object Connect {
                 running = true
                 Desk.live = true
                 Desk.connecting = false
-                Desk.systemProxy = SystemProxy.enable(port)
+                if (Store.fullTunnel()) {
+                    val tun = TunEngine.start(chosen, pass, port)
+                    Desk.tunActive = tun
+                    if (!tun) Desk.fault = TunService.last()
+                }
+                if (!Desk.tunActive) Desk.systemProxy = SystemProxy.enable(port)
                 Desk.startTicker()
             } catch (e: Exception) {
                 stop()
@@ -293,6 +300,8 @@ object Connect {
 
     fun stop() {
         running = false
+        TunEngine.stop()
+        Desk.tunActive = false
         if (Desk.systemProxy || Desk.proxyPort > 0) SystemProxy.disable()
         Desk.systemProxy = false
         proxy?.stop()

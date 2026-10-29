@@ -348,4 +348,6 @@ AGPL-3.0-or-later</string>
     <string name="apps">Apps in the tunnel</string>
     <string name="apps_all">All apps</string>
     <string name="apps_restart">Reconnect for the new app list to apply.</string>
+    <string name="apps_search">Search apps</string>
+    <string name="apps_system">system</string>
 </resources>

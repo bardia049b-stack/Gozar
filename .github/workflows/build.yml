@@ -140,6 +140,15 @@ jobs:
           if (-not (Test-Path "$wix\bin\light.exe")) { choco install wixtoolset -y --no-progress }
           if (-not (Test-Path "$wix\bin\light.exe")) { throw "light.exe is missing" }
 
+      - name: Fetch wintun
+        shell: pwsh
+        run: |
+          $zip = "$env:RUNNER_TEMP\wintun.zip"
+          Invoke-WebRequest -Uri "https://www.wintun.net/builds/wintun-0.14.1.zip" -OutFile $zip
+          Expand-Archive -Path $zip -DestinationPath "$env:RUNNER_TEMP\wintun" -Force
+          New-Item -ItemType Directory -Force -Path "desktop\src\main\resources" | Out-Null
+          Copy-Item "$env:RUNNER_TEMP\wintun\wintun\bin\amd64\wintun.dll" "desktop\src\main\resources\wintun.dll" -Force
+
       - name: Package
         shell: bash
         run: bash ./gradlew :desktop:createDistributable :desktop:packageMsi --no-daemon --stacktrace

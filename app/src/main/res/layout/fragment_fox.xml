@@ -19,7 +19,7 @@
             android:layout_width="34dp"
             android:layout_height="34dp"
             android:contentDescription="@string/fox_title"
-            android:src="@drawable/firefox_logo" />
+            android:src="@drawable/fox_red_logo" />
 
         <LinearLayout
             android:layout_width="0dp"
@@ -416,7 +416,7 @@
                 android:layout_marginTop="@dimen/sp_l"
                 android:background="@drawable/fox_form"
                 android:orientation="vertical"
-                android:padding="@dimen/sp_l"
+                android:padding="20dp"
                 android:visibility="gone">
 
                 <TextView
@@ -430,118 +430,32 @@
                     android:id="@+id/foxSignInSub"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
+                    android:layout_marginTop="6dp"
                     android:text="@string/fox_sign_sub"
                     android:textAppearance="?attr/textAppearanceBodySmall"
                     android:textColor="@color/text2" />
 
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/foxEmailBox"
-                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/sp_m"
-                    android:hint="@string/fox_email">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/foxEmailInput"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:inputType="textEmailAddress"
-                        android:maxLines="1" />
-                </com.google.android.material.textfield.TextInputLayout>
-
-                <com.google.android.material.textfield.TextInputLayout
-                    android:id="@+id/foxPasswordBox"
-                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/sp_xs"
-                    android:hint="@string/fox_password"
-                    app:endIconMode="password_toggle">
-
-                    <com.google.android.material.textfield.TextInputEditText
-                        android:id="@+id/foxPasswordInput"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:inputType="textPassword"
-                        android:maxLines="1" />
-                </com.google.android.material.textfield.TextInputLayout>
-
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/foxSignInButton"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/sp_s"
-                    android:insetTop="0dp"
-                    android:insetBottom="0dp"
-                    android:text="@string/fox_sign_in" />
+                    android:layout_height="52dp"
+                    android:layout_marginTop="16dp"
+                    android:text="@string/fox_sign_in"
+                    app:cornerRadius="26dp" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/foxSignUpButton"
                     style="@style/Widget.Material3.Button.TextButton"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:insetTop="0dp"
-                    android:insetBottom="0dp"
+                    android:layout_marginTop="4dp"
                     android:text="@string/fox_create" />
-
-                <LinearLayout
-                    android:id="@+id/foxCodeBox"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/sp_s"
-                    android:orientation="vertical"
-                    android:visibility="gone">
-
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:id="@+id/foxCodeFrame"
-                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:hint="@string/fox_code">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/foxCodeInput"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:inputType="text"
-                            android:maxLines="1" />
-                    </com.google.android.material.textfield.TextInputLayout>
-
-                    <TextView
-                        android:id="@+id/foxCodeHint"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/sp_xs"
-                        android:text="@string/fox_code_hint"
-                        android:textAppearance="?attr/textAppearanceBodySmall"
-                        android:textColor="@color/text2" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/foxVerifyButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/sp_xs"
-                        android:insetTop="0dp"
-                        android:insetBottom="0dp"
-                        android:text="@string/fox_continue" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/foxResendButton"
-                        style="@style/Widget.Material3.Button.TextButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:insetTop="0dp"
-                        android:insetBottom="0dp"
-                        android:text="@string/fox_send_again" />
-                </LinearLayout>
 
                 <LinearLayout
                     android:id="@+id/foxBusyRow"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/sp_s"
+                    android:layout_marginTop="8dp"
                     android:gravity="center_vertical"
                     android:orientation="horizontal"
                     android:visibility="gone">
@@ -568,7 +482,7 @@
                     android:id="@+id/foxSignError"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/sp_s"
+                    android:layout_marginTop="8dp"
                     android:textAppearance="?attr/textAppearanceBodySmall"
                     android:textColor="@color/m3_error"
                     android:visibility="gone" />
