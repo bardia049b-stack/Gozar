@@ -1,3 +1,7 @@
-GozarWG is a client for circumventing filtering, powered by the AmneziaWG core.
+Gozar is a Firefox VPN client for Android, Windows, macOS and Linux.
+
+It signs in with a Firefox account, opens the Mozilla proxy tunnel and routes the whole device
+through it. The interface is one screen: the connection control, live usage, the server list and
+an offline route map.
 
 Source code is licensed under GNU AGPL-3.0-or-later. See LICENSE and NOTICE.

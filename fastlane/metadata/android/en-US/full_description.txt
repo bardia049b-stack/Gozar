@@ -1,4 +1,4 @@
-GozarWG is a lightweight client for reaching the open internet when it is filtered.
+Gozar is a lightweight client for reaching the open internet when it is filtered.
 
 It runs the AmneziaWG core on the device and keeps the tunnel alive while the app is in the background, so the connection is not dropped when you close the window or swipe the app away.
 

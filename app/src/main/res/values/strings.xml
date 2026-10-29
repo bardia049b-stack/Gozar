@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">GozarWG</string>
+    <string name="app_name">Gozar</string>
     <string name="status_off">Disconnected</string>
     <string name="status_on">Connected</string>
     <string name="status_connecting">Connecting…</string>
@@ -45,7 +45,7 @@
     <string name="imp_link">Import from link</string>
     <string name="imp_create">Create new</string>
     <string name="link_title">Import from link</string>
-    <string name="link_hint">gozarwg://import?config=…</string>
+    <string name="link_hint">gozar://import?config=…</string>
     <string name="st_connection">Connection</string>
     <string name="kill_switch">Kill switch</string>
     <string name="kill_switch_desc">Block traffic if the tunnel drops and auto-reconnect. For full lockdown also enable “Block connections without VPN” in system VPN settings.</string>
@@ -187,7 +187,7 @@
     <string name="ed_delete">Delete</string>
     <string name="hs_short">Handshake</string>
     <string name="version_license">Version %s · AGPL-3.0</string>
-    <string name="legal_title">GozarWG</string>
+    <string name="legal_title">Gozar</string>
     <string name="source_code">Source code</string>
     <string name="route_map">Tunnel route</string>
     <string name="open_live_map">Open route map</string>
@@ -212,12 +212,12 @@
     <string name="update_available">Version %s is available</string>
     <string name="update_failed">Couldn’t check for updates</string>
     <string name="update_title">Update available</string>
-    <string name="update_message">GozarWG %s is ready to download.</string>
+    <string name="update_message">Gozar %s is ready to download.</string>
     <string name="update_open">Open release</string>
     <string name="update_notification_channel">App updates</string>
-    <string name="update_notification_title">GozarWG update available</string>
+    <string name="update_notification_title">Gozar update available</string>
     <string name="update_notification_text">Version %s is ready to download</string>
-    <string name="legal_notice">GozarWG
+    <string name="legal_notice">Gozar
 AGPL-3.0-or-later</string>
     <string name="mode_wireguard">WireGuard</string>
     <string name="mode_firefox">Firefox VPN</string>
@@ -278,9 +278,48 @@ AGPL-3.0-or-later</string>
     <string name="fox_link_hint">Mozilla sent a confirmation link instead of a code. Open it once in your browser, then press Confirm.</string>
     <string name="fox_confirm">Confirm</string>
     <string name="fox_send_again">Send again</string>
-    <string name="fox_build">GozarWG %1$s · pick a server, then measure the delay to it.</string>
+    <string name="fox_build">Gozar %1$s · pick a server, then measure the delay to it.</string>
     <string name="fox_logs">Logs</string>
     <string name="fox_log_empty">Nothing logged yet</string>
     <string name="fox_copy">Copy</string>
     <string name="fox_clear">Clear</string>
+
+    <string name="login_welcome_title">Hi,\nWelcome back</string>
+    <string name="login_welcome_sub">Sign in with your Firefox account to start the tunnel. 50 GB every month, no card needed.</string>
+    <string name="login_create_title">Create\naccount</string>
+    <string name="login_create_sub">One Firefox account gives you 50 GB every month on every device.</string>
+    <string name="login_email">Email</string>
+    <string name="login_password">Password</string>
+    <string name="login_confirm">Repeat password</string>
+    <string name="login_action">Log in</string>
+    <string name="login_create_action">Sign up</string>
+    <string name="login_or">or continue with</string>
+    <string name="login_google">Google</string>
+    <string name="login_apple">Apple</string>
+    <string name="login_no_account">New here? Create an account</string>
+    <string name="login_have_account">Already have an account? Log in</string>
+    <string name="login_check_title">Check your email</string>
+    <string name="login_check_code">Mozilla emailed a 6-digit code. Enter it below.</string>
+    <string name="login_check_link">Mozilla sent a confirmation link. Open it once, then press Confirm.</string>
+    <string name="login_continue">Continue</string>
+    <string name="login_confirm_action">Confirm</string>
+    <string name="login_fill">Enter your email and password.</string>
+    <string name="login_mismatch">The two passwords do not match.</string>
+    <string name="login_working">Working…</string>
+    <string name="login_no_browser">No browser found for the Firefox account page.</string>
+    <string name="account_refresh">Refresh usage</string>
+    <string name="account_refreshing">Updating your usage…</string>
+    <string name="account_free">Free plan · 50 GB a month</string>
+    <string name="account_usage">%1$s of %2$s used this month</string>
+    <string name="sign_out_confirm">Sign out of Gozar on this device?</string>
+    <string name="geolocation">Geolocation</string>
+    <string name="geolocation_desc">Use the network location for the map</string>
+    <string name="recents">Recent servers</string>
+    <string name="recents_desc">Suggest the last used server first</string>
+    <string name="project">Project</string>
+    <string name="project_desc">Source code and releases</string>
+    <string name="update_channel">Updates</string>
+    <string name="about_section">About</string>
+    <string name="update_action">Download</string>
+    <string name="update_latest">You are on the latest version.</string>
 </resources>

@@ -7,37 +7,6 @@
     android:background="?android:attr/colorBackground"
     android:orientation="vertical">
 
-    <com.google.android.material.button.MaterialButtonToggleGroup
-        android:id="@+id/modeSwitch"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="@dimen/screen_gutter"
-        android:layout_marginTop="@dimen/sp_s"
-        android:layout_marginEnd="@dimen/screen_gutter"
-        app:selectionRequired="true"
-        app:singleSelection="true">
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/modeWg"
-            style="@style/Widget.Material3.Button.OutlinedButton"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/mode_wireguard"
-            app:icon="@drawable/amnezia_mark"
-            app:iconSize="18dp" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/modeFox"
-            style="@style/Widget.Material3.Button.OutlinedButton"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/mode_firefox"
-            app:icon="@drawable/fox_logo"
-            app:iconSize="18dp" />
-    </com.google.android.material.button.MaterialButtonToggleGroup>
-
     <FrameLayout
         android:id="@+id/container"
         android:layout_width="match_parent"

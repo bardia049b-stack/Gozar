@@ -87,7 +87,7 @@
                     android:paddingEnd="@dimen/sp_l"
                     android:paddingBottom="18dp">
 
-                    <com.gozarwg.ConnectControl
+                    <com.gozar.ConnectControl
                         android:id="@+id/foxConnect"
                         android:layout_width="168dp"
                         android:layout_height="168dp"
@@ -153,7 +153,7 @@
                         android:orientation="horizontal"
                         android:visibility="gone">
 
-                        <com.gozarwg.CountryFlagView
+                        <com.gozar.CountryFlagView
                             android:id="@+id/foxLiveFlag"
                             android:layout_width="22dp"
                             android:layout_height="22dp"
@@ -225,7 +225,7 @@
                         android:src="@drawable/ic_down"
                         app:tint="@color/tile_on_container" />
 
-                    <com.gozarwg.RollingValueView
+                    <com.gozar.RollingValueView
                         android:id="@+id/foxDown"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -265,7 +265,7 @@
                         android:src="@drawable/ic_up"
                         app:tint="@color/m3_on_primary" />
 
-                    <com.gozarwg.RollingValueView
+                    <com.gozar.RollingValueView
                         android:id="@+id/foxUp"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -305,7 +305,7 @@
                         android:src="@drawable/ic_data"
                         app:tint="@color/m3_on_tertiary_container" />
 
-                    <com.gozarwg.RollingValueView
+                    <com.gozar.RollingValueView
                         android:id="@+id/foxTotal"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -373,7 +373,7 @@
                 android:id="@+id/foxServerRow"
                 style="@style/Gozar.Row">
 
-                <com.gozarwg.CountryFlagView
+                <com.gozar.CountryFlagView
                     android:id="@+id/foxServerFlag"
                     android:layout_width="@dimen/tile_size"
                     android:layout_height="@dimen/tile_size"

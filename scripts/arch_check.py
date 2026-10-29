@@ -2,7 +2,7 @@ import os
 import struct
 import sys
 
-NAMES = {"jvm.dll", "libjvm.so", "libjvm.dylib", "GozarWG.exe", "GozarWG"}
+NAMES = {"jvm.dll", "libjvm.so", "libjvm.dylib", "Gozar.exe", "Gozar"}
 
 ELF = {0x3E: "x86_64", 0xB7: "aarch64", 0x03: "x86", 0x28: "arm"}
 MACH = {0x01000007: "x86_64", 0x0100000C: "aarch64", 0x07: "x86", 0x0C: "arm"}

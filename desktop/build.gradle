@@ -24,7 +24,7 @@ dependencies {
 
 compose.desktop {
     application {
-        mainClass = 'com.gozarwg.desk.MainKt'
+        mainClass = 'com.gozar.desk.MainKt'
 
 
         nativeDistributions {
@@ -45,27 +45,27 @@ compose.desktop {
                 'jdk.crypto.ec',
                 'jdk.unsupported'
             )
-            packageName = 'GozarWG'
+            packageName = 'Gozar'
             packageVersion = '1.7.0'
-            description = 'GozarWG desktop'
-            vendor = 'GozarWG'
+            description = 'Gozar desktop'
+            vendor = 'Gozar'
 
             linux {
                 menuGroup = 'Network'
                 appCategory = 'Network'
-                debMaintainer = 'dev@gozarwg.local'
+                debMaintainer = 'dev@gozar.local'
                 iconFile.set(file('icons/fox-256.png'))
             }
 
             windows {
-                menuGroup = 'GozarWG'
+                menuGroup = 'Gozar'
                 upgradeUuid = '8f9f0b34-4cb6-4b6a-9a2e-6c4f1e8a6d51'
                 iconFile.set(file('icons/fox.ico'))
             }
 
             macOS {
-                bundleID = 'com.gozarwg.desktop'
-                dockName = 'GozarWG'
+                bundleID = 'com.gozar.desktop'
+                dockName = 'Gozar'
                 iconFile.set(file('icons/fox.icns'))
             }
         }

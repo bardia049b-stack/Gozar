@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">GozarWG</string>
+    <string name="app_name">Gozar</string>
     <string name="status_off">قطع است</string>
     <string name="status_on">متصل است</string>
     <string name="status_connecting">در حال اتصال…</string>
@@ -45,7 +45,7 @@
     <string name="imp_link">وارد کردن با لینک</string>
     <string name="imp_create">ساخت کانفیگ جدید</string>
     <string name="link_title">وارد کردن با لینک</string>
-    <string name="link_hint">gozarwg://import?config=…</string>
+    <string name="link_hint">gozar://import?config=…</string>
     <string name="st_connection">اتصال</string>
     <string name="kill_switch">کیل سوییچ</string>
     <string name="kill_switch_desc">اگر تونل قطع شد ترافیک را متوقف و خودکار دوباره وصل شو. برای قفل کامل، گزینه «مسدود کردن اتصال بدون VPN» را هم در تنظیمات VPN سیستم فعال کن.</string>
@@ -187,7 +187,7 @@
     <string name="ed_delete">حذف</string>
     <string name="hs_short">دست‌داد</string>
     <string name="version_license">نسخه %s · AGPL-3.0</string>
-    <string name="legal_title">GozarWG</string>
+    <string name="legal_title">Gozar</string>
     <string name="source_code">کد منبع</string>
     <string name="route_map">مسیر تونل</string>
     <string name="open_live_map">باز کردن نقشهٔ مسیر</string>
@@ -212,12 +212,12 @@
     <string name="update_available">نسخهٔ %s آماده است</string>
     <string name="update_failed">بررسی به‌روزرسانی انجام نشد</string>
     <string name="update_title">به‌روزرسانی آماده است</string>
-    <string name="update_message">GozarWG %s آمادهٔ دریافت است.</string>
+    <string name="update_message">Gozar %s آمادهٔ دریافت است.</string>
     <string name="update_open">باز کردن ریلیز</string>
     <string name="update_notification_channel">به‌روزرسانی برنامه</string>
-    <string name="update_notification_title">به‌روزرسانی GozarWG آماده است</string>
+    <string name="update_notification_title">به‌روزرسانی Gozar آماده است</string>
     <string name="update_notification_text">نسخهٔ %s آمادهٔ دریافت است</string>
-    <string name="legal_notice">GozarWG
+    <string name="legal_notice">Gozar
 AGPL-3.0-or-later</string>
     <string name="mode_wireguard">وایرگارد</string>
     <string name="mode_firefox">فایرفاکس VPN</string>
@@ -283,4 +283,43 @@ AGPL-3.0-or-later</string>
     <string name="fox_log_empty">هنوز چیزی ثبت نشده</string>
     <string name="fox_copy">کپی</string>
     <string name="fox_clear">پاک کردن</string>
+
+    <string name="login_welcome_title">سلام،\nخوش آمدید</string>
+    <string name="login_welcome_sub">با حساب فایرفاکس خود وارد شوید تا تونل شروع شود. هر ماه ۵۰ گیگابایت، بدون کارت بانکی.</string>
+    <string name="login_create_title">ساخت\nحساب</string>
+    <string name="login_create_sub">یک حساب فایرفاکس، هر ماه ۵۰ گیگابایت روی همه دستگاه‌ها.</string>
+    <string name="login_email">ایمیل</string>
+    <string name="login_password">رمز عبور</string>
+    <string name="login_confirm">تکرار رمز عبور</string>
+    <string name="login_action">ورود</string>
+    <string name="login_create_action">ثبت‌نام</string>
+    <string name="login_or">یا ادامه با</string>
+    <string name="login_google">گوگل</string>
+    <string name="login_apple">اپل</string>
+    <string name="login_no_account">کاربر جدید هستید؟ حساب بسازید</string>
+    <string name="login_have_account">حساب دارید؟ وارد شوید</string>
+    <string name="login_check_title">ایمیل خود را ببینید</string>
+    <string name="login_check_code">موزیلا یک کد ۶ رقمی فرستاده است. آن را وارد کنید.</string>
+    <string name="login_check_link">موزیلا یک لینک تأیید فرستاده است. یک بار بازش کنید و سپس تأیید را بزنید.</string>
+    <string name="login_continue">ادامه</string>
+    <string name="login_confirm_action">تأیید</string>
+    <string name="login_fill">ایمیل و رمز عبور را وارد کنید.</string>
+    <string name="login_mismatch">دو رمز عبور یکسان نیستند.</string>
+    <string name="login_working">در حال انجام…</string>
+    <string name="login_no_browser">مرورگری برای صفحه حساب فایرفاکس پیدا نشد.</string>
+    <string name="account_refresh">به‌روزرسانی مصرف</string>
+    <string name="account_refreshing">مصرف شما به‌روز می‌شود…</string>
+    <string name="account_free">حساب رایگان · ۵۰ گیگابایت در ماه</string>
+    <string name="account_usage">%1$s از %2$s این ماه مصرف شده</string>
+    <string name="sign_out_confirm">از حساب خود در این دستگاه خارج می‌شوید؟</string>
+    <string name="geolocation">موقعیت مکانی</string>
+    <string name="geolocation_desc">استفاده از موقعیت شبکه برای نقشه</string>
+    <string name="recents">سرورهای اخیر</string>
+    <string name="recents_desc">پیشنهاد آخرین سرور استفاده‌شده در ابتدا</string>
+    <string name="project">پروژه</string>
+    <string name="project_desc">کد منبع و نسخه‌ها</string>
+    <string name="update_channel">به‌روزرسانی‌ها</string>
+    <string name="about_section">درباره</string>
+    <string name="update_action">دانلود</string>
+    <string name="update_latest">شما آخرین نسخه را دارید.</string>
 </resources>

@@ -7,11 +7,11 @@ def keystoreFile = System.getenv('KEYSTORE_FILE')
 def hasSigning = keystoreFile != null && !keystoreFile.isEmpty() && file(keystoreFile).exists()
 
 android {
-    namespace 'com.gozarwg'
+    namespace 'com.gozar'
     compileSdk 36
 
     defaultConfig {
-        applicationId 'com.gozarwg'
+        applicationId 'com.gozar'
         minSdk 24
         targetSdk 35
         versionCode 17
@@ -85,7 +85,6 @@ android {
 
 dependencies {
     implementation project(':core')
-    implementation 'com.zaneschepke:amneziawg-android:2.3.7'
     implementation 'com.google.zxing:core:3.5.3'
     implementation 'androidx.appcompat:appcompat:1.7.1'
     implementation 'androidx.fragment:fragment:1.8.9'

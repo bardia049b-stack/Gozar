@@ -44,61 +44,84 @@
                 android:textColor="?attr/colorOnSurface" />
         </LinearLayout>
 
-        <com.google.android.material.textfield.TextInputLayout
-            android:id="@+id/searchBox"
-            style="@style/Gozar.Field"
-            app:startIconDrawable="@drawable/ic_search">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etSettingsSearch"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="@string/search_settings"
-                android:imeOptions="actionSearch"
-                android:inputType="text"
-                android:maxLines="1" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <LinearLayout
-            android:id="@+id/bannerSupport"
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/sp_l"
-            android:background="@drawable/banner"
-            android:clickable="true"
-            android:focusable="true"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:padding="@dimen/sp_l">
-
-            <ImageView
-                android:layout_width="44dp"
-                android:layout_height="44dp"
-                android:background="@drawable/circle_soft"
-                android:backgroundTint="?attr/colorSurfaceContainerHighest"
-                android:contentDescription="@string/support"
-                android:padding="11dp"
-                android:src="@drawable/ic_volunteer"
-                app:tint="?attr/colorPrimary" />
+            android:layout_marginTop="@dimen/sp_s"
+            app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
+            app:cardCornerRadius="@dimen/card_radius"
+            app:cardElevation="0dp">
 
             <LinearLayout
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="@dimen/sp_l"
-                android:layout_weight="1"
-                android:orientation="vertical">
+                android:orientation="vertical"
+                android:padding="@dimen/sp_l">
 
-                <TextView
-                    style="@style/Gozar.Row.Title"
-                    android:text="@string/support"
-                    android:textColor="?attr/colorOnPrimaryContainer" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
 
-                <TextView
-                    style="@style/Gozar.Row.Subtitle"
-                    android:text="@string/support_desc"
-                    android:textColor="?attr/colorOnPrimaryContainer" />
+                    <TextView
+                        android:id="@+id/tvAccountInitial"
+                        android:layout_width="52dp"
+                        android:layout_height="52dp"
+                        android:background="@drawable/circle_soft"
+                        android:backgroundTint="?attr/colorPrimary"
+                        android:gravity="center"
+                        android:textColor="?attr/colorOnPrimary"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+
+                    <LinearLayout style="@style/Gozar.Row.Text">
+
+                        <TextView
+                            android:id="@+id/tvAccountEmail"
+                            style="@style/Gozar.Row.Title"
+                            android:maxLines="1"
+                            android:ellipsize="end" />
+
+                        <TextView
+                            android:id="@+id/tvAccountPlan"
+                            style="@style/Gozar.Row.Subtitle" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <com.google.android.material.progressindicator.LinearProgressIndicator
+                    android:id="@+id/pbAccountUsage"
+                    android:layout_width="match_parent"
+                    android:layout_height="6dp"
+                    android:layout_marginTop="@dimen/sp_m"
+                    app:trackCornerRadius="3dp"
+                    app:trackThickness="6dp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/sp_m"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnAccountRefresh"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/account_refresh" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnSignOut"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/sp_m"
+                        android:layout_weight="1"
+                        android:text="@string/fox_sign_out" />
+                </LinearLayout>
             </LinearLayout>
-        </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
         <TextView
             style="@style/Gozar.Section"
@@ -124,8 +147,7 @@
                     android:id="@+id/tvLang"
                     style="@style/Gozar.Row.Subtitle" />
             </LinearLayout>
-            <ImageView
-                style="@style/Gozar.Row.Chevron" />
+            <ImageView style="@style/Gozar.Row.Chevron" />
         </LinearLayout>
 
         <LinearLayout
@@ -148,8 +170,7 @@
                     android:id="@+id/tvTheme"
                     style="@style/Gozar.Row.Subtitle" />
             </LinearLayout>
-            <ImageView
-                style="@style/Gozar.Row.Chevron" />
+            <ImageView style="@style/Gozar.Row.Chevron" />
         </LinearLayout>
 
         <TextView
@@ -157,218 +178,60 @@
             android:text="@string/connection_section" />
 
         <LinearLayout
-            android:id="@+id/rowKill"
-            style="@style/Gozar.Row">
-
-            <ImageView
-                style="@style/Gozar.Tile"
-                android:background="@drawable/frame_hex"
-                android:backgroundTint="@color/tile_container"
-                android:contentDescription="@string/kill_switch"
-                android:src="@drawable/ic_vpn_lock"
-                app:tint="@color/tile_on_container" />
-
-            <LinearLayout style="@style/Gozar.Row.Text">
-                <TextView
-                    style="@style/Gozar.Row.Title"
-                    android:text="@string/kill_switch" />
-                <TextView
-                    style="@style/Gozar.Row.Subtitle"
-                    android:text="@string/kill_switch_short" />
-            </LinearLayout>
-            <com.google.android.material.materialswitch.MaterialSwitch
-                android:id="@+id/swKill"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/rowAuto"
+            android:id="@+id/rowGeo"
             style="@style/Gozar.Row">
 
             <ImageView
                 style="@style/Gozar.Tile"
                 android:background="@drawable/frame_burst"
                 android:backgroundTint="@color/tile_container"
-                android:contentDescription="@string/auto_connect"
-                android:src="@drawable/ic_auto"
+                android:contentDescription="@string/geolocation"
+                android:src="@drawable/ic_location"
                 app:tint="@color/tile_on_container" />
 
             <LinearLayout style="@style/Gozar.Row.Text">
                 <TextView
                     style="@style/Gozar.Row.Title"
-                    android:text="@string/auto_connect" />
+                    android:text="@string/geolocation" />
                 <TextView
                     style="@style/Gozar.Row.Subtitle"
-                    android:text="@string/auto_connect_desc" />
+                    android:text="@string/geolocation_desc" />
             </LinearLayout>
             <com.google.android.material.materialswitch.MaterialSwitch
-                android:id="@+id/swAuto"
+                android:id="@+id/swGeo"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content" />
         </LinearLayout>
 
         <LinearLayout
-            android:id="@+id/rowLan"
-            style="@style/Gozar.Row">
-
-            <ImageView
-                style="@style/Gozar.Tile"
-                android:background="@drawable/frame_squircle"
-                android:backgroundTint="@color/tile_container"
-                android:contentDescription="@string/lan"
-                android:src="@drawable/ic_devices"
-                app:tint="@color/tile_on_container" />
-
-            <LinearLayout style="@style/Gozar.Row.Text">
-                <TextView
-                    style="@style/Gozar.Row.Title"
-                    android:text="@string/lan" />
-                <TextView
-                    style="@style/Gozar.Row.Subtitle"
-                    android:text="@string/lan_desc" />
-            </LinearLayout>
-            <com.google.android.material.materialswitch.MaterialSwitch
-                android:id="@+id/swLan"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/rowNotif"
-            style="@style/Gozar.Row">
-
-            <ImageView
-                style="@style/Gozar.Tile"
-                android:background="@drawable/frame_gem"
-                android:backgroundTint="@color/tile_container"
-                android:contentDescription="@string/notif_speed"
-                android:src="@drawable/ic_bell"
-                app:tint="@color/tile_on_container" />
-
-            <LinearLayout style="@style/Gozar.Row.Text">
-                <TextView
-                    style="@style/Gozar.Row.Title"
-                    android:text="@string/notif_speed" />
-                <TextView
-                    style="@style/Gozar.Row.Subtitle"
-                    android:text="@string/notif_speed_desc" />
-            </LinearLayout>
-            <com.google.android.material.materialswitch.MaterialSwitch
-                android:id="@+id/swNotif"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
-        </LinearLayout>
-
-        <TextView
-            style="@style/Gozar.Section"
-            android:text="@string/proxy_section" />
-
-        <LinearLayout
-            android:id="@+id/rowProxy"
-            style="@style/Gozar.Row">
-
-            <ImageView
-                style="@style/Gozar.Tile"
-                android:background="@drawable/frame_clover"
-                android:backgroundTint="@color/tile_container"
-                android:contentDescription="@string/proxy_mode"
-                android:src="@drawable/ic_router_alt"
-                app:tint="@color/tile_on_container" />
-
-            <LinearLayout style="@style/Gozar.Row.Text">
-                <TextView
-                    style="@style/Gozar.Row.Title"
-                    android:text="@string/proxy_mode" />
-                <TextView
-                    style="@style/Gozar.Row.Subtitle"
-                    android:text="@string/proxy_desc" />
-            </LinearLayout>
-            <com.google.android.material.materialswitch.MaterialSwitch
-                android:id="@+id/swProxy"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/rowPort"
-            style="@style/Gozar.Row">
-
-            <ImageView
-                style="@style/Gozar.Tile"
-                android:background="@drawable/frame_circle"
-                android:backgroundTint="@color/tile_container"
-                android:contentDescription="@string/proxy_port"
-                android:src="@drawable/ic_router"
-                app:tint="@color/tile_on_container" />
-
-            <LinearLayout style="@style/Gozar.Row.Text">
-                <TextView
-                    style="@style/Gozar.Row.Title"
-                    android:text="@string/proxy_port" />
-                <TextView
-                    android:id="@+id/tvProxyPort"
-                    style="@style/Gozar.Row.Subtitle" />
-            </LinearLayout>
-            <ImageView
-                style="@style/Gozar.Row.Chevron" />
-        </LinearLayout>
-
-        <TextView
-            style="@style/Gozar.Section"
-            android:text="@string/split" />
-
-        <LinearLayout
-            android:id="@+id/rowSplitMode"
+            android:id="@+id/rowRecents"
             style="@style/Gozar.Row">
 
             <ImageView
                 style="@style/Gozar.Tile"
                 android:background="@drawable/frame_hex"
                 android:backgroundTint="@color/tile_container"
-                android:contentDescription="@string/split_mode"
-                android:src="@drawable/ic_rule"
+                android:contentDescription="@string/recents"
+                android:src="@drawable/ic_time"
                 app:tint="@color/tile_on_container" />
 
             <LinearLayout style="@style/Gozar.Row.Text">
                 <TextView
                     style="@style/Gozar.Row.Title"
-                    android:text="@string/split_mode" />
+                    android:text="@string/recents" />
                 <TextView
-                    android:id="@+id/tvSplitMode"
-                    style="@style/Gozar.Row.Subtitle" />
+                    style="@style/Gozar.Row.Subtitle"
+                    android:text="@string/recents_desc" />
             </LinearLayout>
-            <ImageView
-                style="@style/Gozar.Row.Chevron" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/rowSplitApps"
-            style="@style/Gozar.Row">
-
-            <ImageView
-                style="@style/Gozar.Tile"
-                android:background="@drawable/frame_squircle"
-                android:backgroundTint="@color/tile_container"
-                android:contentDescription="@string/split_apps"
-                android:src="@drawable/ic_apps"
-                app:tint="@color/tile_on_container" />
-
-            <LinearLayout style="@style/Gozar.Row.Text">
-                <TextView
-                    style="@style/Gozar.Row.Title"
-                    android:text="@string/split_apps" />
-                <TextView
-                    android:id="@+id/tvSplitApps"
-                    style="@style/Gozar.Row.Subtitle" />
-            </LinearLayout>
-            <ImageView
-                style="@style/Gozar.Row.Chevron" />
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/swRecents"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
         </LinearLayout>
 
         <TextView
             style="@style/Gozar.Section"
-            android:text="@string/updates_section" />
+            android:text="@string/about_section" />
 
         <LinearLayout
             android:id="@+id/rowUpdate"
@@ -376,10 +239,10 @@
 
             <ImageView
                 style="@style/Gozar.Tile"
-                android:background="@drawable/frame_circle"
+                android:background="@drawable/frame_clover"
                 android:backgroundTint="@color/tile_container"
                 android:contentDescription="@string/check_updates"
-                android:src="@drawable/ic_system_update"
+                android:src="@drawable/ic_refresh"
                 app:tint="@color/tile_on_container" />
 
             <LinearLayout style="@style/Gozar.Row.Text">
@@ -390,36 +253,7 @@
                     android:id="@+id/tvUpdate"
                     style="@style/Gozar.Row.Subtitle" />
             </LinearLayout>
-            <ImageView
-                style="@style/Gozar.Row.Chevron" />
-        </LinearLayout>
-
-        <TextView
-            style="@style/Gozar.Section"
-            android:text="@string/about_section" />
-
-        <LinearLayout
-            android:id="@+id/rowVpnSettings"
-            style="@style/Gozar.Row">
-
-            <ImageView
-                style="@style/Gozar.Tile"
-                android:background="@drawable/frame_puff"
-                android:backgroundTint="@color/tile_container"
-                android:contentDescription="@string/vpn_settings"
-                android:src="@drawable/ic_settings"
-                app:tint="@color/tile_on_container" />
-
-            <LinearLayout style="@style/Gozar.Row.Text">
-                <TextView
-                    style="@style/Gozar.Row.Title"
-                    android:text="@string/vpn_settings" />
-                <TextView
-                    style="@style/Gozar.Row.Subtitle"
-                    android:text="@string/vpn_settings_desc" />
-            </LinearLayout>
-            <ImageView
-                style="@style/Gozar.Row.Chevron" />
+            <ImageView style="@style/Gozar.Row.Chevron" />
         </LinearLayout>
 
         <LinearLayout
@@ -428,68 +262,21 @@
 
             <ImageView
                 style="@style/Gozar.Tile"
-                android:background="@drawable/frame_burst"
-                android:backgroundTint="@color/tile_container"
-                android:contentDescription="@string/support"
-                android:src="@drawable/ic_open_app"
-                app:tint="@color/tile_on_container" />
-
-            <LinearLayout style="@style/Gozar.Row.Text">
-                <TextView
-                    style="@style/Gozar.Row.Title"
-                    android:text="@string/support" />
-                <TextView
-                    style="@style/Gozar.Row.Subtitle"
-                    android:text="@string/support_desc" />
-            </LinearLayout>
-            <ImageView
-                style="@style/Gozar.Row.Chevron" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/rowCrash"
-            style="@style/Gozar.Row">
-
-            <ImageView
-                style="@style/Gozar.Tile"
-                android:background="@drawable/frame_flower"
-                android:backgroundTint="@color/tile_container"
-                android:contentDescription="@string/crash_title"
-                android:src="@drawable/ic_bug"
-                app:tint="@color/tile_on_container" />
-
-            <LinearLayout style="@style/Gozar.Row.Text">
-                <TextView
-                    style="@style/Gozar.Row.Title"
-                    android:text="@string/crash_title" />
-                <TextView
-                    style="@style/Gozar.Row.Subtitle"
-                    android:text="@string/crash_desc" />
-            </LinearLayout>
-            <ImageView
-                style="@style/Gozar.Row.Chevron" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/rowCore"
-            style="@style/Gozar.Row">
-
-            <ImageView
-                style="@style/Gozar.Tile"
                 android:background="@drawable/frame_gem"
                 android:backgroundTint="@color/tile_container"
-                android:contentDescription="@string/core"
-                android:src="@drawable/ic_memory"
+                android:contentDescription="@string/project"
+                android:src="@drawable/ic_published"
                 app:tint="@color/tile_on_container" />
 
             <LinearLayout style="@style/Gozar.Row.Text">
                 <TextView
                     style="@style/Gozar.Row.Title"
-                    android:text="@string/core" />
+                    android:text="@string/project" />
                 <TextView
-                    android:id="@+id/tvCore"
-                    style="@style/Gozar.Row.Subtitle" />
+                    style="@style/Gozar.Row.Subtitle"
+                    android:text="@string/project_desc" />
             </LinearLayout>
+            <ImageView style="@style/Gozar.Row.Chevron" />
         </LinearLayout>
 
         <LinearLayout
@@ -498,7 +285,7 @@
 
             <ImageView
                 style="@style/Gozar.Tile"
-                android:background="@drawable/frame_clover"
+                android:background="@drawable/frame_puff"
                 android:backgroundTint="@color/tile_container"
                 android:contentDescription="@string/about"
                 android:src="@drawable/ic_info"
@@ -512,27 +299,8 @@
                     android:id="@+id/tvAbout"
                     style="@style/Gozar.Row.Subtitle" />
             </LinearLayout>
+            <ImageView style="@style/Gozar.Row.Chevron" />
         </LinearLayout>
-
-        <TextView
-            android:id="@+id/tvKillDesc"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/sp_l"
-            android:lineSpacingMultiplier="1.4"
-            android:text="@string/kill_switch_desc"
-            android:textAppearance="@style/TextAppearance.Gozar.BodySmall"
-            android:textColor="?attr/colorOnSurfaceVariant" />
-
-        <TextView
-            android:id="@+id/tvExportNote"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/sp_s"
-            android:lineSpacingMultiplier="1.4"
-            android:text="@string/export_note"
-            android:textAppearance="@style/TextAppearance.Gozar.BodySmall"
-            android:textColor="?attr/colorOnSurfaceVariant" />
 
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>
