@@ -146,35 +146,43 @@ class SettingsFragment : Fragment() {
 
     private fun editBypass() {
         val context = requireContext()
-        val field = android.widget.EditText(context)
-        field.setText(Store.bypassList(context))
-        field.hint = getString(R.string.routing_list_hint)
-        field.setPadding(48, 32, 48, 16)
-        MaterialAlertDialogBuilder(context)
-            .setTitle(R.string.routing_list)
-            .setView(field)
-            .setNegativeButton(R.string.cancel, null)
-            .setPositiveButton(R.string.routing_save) { _, _ ->
-                Store.setBypassList(context, field.text?.toString().orEmpty())
-                paint()
-            }
-            .show()
+        askText(
+            title = getString(R.string.routing_list),
+            hint = getString(R.string.routing_list_hint),
+            value = Store.bypassList(context)
+        ) { text ->
+            Store.setBypassList(context, text)
+            paint()
+        }
     }
 
     private fun editChain() {
         val context = requireContext()
-        val field = android.widget.EditText(context)
-        field.setText(Store.chain(context))
-        field.hint = getString(R.string.chain_hint)
-        field.setPadding(48, 32, 48, 16)
-        field.setTextDirection(android.view.View.TEXT_DIRECTION_LTR)
+        askText(
+            title = getString(R.string.chain),
+            hint = getString(R.string.chain_hint),
+            value = Store.chain(context)
+        ) { text ->
+            Store.setChain(context, text)
+            paint()
+        }
+    }
+
+    private fun askText(title: String, hint: String, value: String, save: (String) -> Unit) {
+        val context = requireContext()
+        val view = layoutInflater.inflate(R.layout.dialog_text_value, null)
+        view.findViewById<TextView>(R.id.dialogTextHint).text = hint
+        val box = view.findViewById<com.google.android.material.textfield.TextInputLayout>(R.id.dialogTextBox)
+        val field = view.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.dialogTextInput)
+        field.setText(value)
+        field.setSelection(field.text?.length ?: 0)
         MaterialAlertDialogBuilder(context)
-            .setTitle(R.string.chain)
-            .setView(field)
+            .setTitle(title)
+            .setView(view)
             .setNegativeButton(R.string.cancel, null)
             .setPositiveButton(R.string.routing_save) { _, _ ->
-                Store.setChain(context, field.text?.toString().orEmpty())
-                paint()
+                box.error = null
+                save(field.text?.toString().orEmpty().trim())
             }
             .show()
     }

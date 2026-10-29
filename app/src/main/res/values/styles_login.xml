@@ -85,4 +85,38 @@
         <item name="android:letterSpacing">0</item>
         <item name="rippleColor">@color/login_ripple</item>
     </style>
+
+    <style name="Gozar.Login.Well">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">58dp</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:background">@drawable/bg_login_well</item>
+        <item name="android:paddingStart">12dp</item>
+        <item name="android:paddingEnd">8dp</item>
+    </style>
+
+    <style name="Gozar.Login.Well.Icon">
+        <item name="android:layout_width">22dp</item>
+        <item name="android:layout_height">22dp</item>
+        <item name="android:layout_marginStart">4dp</item>
+        <item name="android:layout_marginEnd">12dp</item>
+        <item name="android:alpha">0.72</item>
+        <item name="android:tint">@color/login_text_dim</item>
+    </style>
+
+    <style name="Gozar.Login.Well.Input">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:background">@null</item>
+        <item name="android:textColor">@color/login_text</item>
+        <item name="android:textColorHint">@color/login_text_dim</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:paddingStart">0dp</item>
+        <item name="android:paddingEnd">8dp</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:singleLine">true</item>
+        <item name="android:textColorHighlight">#44FF3B54</item>
+    </style>
 </resources>

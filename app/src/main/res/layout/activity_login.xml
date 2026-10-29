@@ -67,69 +67,89 @@
                     android:textAppearance="@style/TextAppearance.Gozar.BodyMedium"
                     android:textColor="@color/login_text_dim" />
 
-                <com.google.android.material.textfield.TextInputLayout
+                <LinearLayout
                     android:id="@+id/loginMailBox"
-                    style="@style/Gozar.Login.Field"
-                    android:layout_marginTop="22dp"
-                    android:hint="@string/login_email"
-                    app:startIconDrawable="@drawable/ic_mail">
+                    style="@style/Gozar.Login.Well"
+                    android:layout_marginTop="22dp">
 
-                    <com.google.android.material.textfield.TextInputEditText
+                    <ImageView
+                        style="@style/Gozar.Login.Well.Icon"
+                        android:contentDescription="@string/login_email"
+                        android:src="@drawable/ic_mail" />
+
+                    <EditText
                         android:id="@+id/loginMail"
-                        style="@style/Gozar.Login.Input"
+                        style="@style/Gozar.Login.Well.Input"
+                        android:hint="@string/login_email"
                         android:imeOptions="actionNext"
                         android:inputType="textEmailAddress"
                         android:maxLines="1" />
-                </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
 
-                <com.google.android.material.textfield.TextInputLayout
+                <LinearLayout
                     android:id="@+id/loginSecretBox"
-                    style="@style/Gozar.Login.Field"
-                    android:layout_marginTop="12dp"
-                    android:hint="@string/login_password"
-                    app:endIconMode="password_toggle"
-                    app:startIconDrawable="@drawable/ic_lock">
+                    style="@style/Gozar.Login.Well"
+                    android:layout_marginTop="12dp">
 
-                    <com.google.android.material.textfield.TextInputEditText
+                    <ImageView
+                        style="@style/Gozar.Login.Well.Icon"
+                        android:contentDescription="@string/login_password"
+                        android:src="@drawable/ic_lock" />
+
+                    <EditText
                         android:id="@+id/loginSecret"
-                        style="@style/Gozar.Login.Input"
+                        style="@style/Gozar.Login.Well.Input"
+                        android:hint="@string/login_password"
                         android:imeOptions="actionDone"
                         android:inputType="textPassword"
                         android:maxLines="1" />
-                </com.google.android.material.textfield.TextInputLayout>
 
-                <com.google.android.material.textfield.TextInputLayout
+                    <ImageView
+                        android:id="@+id/loginReveal"
+                        style="@style/Gozar.Login.Well.Icon"
+                        android:contentDescription="@string/login_show_password"
+                        android:src="@drawable/ic_eye" />
+                </LinearLayout>
+
+                <LinearLayout
                     android:id="@+id/loginConfirmBox"
-                    style="@style/Gozar.Login.Field"
+                    style="@style/Gozar.Login.Well"
                     android:layout_marginTop="12dp"
-                    android:hint="@string/login_confirm"
-                    android:visibility="gone"
-                    app:endIconMode="password_toggle"
-                    app:startIconDrawable="@drawable/ic_lock">
+                    android:visibility="gone">
 
-                    <com.google.android.material.textfield.TextInputEditText
+                    <ImageView
+                        style="@style/Gozar.Login.Well.Icon"
+                        android:contentDescription="@string/login_confirm"
+                        android:src="@drawable/ic_lock" />
+
+                    <EditText
                         android:id="@+id/loginConfirm"
-                        style="@style/Gozar.Login.Input"
+                        style="@style/Gozar.Login.Well.Input"
+                        android:hint="@string/login_confirm"
                         android:imeOptions="actionDone"
                         android:inputType="textPassword"
                         android:maxLines="1" />
-                </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
 
-                <com.google.android.material.textfield.TextInputLayout
+                <LinearLayout
                     android:id="@+id/loginCodeBox"
-                    style="@style/Gozar.Login.Field"
+                    style="@style/Gozar.Login.Well"
                     android:layout_marginTop="12dp"
-                    android:hint="@string/login_code"
-                    android:visibility="gone"
-                    app:startIconDrawable="@drawable/ic_key">
+                    android:visibility="gone">
 
-                    <com.google.android.material.textfield.TextInputEditText
+                    <ImageView
+                        style="@style/Gozar.Login.Well.Icon"
+                        android:contentDescription="@string/login_code"
+                        android:src="@drawable/ic_key" />
+
+                    <EditText
                         android:id="@+id/loginCode"
-                        style="@style/Gozar.Login.Input"
+                        style="@style/Gozar.Login.Well.Input"
+                        android:hint="@string/login_code"
                         android:imeOptions="actionDone"
                         android:inputType="number"
                         android:maxLines="1" />
-                </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/loginForgot"

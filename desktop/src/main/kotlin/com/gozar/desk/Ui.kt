@@ -70,6 +70,11 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Switch
 import com.gozar.FoxRoute
 import com.gozar.FoxUpstream
+import androidx.compose.foundation.border
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.input.VisualTransformation
 
 internal object Flag {
 
@@ -680,6 +685,66 @@ private fun SettingRow(title: String, subtitle: String, onClick: () -> Unit) {
 }
 
 @Composable
+private fun Well(
+    value: String,
+    onChange: (String) -> Unit,
+    hint: String,
+    fieldBg: Color,
+    fieldLine: Color,
+    textMain: Color,
+    textDim: Color,
+    accent: Color,
+    enabled: Boolean,
+    password: Boolean = false
+) {
+    var shown by remember { mutableStateOf(false) }
+    var focus by remember { mutableStateOf(false) }
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .height(58.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(fieldBg)
+            .border(
+                1.dp,
+                if (focus) accent else fieldLine,
+                RoundedCornerShape(16.dp)
+            )
+            .padding(start = 16.dp, end = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        BasicTextField(
+            value = value,
+            onValueChange = onChange,
+            enabled = enabled,
+            singleLine = true,
+            cursorBrush = SolidColor(accent),
+            visualTransformation = if (password && !shown) PasswordVisualTransformation() else VisualTransformation.None,
+            textStyle = MaterialTheme.typography.bodyLarge.copy(color = textMain),
+            decorationBox = { inner ->
+                Box(Modifier.fillMaxWidth()) {
+                    if (value.isEmpty()) {
+                        Text(hint, color = textDim, style = MaterialTheme.typography.bodyLarge)
+                    }
+                    inner()
+                }
+            },
+            modifier = Modifier
+                .weight(1f)
+                .onFocusChanged { focus = it.isFocused }
+        )
+        if (password) {
+            Text(
+                if (shown) "hide" else "show",
+                color = textDim,
+                style = MaterialTheme.typography.labelSmall,
+                modifier = Modifier.clickable { shown = !shown }.padding(start = 8.dp)
+            )
+        }
+    }
+}
+
+@Composable
 private fun LoginScreen() {
     val bg = Color(0xFF0A0B0E)
     val cardBg = Color(0xFF14161B)
@@ -756,41 +821,12 @@ private fun LoginScreen() {
                     )
                     Spacer(Modifier.height(20.dp))
                     if (!step) {
-                        OutlinedTextField(
-                            value = mail,
-                            onValueChange = { mail = it; localError = "" },
-                            label = { Text("Email") },
-                            singleLine = true,
-                            enabled = !Desk.busy,
-                            shape = RoundedCornerShape(14.dp),
-                            colors = fieldColors,
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                        Well(mail, { mail = it; localError = "" }, "Email", fieldBg, fieldLine, textMain, textDim, accent, !Desk.busy)
                         Spacer(Modifier.height(12.dp))
-                        OutlinedTextField(
-                            value = secret,
-                            onValueChange = { secret = it; localError = "" },
-                            label = { Text("Password") },
-                            singleLine = true,
-                            enabled = !Desk.busy,
-                            visualTransformation = PasswordVisualTransformation(),
-                            shape = RoundedCornerShape(14.dp),
-                            colors = fieldColors,
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                        Well(secret, { secret = it; localError = "" }, "Password", fieldBg, fieldLine, textMain, textDim, accent, !Desk.busy, password = true)
                         if (create) {
                             Spacer(Modifier.height(12.dp))
-                            OutlinedTextField(
-                                value = confirm,
-                                onValueChange = { confirm = it; localError = "" },
-                                label = { Text("Repeat password") },
-                                singleLine = true,
-                                enabled = !Desk.busy,
-                                visualTransformation = PasswordVisualTransformation(),
-                                shape = RoundedCornerShape(14.dp),
-                                colors = fieldColors,
-                                modifier = Modifier.fillMaxWidth()
-                            )
+                            Well(confirm, { confirm = it; localError = "" }, "Repeat password", fieldBg, fieldLine, textMain, textDim, accent, !Desk.busy, password = true)
                         }
                         if (!create) {
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
@@ -805,16 +841,7 @@ private fun LoginScreen() {
                             Spacer(Modifier.height(8.dp))
                         }
                     } else if (!link) {
-                        OutlinedTextField(
-                            value = code,
-                            onValueChange = { code = it },
-                            label = { Text("6-digit code") },
-                            singleLine = true,
-                            enabled = !Desk.busy,
-                            shape = RoundedCornerShape(14.dp),
-                            colors = fieldColors,
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                        Well(code, { code = it }, "6-digit code", fieldBg, fieldLine, textMain, textDim, accent, !Desk.busy)
                     }
                     Spacer(Modifier.height(12.dp))
                     Button(

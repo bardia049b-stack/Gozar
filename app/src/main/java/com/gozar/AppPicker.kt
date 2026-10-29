@@ -56,7 +56,14 @@ class AppPicker(private val context: Context, private val done: () -> Unit) {
     }
 
     private fun show(rows: List<Row>) {
-        if (rows.isEmpty()) return
+        if (rows.isEmpty()) {
+            AlertDialog.Builder(context)
+                .setTitle(R.string.apps)
+                .setMessage(R.string.apps_none)
+                .setPositiveButton(R.string.ok, null)
+                .show()
+            return
+        }
         val chosen = Store.apps(context).toMutableSet()
         val filtered = ArrayList<Row>(rows)
 
@@ -83,23 +90,23 @@ class AppPicker(private val context: Context, private val done: () -> Unit) {
 
             override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View {
                 val view = convertView ?: LayoutInflater.from(context)
-                    .inflate(android.R.layout.simple_list_item_multiple_choice, parent, false)
+                    .inflate(R.layout.item_app_pick, parent, false)
                 val row = filtered[position]
-                val text = view.findViewById<TextView>(android.R.id.text1)
-                text.text = row.label + if (row.system) "  ·  " + context.getString(R.string.apps_system) else ""
-                val check = view.findViewById<CheckBox>(android.R.id.checkbox)
-                check.isChecked = row.packageName in chosen
+                view.findViewById<TextView>(R.id.appLabel).text = row.label
+                view.findViewById<TextView>(R.id.appSystem).visibility =
+                    if (row.system) View.VISIBLE else View.GONE
+                view.findViewById<TextView>(R.id.appPackage).text = row.packageName
+                val picture = view.findViewById<ImageView>(R.id.appIcon)
+                if (row.icon != null) picture.setImageDrawable(row.icon) else picture.setImageResource(R.drawable.ic_apps)
+                view.findViewById<CheckBox>(R.id.appCheck).isChecked = row.packageName in chosen
                 return view
             }
         }
         list.adapter = adapter
-        list.choiceMode = android.widget.ListView.CHOICE_MODE_MULTIPLE
         list.setOnItemClickListener { _, _, position, _ ->
             val row = filtered[position]
-            list.setItemChecked(position, row.packageName in chosen)
             if (!chosen.add(row.packageName)) chosen.remove(row.packageName)
             adapter.notifyDataSetChanged()
-            list.setItemChecked(position, row.packageName in chosen)
         }
 
         search.addTextChangedListener(object : TextWatcher {

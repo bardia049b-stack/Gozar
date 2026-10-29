@@ -9,8 +9,9 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.view.WindowCompat
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.textfield.TextInputEditText
-import com.google.android.material.textfield.TextInputLayout
+import android.text.InputType
+import android.widget.EditText
+import android.widget.ImageView
 
 class LoginActivity : BaseActivity() {
 
@@ -21,14 +22,16 @@ class LoginActivity : BaseActivity() {
 
     private lateinit var title: TextView
     private lateinit var subtitle: TextView
-    private lateinit var mailBox: TextInputLayout
-    private lateinit var secretBox: TextInputLayout
-    private lateinit var confirmBox: TextInputLayout
-    private lateinit var codeBox: TextInputLayout
-    private lateinit var mail: TextInputEditText
-    private lateinit var secret: TextInputEditText
-    private lateinit var confirm: TextInputEditText
-    private lateinit var codeInput: TextInputEditText
+    private lateinit var mailBox: View
+    private lateinit var secretBox: View
+    private lateinit var confirmBox: View
+    private lateinit var codeBox: View
+    private lateinit var mail: EditText
+    private lateinit var secret: EditText
+    private lateinit var confirm: EditText
+    private lateinit var codeInput: EditText
+    private lateinit var reveal: ImageView
+    private var shown = false
     private lateinit var primary: MaterialButton
     private lateinit var forgot: MaterialButton
     private lateinit var switchButton: MaterialButton
@@ -63,6 +66,14 @@ class LoginActivity : BaseActivity() {
         busyRow = findViewById(R.id.loginBusy)
         notice = findViewById(R.id.loginNotice)
         error = findViewById(R.id.loginError)
+        reveal = findViewById(R.id.loginReveal)
+        reveal.setOnClickListener {
+            shown = !shown
+            val mode = if (shown) InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD else
+                InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+            secret.inputType = mode
+            secret.setSelection(secret.text.length)
+        }
 
         primary.setOnClickListener { act() }
         forgot.setOnClickListener { web(RESET_PAGE) }
@@ -154,7 +165,7 @@ class LoginActivity : BaseActivity() {
         codeBox.visibility = if (step && !link) View.VISIBLE else View.GONE
         forgot.visibility = if (step || create) View.GONE else View.VISIBLE
         switchButton.visibility = if (step) View.GONE else View.VISIBLE
-        busyRow.visibility = if (Fox.busy) View.VISIBLE else View.GONE
+        busyRow.visibility = if (Fox.busy && notice.text.isNotEmpty()) View.VISIBLE else View.GONE
 
         title.text = when {
             step -> getString(R.string.login_check_title)
@@ -175,9 +186,11 @@ class LoginActivity : BaseActivity() {
         }
         primary.isEnabled = !Fox.busy
         switchButton.text = if (create) getString(R.string.login_have_account) else getString(R.string.login_no_account)
-        notice.text = Fox.stage.ifEmpty { getString(R.string.login_working) }
+        notice.text = Fox.stage
 
-        val trouble = Fox.message.isNotEmpty() && Fox.message != "code" && Fox.message != "link"
+        val trouble = Fox.message.isNotEmpty() &&
+            Fox.message != "code" && Fox.message != "link" &&
+            Fox.message != "ping" && Fox.message != "servers" && Fox.message != "quota"
         if (trouble) {
             show(Fox.message)
         } else {

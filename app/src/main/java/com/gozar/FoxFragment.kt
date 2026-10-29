@@ -12,7 +12,6 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
-import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
 class FoxFragment : Fragment() {
@@ -37,13 +36,6 @@ class FoxFragment : Fragment() {
     private lateinit var serverFlag: CountryFlagView
     private lateinit var serverName: TextView
     private lateinit var serverMeta: TextView
-    private lateinit var signInCard: View
-    private lateinit var signInTitle: TextView
-    private lateinit var signInButton: MaterialButton
-    private lateinit var signUpButton: MaterialButton
-    private lateinit var busyRow: View
-    private lateinit var busyText: TextView
-    private lateinit var signError: TextView
     private var measured = false
 
     private val permission = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -76,13 +68,6 @@ class FoxFragment : Fragment() {
         serverFlag = view.findViewById(R.id.foxServerFlag)
         serverName = view.findViewById(R.id.foxServerName)
         serverMeta = view.findViewById(R.id.foxServerMeta)
-        signInCard = view.findViewById(R.id.foxSignIn)
-        signInTitle = view.findViewById(R.id.foxSignInTitle)
-        signInButton = view.findViewById(R.id.foxSignInButton)
-        signUpButton = view.findViewById(R.id.foxSignUpButton)
-        busyRow = view.findViewById(R.id.foxBusyRow)
-        busyText = view.findViewById(R.id.foxBusyText)
-        signError = view.findViewById(R.id.foxSignError)
 
         connect.tune(
             requireContext().getColor(R.color.fox_cream),
@@ -97,8 +82,6 @@ class FoxFragment : Fragment() {
         connect.setOnClickListener { toggle() }
         map.setOnClickListener { startActivity(Intent(requireContext(), RouteMapActivity::class.java)) }
         view.findViewById<View>(R.id.foxServerRow).setOnClickListener { pickServer() }
-        signInButton.setOnClickListener { openLogin() }
-        signUpButton.setOnClickListener { openLogin() }
         return view
     }
 
@@ -248,7 +231,6 @@ class FoxFragment : Fragment() {
         }
 
         paintServer(c)
-        paintAccount(c, signed, mail)
         maybeMeasure()
     }
 
@@ -274,27 +256,6 @@ class FoxFragment : Fragment() {
             else -> getString(R.string.fox_ping_wait)
         }
         serverMeta.text = location.host + " · " + clock
-    }
-
-    private fun paintAccount(c: Context, signed: Boolean, mail: String) {
-        signInCard.visibility = if (signed) View.GONE else View.VISIBLE
-        signInTitle.text = getString(R.string.fox_auth_title)
-        signInButton.isEnabled = !Fox.busy
-        signUpButton.isEnabled = !Fox.busy
-        signInButton.text = when {
-            Fox.busy && Fox.stage.isNotEmpty() -> Fox.stage
-            else -> getString(R.string.fox_sign_in)
-        }
-        busyRow.visibility = if (Fox.busy) View.VISIBLE else View.GONE
-        busyText.text = Fox.stage.ifEmpty { getString(R.string.fox_working) }
-        val trouble = Fox.message.isNotEmpty() && Fox.message != "code" && Fox.message != "link" &&
-            Fox.message != "ping" && Fox.message != "quota" && Fox.message != "servers"
-        if (trouble) {
-            signError.visibility = View.VISIBLE
-            signError.text = Fox.message
-        } else {
-            signError.visibility = View.GONE
-        }
     }
 
     private fun resetText(raw: String): String {

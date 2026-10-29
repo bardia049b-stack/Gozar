@@ -349,4 +349,7 @@ AGPL-3.0-or-later</string>
     <string name="apps_all">همه برنامه‌ها</string>
     <string name="apps_restart">برای اعمال فهرست جدید یک‌بار قطع و وصل کنید.</string>
     <string name="apps_system">سیستمی</string>
+    <string name="login_show_password">نمایش رمز عبور</string>
+    <string name="apps_none">برنامه‌ای روی این دستگاه پیدا نشد.</string>
+    <string name="chain_hint_short">socks5://host:port</string>
 </resources>
