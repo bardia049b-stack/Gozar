@@ -19,14 +19,6 @@ class FoxVpnService : VpnService() {
 
     private var descriptor: ParcelFileDescriptor? = null
 
-    private companion object {
-        val LAN_RANGES = arrayOf(
-            arrayOf("10.0.0.0", 8),
-            arrayOf("172.16.0.0", 12),
-            arrayOf("192.168.0.0", 16),
-            arrayOf("169.254.0.0", 16)
-        )
-    }
     private var stack: FoxStack? = null
 
     override fun onCreate() {
@@ -182,6 +174,12 @@ class FoxVpnService : VpnService() {
 
     companion object {
         const val LOCAL_ADDRESS = "10.111.0.2"
+        val LAN_RANGES = arrayOf(
+            arrayOf("10.0.0.0", 8),
+            arrayOf("172.16.0.0", 12),
+            arrayOf("192.168.0.0", 16),
+            arrayOf("169.254.0.0", 16)
+        )
         const val DNS_ADDRESS = "10.111.0.53"
         private const val CHANNEL = "fox_vpn"
         private const val NOTIFY = 7412
