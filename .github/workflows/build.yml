@@ -89,7 +89,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
 
       - name: Package
-        run: bash ./gradlew :desktop:packageDeb --no-daemon --stacktrace
+        run: bash ./gradlew :desktop:createDistributable :desktop:packageDeb --no-daemon --stacktrace
 
       - name: Verify architecture
         run: |
@@ -134,13 +134,14 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
 
       - name: WiX
+        continue-on-error: true
         shell: pwsh
         run: |
-          $light = "C:\Program Files (x86)\WiX Toolset v3.14\bin\light.exe"
-          if (-not (Test-Path $light)) { choco install wixtoolset -y --no-progress }
+          choco install wixtoolset -y --no-progress --ignore-checksums
+          Get-ChildItem "C:\Program Files (x86)" -Directory -Filter "WiX*" | Select-Object -ExpandProperty FullName
 
       - name: Package
-        run: ./gradlew.bat :desktop:packageMsi --no-daemon --stacktrace
+        run: ./gradlew.bat :desktop:createDistributable :desktop:packageMsi --no-daemon --stacktrace
 
       - name: Verify architecture
         shell: bash
