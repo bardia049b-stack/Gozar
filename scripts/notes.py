@@ -11,8 +11,8 @@ files = [
     ('Android · ARMv7', f'Gozar_{android}_armeabi-v7a.apk'),
     ('Android · x64', f'Gozar_{android}_x86_64.apk'),
     ('Windows · x64', 'Gozar-Windows-x64.zip'),
-    ('macOS · Apple Silicon', 'Gozar-macOS-ARM.zip'),
-    ('macOS · Intel', 'Gozar-macOS-Intel.zip'),
+    ('macOS · Apple Silicon', 'Gozar-macOS-ARM.tar.xz'),
+    ('macOS · Intel', 'Gozar-macOS-Intel.tar.xz'),
     ('Linux · amd64', 'Gozar-Linux-amd64.tar.xz'),
 ]
 
@@ -32,5 +32,7 @@ print()
 print('Windows requests administrator privileges at launch. Linux and macOS require administrator '
       'privileges for the tunnel. Keep the extracted application files together. The macOS build is '
       'ad-hoc signed, not notarized; Windows is not Authenticode-signed.')
+print()
+print('macOS archives can be extracted with tar -xJf ARCHIVE.tar.xz in Terminal.')
 print()
 print('Every archive and APK has a detached OpenPGP signature; use gozar-public-key.asc to verify it.')

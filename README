@@ -17,8 +17,8 @@ proxy settings manually rather than assuming that a proxy belongs to Gozar.
 
 The desktop tunnel is experimental. It has not been verified in a live connection in this
 revision. Firefox account sign-in was checked with mock responses, not a real account. Mozilla's
-anti-bot challenges may prevent sign-in. IPv6 is not routed through the tunnel and may bypass it. UDP other than DNS is not
-supported. Do not rely on this build for privacy or as a complete device-wide VPN. Routing,
+anti-bot challenges may prevent sign-in. IPv6 is not routed through the tunnel and may bypass it.
+UDP other than DNS is not supported. Do not rely on this build for privacy or as a complete device-wide VPN. Routing,
 per-application rules, proxy chains, tunnel-in-tunnel, update checking, and the route map are not
 implemented in the new desktop interface.
 
@@ -33,5 +33,6 @@ Linux build, from the repository root:
 The desktop build needs Flutter 3.24.5, Go 1.24, and the platform's native build dependencies.
 On Linux, the built app requires GTK 3 and a graphical desktop. A Flutter bundle contains
 multiple files: keep the Go core, the executable, and the bundled data and libraries together.
+macOS downloads use .tar.xz; extract them in Terminal with `tar -xJf ARCHIVE.tar.xz`.
 
 Source code is licensed under GNU AGPL-3.0-or-later. See LICENSE, NOTICE, and WINTUN-LICENSE.txt.

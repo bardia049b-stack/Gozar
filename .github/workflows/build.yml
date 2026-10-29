@@ -167,9 +167,17 @@ jobs:
           (cd ../go-desktop && CGO_ENABLED=0 GOOS=darwin GOARCH="$GOARCH" go build -trimpath -ldflags='-s -w' -o "../desktop_flutter/$APP/Contents/MacOS/gozar-core" ./cmd/gozar)
           cp ../LICENSE ../NOTICE ../WINTUN-LICENSE.txt "$APP/Contents/Resources/"
           codesign --force --deep --sign - "$APP"
-          mkdir -p out
-          ditto -c -k --sequesterRsrc --keepParent "$APP" "out/Gozar-$ARTIFACT_NAME.zip"
+          mkdir -p out "$RUNNER_TEMP/gozar-extracted"
+          python3 ../scripts/archive_macos.py "$APP" "out/Gozar-$ARTIFACT_NAME.tar.xz"
+          tar -xJf "out/Gozar-$ARTIFACT_NAME.tar.xz" -C "$RUNNER_TEMP/gozar-extracted"
+          codesign --verify --deep --strict "$RUNNER_TEMP/gozar-extracted/Gozar.app"
           ls -lh out/*
+      - name: Check download size
+        working-directory: desktop_flutter
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = Windows ]; then PYTHON=python; else PYTHON=python3; fi
+          "$PYTHON" -c "import pathlib; files=list(pathlib.Path('out').iterdir()); assert files and all(f.stat().st_size < 17000000 for f in files), 'Desktop archive exceeds 17 MB'"
       - uses: actions/upload-artifact@v4
         with:
           name: gozar-${{ matrix.name }}
