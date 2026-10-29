@@ -16,6 +16,14 @@ object Store {
     fun setRecents(c: Context, v: Boolean) = p(c).edit().putBoolean("recents", v).apply()
     fun geolocation(c: Context) = p(c).getBoolean("geolocation", true)
     fun setGeolocation(c: Context, v: Boolean) = p(c).edit().putBoolean("geolocation", v).apply()
+    fun bypassLan(c: Context) = p(c).getBoolean("bypass_lan", false)
+    fun setBypassLan(c: Context, v: Boolean) = p(c).edit().putBoolean("bypass_lan", v).apply()
+    fun bypassList(c: Context) = p(c).getString("bypass_list", "") ?: ""
+    fun setBypassList(c: Context, v: String) = p(c).edit().putString("bypass_list", v).apply()
+    fun chain(c: Context) = p(c).getString("chain", "") ?: ""
+    fun setChain(c: Context, v: String) = p(c).edit().putString("chain", v).apply()
+    fun apps(c: Context) = p(c).getStringSet("apps", emptySet())?.toSet() ?: emptySet()
+    fun setApps(c: Context, v: Set<String>) = p(c).edit().putStringSet("apps", v).apply()
 
     fun updateVersion(c: Context) = p(c).getString("update_version", "") ?: ""
     fun updateUrl(c: Context) = p(c).getString("update_url", "") ?: ""

@@ -286,7 +286,7 @@ AGPL-3.0-or-later</string>
 
     <string name="login_welcome_title">سلام،\nخوش آمدید</string>
     <string name="login_welcome_sub">با حساب فایرفاکس خود وارد شوید تا تونل شروع شود. هر ماه ۵۰ گیگابایت، بدون کارت بانکی.</string>
-    <string name="login_create_title">ساخت\nحساب</string>
+    <string name="login_create_title">ساخت حساب</string>
     <string name="login_create_sub">یک حساب فایرفاکس، هر ماه ۵۰ گیگابایت روی همه دستگاه‌ها.</string>
     <string name="login_email">ایمیل</string>
     <string name="login_password">رمز عبور</string>
@@ -333,4 +333,20 @@ AGPL-3.0-or-later</string>
     <string name="login_browser_body">ورود با گوگل و اپل فقط در مرورگر و روی accounts.firefox.com انجام می‌شود. حسابی که این‌طور ساخته شود رمز عبور ندارد، پس گز‌ار تا زمانی که رمز تعیین نکنید نمی‌تواند با آن وارد شود.</string>
     <string name="login_browser_open">باز کردن صفحه ورود</string>
     <string name="login_browser_password">تعیین رمز عبور</string>
+    <string name="advanced_section">مسیریابی و موتورها</string>
+    <string name="routing">مسیریابی هوشمند</string>
+    <string name="routing_on">شبکه محلی دور زده می‌شود · %1$d قاعده</string>
+    <string name="routing_off">همه چیز از تونل می‌رود</string>
+    <string name="routing_lan">دور زدن شبکه محلی</string>
+    <string name="routing_list">میزبان‌های مستقیم</string>
+    <string name="routing_list_hint">هر خط یک دامنه، مثلا irancell.ir</string>
+    <string name="routing_save">ذخیره</string>
+    <string name="chain">زنجیره پراکسی</string>
+    <string name="chain_on">%1$d پرش قبل از موزیلا</string>
+    <string name="chain_off">مستقیم به موزیلا</string>
+    <string name="chain_hint">socks5://host:port و پرش دوم با کاما</string>
+    <string name="apps">برنامه‌های داخل تونل</string>
+    <string name="apps_all">همه برنامه‌ها</string>
+    <string name="apps_count">فقط %1$d برنامه</string>
+    <string name="apps_restart">برای اعمال فهرست جدید یک‌بار قطع و وصل کنید.</string>
 </resources>

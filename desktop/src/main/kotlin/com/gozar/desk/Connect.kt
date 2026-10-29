@@ -255,6 +255,8 @@ object Connect {
         Desk.fault = ""
         thread(isDaemon = true, name = "gozar-connect") {
             try {
+                com.gozar.FoxRoute.apply(Store.bypassLan(), Store.bypassList())
+                com.gozar.FoxRoute.applyChain(Store.chain())
                 val pass = Desk.currentPass()
                 if (Desk.servers.isEmpty()) Desk.servers = FoxApi.servers()
                 val chosen = Desk.selected() ?: throw FoxError("No server available")
@@ -262,7 +264,12 @@ object Connect {
                 location = chosen
                 val port = freePort()
                 val engine = LocalProxy(port) { host, target ->
-                    com.gozar.FoxTunnel.open(chosen, host, target, pass)
+                    if (com.gozar.FoxRoute.direct(host)) {
+                        com.gozar.FoxSocketPipe.connect(host, target)
+                            ?: com.gozar.FoxTunnel.open(chosen, host, target, pass)
+                    } else {
+                        com.gozar.FoxTunnel.open(chosen, host, target, pass)
+                    }
                 }
                 if (!engine.start()) throw FoxError("The local proxy did not start")
                 proxy = engine

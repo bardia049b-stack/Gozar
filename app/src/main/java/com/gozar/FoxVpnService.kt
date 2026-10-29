@@ -18,6 +18,15 @@ import java.io.IOException
 class FoxVpnService : VpnService() {
 
     private var descriptor: ParcelFileDescriptor? = null
+
+    private companion object {
+        val LAN_RANGES = arrayOf(
+            arrayOf("10.0.0.0", 8),
+            arrayOf("172.16.0.0", 12),
+            arrayOf("192.168.0.0", 16),
+            arrayOf("169.254.0.0", 16)
+        )
+    }
     private var stack: FoxStack? = null
 
     override fun onCreate() {
@@ -51,6 +60,23 @@ class FoxVpnService : VpnService() {
         try {
             builder.addDisallowedApplication(packageName)
         } catch (e: Exception) {
+        }
+        val only = Store.apps(this)
+        if (only.isNotEmpty()) {
+            for (target in only) {
+                try {
+                    builder.addAllowedApplication(target)
+                } catch (e: Exception) {
+                }
+            }
+        }
+        if (Store.bypassLan(this) && Build.VERSION.SDK_INT >= 33) {
+            for (range in LAN_RANGES) {
+                try {
+                    builder.excludeRoute(android.net.IpPrefix(java.net.InetAddress.getByName(range[0]), range[1]))
+                } catch (e: Exception) {
+                }
+            }
         }
         val fd = try {
             builder.establish()

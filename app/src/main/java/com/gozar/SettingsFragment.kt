@@ -33,6 +33,9 @@ class SettingsFragment : Fragment() {
         find<View>(R.id.rowUpdate).setOnClickListener { checkUpdates() }
         find<View>(R.id.rowGithub).setOnClickListener { openProject() }
         find<View>(R.id.rowAbout).setOnClickListener { showLegalNotice() }
+        find<View>(R.id.rowRouting).setOnClickListener { pickRouting() }
+        find<View>(R.id.rowChain).setOnClickListener { editChain() }
+        find<View>(R.id.rowApps).setOnClickListener { pickApps() }
         find<View>(R.id.btnAccountRefresh).setOnClickListener {
             Fox.refreshUsage(requireContext())
             toast(R.string.account_refreshing)
@@ -88,6 +91,18 @@ class SettingsFragment : Fragment() {
         find<UsageMeterView>(R.id.usageMeter).setProgress(percent)
         find<View>(R.id.btnAccountRefresh).isEnabled = signed
 
+        find<TextView>(R.id.tvRouting).text = if (Store.bypassLan(context) || Store.bypassList(context).isNotBlank()) {
+            getString(R.string.routing_on, FoxRoute.split(Store.bypassList(context)).size + if (Store.bypassLan(context)) 1 else 0)
+        } else {
+            getString(R.string.routing_off)
+        }
+        val hops = FoxUpstream.parse(Store.chain(context)).size
+        find<TextView>(R.id.tvChain).text =
+            if (hops > 0) getString(R.string.chain_on, hops) else getString(R.string.chain_off)
+        val only = Store.apps(context)
+        find<TextView>(R.id.tvApps).text =
+            if (only.isEmpty()) getString(R.string.apps_all) else getString(R.string.apps_count, only.size)
+
         find<TextView>(R.id.tvLang).text = when (Store.lang(context)) {
             "fa" -> getString(R.string.lang_fa)
             "en" -> getString(R.string.lang_en)
@@ -109,6 +124,100 @@ class SettingsFragment : Fragment() {
             updateChecking -> getString(R.string.update_checking)
             available.isNotBlank() -> getString(R.string.update_available, available)
             else -> getString(R.string.update_current, version)
+        }
+    }
+
+
+    private fun pickRouting() {
+        val context = requireContext()
+        val lan = Store.bypassLan(context)
+        MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.routing)
+            .setMultiChoiceItems(
+                arrayOf(getString(R.string.routing_lan)),
+                booleanArrayOf(lan)
+            ) { _, which, checked ->
+                if (which == 0) Store.setBypassLan(context, checked)
+            }
+            .setNeutralButton(R.string.routing_list) { _, _ -> editBypass() }
+            .setPositiveButton(R.string.routing_save) { _, _ -> paint() }
+            .show()
+    }
+
+    private fun editBypass() {
+        val context = requireContext()
+        val field = android.widget.EditText(context)
+        field.setText(Store.bypassList(context))
+        field.hint = getString(R.string.routing_list_hint)
+        field.setPadding(48, 32, 48, 16)
+        MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.routing_list)
+            .setView(field)
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.routing_save) { _, _ ->
+                Store.setBypassList(context, field.text?.toString().orEmpty())
+                paint()
+            }
+            .show()
+    }
+
+    private fun editChain() {
+        val context = requireContext()
+        val field = android.widget.EditText(context)
+        field.setText(Store.chain(context))
+        field.hint = getString(R.string.chain_hint)
+        field.setPadding(48, 32, 48, 16)
+        field.setTextDirection(android.view.View.TEXT_DIRECTION_LTR)
+        MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.chain)
+            .setView(field)
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.routing_save) { _, _ ->
+                Store.setChain(context, field.text?.toString().orEmpty())
+                paint()
+            }
+            .show()
+    }
+
+    private fun pickApps() {
+        val context = requireContext()
+        val manager = context.packageManager
+        val intent = android.content.Intent(android.content.Intent.ACTION_MAIN).addCategory(android.content.Intent.CATEGORY_LAUNCHER)
+        val found = manager.queryIntentActivities(intent, 0)
+            .map { it.activityInfo.packageName to it.loadLabel(manager).toString() }
+            .filter { it.first != context.packageName }
+            .distinctBy { it.first }
+            .sortedBy { it.second.lowercase() }
+        if (found.isEmpty()) return
+        val labels = found.map { it.second }.toTypedArray()
+        val names = found.map { it.first }
+        val chosen = Store.apps(context)
+        val checked = BooleanArray(names.size) { names[it] in chosen }
+        MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.apps)
+            .setMultiChoiceItems(labels, checked) { _, which, isChecked -> checked[which] = isChecked }
+            .setNeutralButton(R.string.apps_all) { _, _ ->
+                Store.setApps(context, emptySet())
+                applyApps()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.routing_save) { _, _ ->
+                val picked = names.filterIndexed { index, _ -> checked[index] }.toSet()
+                Store.setApps(context, picked)
+                applyApps()
+            }
+            .show()
+    }
+
+    private fun applyApps() {
+        paint()
+        val context = context ?: return
+        if (FoxLink.connected) {
+            MaterialAlertDialogBuilder(context)
+                .setTitle(R.string.apps)
+                .setMessage(R.string.apps_restart)
+                .setPositiveButton(R.string.ok, null)
+                .show()
         }
     }
 

@@ -286,7 +286,7 @@ AGPL-3.0-or-later</string>
 
     <string name="login_welcome_title">Hi,\nWelcome back</string>
     <string name="login_welcome_sub">Sign in with your Firefox account to start the tunnel. 50 GB every month, no card needed.</string>
-    <string name="login_create_title">Create\naccount</string>
+    <string name="login_create_title">Create account</string>
     <string name="login_create_sub">One Firefox account gives you 50 GB every month on every device.</string>
     <string name="login_email">Email</string>
     <string name="login_password">Password</string>
@@ -333,4 +333,20 @@ AGPL-3.0-or-later</string>
     <string name="login_browser_body">Google and Apple sign-in only works in the browser, on accounts.firefox.com. A Mozilla account created that way has no password, so Gozar cannot sign in with it until you set one.</string>
     <string name="login_browser_open">Open sign-in page</string>
     <string name="login_browser_password">Set a password</string>
+    <string name="advanced_section">Routing and engines</string>
+    <string name="routing">Smart routing</string>
+    <string name="routing_on">Bypass local network · %1$d rule(s)</string>
+    <string name="routing_off">Everything goes through the tunnel</string>
+    <string name="routing_lan">Bypass local network</string>
+    <string name="routing_list">Direct hosts</string>
+    <string name="routing_list_hint">One host or domain per line, for example irancell.ir</string>
+    <string name="routing_save">Save</string>
+    <string name="chain">Proxy chain</string>
+    <string name="chain_on">%1$d hop(s) before Mozilla</string>
+    <string name="chain_off">Direct to Mozilla</string>
+    <string name="chain_hint">socks5://host:port, then a second hop with a comma</string>
+    <string name="apps">Apps in the tunnel</string>
+    <string name="apps_all">All apps</string>
+    <string name="apps_count">%1$d app(s) only</string>
+    <string name="apps_restart">Reconnect for the new app list to apply.</string>
 </resources>

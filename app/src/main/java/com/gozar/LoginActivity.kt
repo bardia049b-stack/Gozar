@@ -9,7 +9,6 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.view.WindowCompat
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 
@@ -33,8 +32,6 @@ class LoginActivity : BaseActivity() {
     private lateinit var primary: MaterialButton
     private lateinit var forgot: MaterialButton
     private lateinit var switchButton: MaterialButton
-    private lateinit var social: LinearLayout
-    private lateinit var divider: LinearLayout
     private lateinit var busyRow: LinearLayout
     private lateinit var notice: TextView
     private lateinit var error: TextView
@@ -63,8 +60,6 @@ class LoginActivity : BaseActivity() {
         primary = findViewById(R.id.loginPrimary)
         forgot = findViewById(R.id.loginForgot)
         switchButton = findViewById(R.id.loginSwitch)
-        social = findViewById(R.id.loginSocial)
-        divider = findViewById(R.id.loginDivider)
         busyRow = findViewById(R.id.loginBusy)
         notice = findViewById(R.id.loginNotice)
         error = findViewById(R.id.loginError)
@@ -76,8 +71,6 @@ class LoginActivity : BaseActivity() {
             error.visibility = View.GONE
             render()
         }
-        findViewById<View>(R.id.loginGoogle).setOnClickListener { openSocial() }
-        findViewById<View>(R.id.loginApple).setOnClickListener { openSocial() }
         secret.setOnEditorActionListener { _, action, _ ->
             if (action == EditorInfo.IME_ACTION_DONE) {
                 act()
@@ -110,16 +103,6 @@ class LoginActivity : BaseActivity() {
     override fun onDestroy() {
         Fox.unwatch(listener)
         super.onDestroy()
-    }
-
-    private fun openSocial() {
-        MaterialAlertDialogBuilder(this)
-            .setTitle(R.string.login_browser_title)
-            .setMessage(R.string.login_browser_body)
-            .setPositiveButton(R.string.login_browser_open) { _, _ -> web(ACCOUNT_PAGE) }
-            .setNeutralButton(R.string.login_browser_password) { _, _ -> web(RESET_PAGE) }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
     }
 
     private fun web(url: String) {
@@ -170,8 +153,6 @@ class LoginActivity : BaseActivity() {
         confirmBox.visibility = if (create && !step) View.VISIBLE else View.GONE
         codeBox.visibility = if (step && !link) View.VISIBLE else View.GONE
         forgot.visibility = if (step || create) View.GONE else View.VISIBLE
-        social.visibility = if (step) View.GONE else View.VISIBLE
-        divider.visibility = if (step) View.GONE else View.VISIBLE
         switchButton.visibility = if (step) View.GONE else View.VISIBLE
         busyRow.visibility = if (Fox.busy) View.VISIBLE else View.GONE
 

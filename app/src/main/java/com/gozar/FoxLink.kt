@@ -54,6 +54,8 @@ object FoxLink {
         thread {
             try {
                 FoxLog.add("link", "connect start, account=" + FoxStore.email(app))
+                FoxRoute.apply(Store.bypassLan(app), Store.bypassList(app))
+                FoxRoute.applyChain(Store.chain(app))
                 val access = Fox.validAccess(app)
                 FoxLog.secret("access", access)
                 var pass = FoxApi.pass(access)

@@ -21,50 +21,38 @@ class UsageMeterView @JvmOverloads constructor(
     private var animator: ValueAnimator? = null
 
     private val density = resources.displayMetrics.density
-    private val trackHeight = 10f * density
-    private val knobRadius = 8f * density
+    private val barHeight = 10f * density
+    private val pad = 6f * density
 
-    private val trackPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    private val trackPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+    private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+    private val capPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+    private val sheenPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
-        color = 0x14FFFFFF
-    }
-    private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.FILL
-    }
-    private val knobPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.FILL
-        color = 0xFFFF5A6E.toInt()
-    }
-    private val knobRingPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        strokeWidth = 2f * density
-        color = 0x33000000
-    }
-    private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.FILL
-        color = 0x33FF2D45
-    }
-    private val segmentPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        strokeWidth = 1.5f * density
-        color = 0x1F000000
+        color = 0x26FFFFFF
     }
     private val rect = RectF()
-    private var shader: Shader? = null
 
     init {
-        val base = themeColor(com.google.android.material.R.attr.colorOnSurfaceVariant)
-        trackPaint.color = (base and 0x00FFFFFF) or 0x1F000000
-        segmentPaint.color = (base and 0x00FFFFFF) or 0x33000000
+        val base = themeColor(android.R.attr.colorBackground)
+        trackPaint.color = blend(base, 0x33FFFFFF)
     }
 
     private fun themeColor(attr: Int): Int {
         val value = android.util.TypedValue()
-        return if (context.theme.resolveAttribute(attr, value, true)) value.data else 0xFF808080.toInt()
+        return if (context.theme.resolveAttribute(attr, value, true)) value.data else 0xFF121212.toInt()
+    }
+
+    private fun blend(background: Int, overlay: Int): Int {
+        val a = (overlay ushr 24) / 255f
+        val r = ((overlay shr 16 and 0xFF) * a + (background shr 16 and 0xFF) * (1 - a)).toInt()
+        val g = ((overlay shr 8 and 0xFF) * a + (background shr 8 and 0xFF) * (1 - a)).toInt()
+        val b = ((overlay and 0xFF) * a + (background and 0xFF) * (1 - a)).toInt()
+        return (0xFF shl 24) or (r shl 16) or (g shl 8) or b
     }
 
     fun setProgress(percent: Int, animate: Boolean = true) {
-        target = (percent.coerceIn(0, 100)) / 100f
+        target = percent.coerceIn(0, 100) / 100f
         animator?.cancel()
         if (!animate || !isAttachedToWindow) {
             shown = target
@@ -72,7 +60,7 @@ class UsageMeterView @JvmOverloads constructor(
             return
         }
         animator = ValueAnimator.ofFloat(shown, target).apply {
-            duration = 620
+            duration = 640
             interpolator = DecelerateInterpolator()
             addUpdateListener {
                 shown = it.animatedValue as Float
@@ -90,54 +78,51 @@ class UsageMeterView @JvmOverloads constructor(
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        shader = LinearGradient(
-            0f, 0f, w.toFloat(), 0f,
-            intArrayOf(0xFF8A0018.toInt(), 0xFFE4002B.toInt(), 0xFFFF5A6E.toInt()),
-            floatArrayOf(0f, 0.62f, 1f),
+        fillPaint.shader = LinearGradient(
+            pad, 0f, (w - pad).toFloat(), 0f,
+            intArrayOf(0xFF9E0018.toInt(), 0xFFE4002B.toInt(), 0xFFFF5A6E.toInt()),
+            floatArrayOf(0f, 0.55f, 1f),
             Shader.TileMode.CLAMP
         )
-        fillPaint.shader = shader
+        capPaint.shader = fillPaint.shader
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        val wanted = (knobRadius * 2f + 4f * density).toInt()
-        val height = resolveSize(wanted, heightMeasureSpec)
-        setMeasuredDimension(measureWidth(widthMeasureSpec), height)
-    }
-
-    private fun measureWidth(spec: Int): Int {
-        val size = MeasureSpec.getSize(spec)
-        return if (size > 0) size else (200f * density).toInt()
+        val wanted = (barHeight + pad * 2).toInt()
+        val height = if (MeasureSpec.getMode(heightMeasureSpec) == MeasureSpec.EXACTLY) {
+            MeasureSpec.getSize(heightMeasureSpec)
+        } else {
+            wanted
+        }
+        val width = MeasureSpec.getSize(widthMeasureSpec)
+        setMeasuredDimension(if (width > 0) width else (240f * density).toInt(), height)
     }
 
     override fun onDraw(canvas: Canvas) {
-        val cy = height / 2f
-        val inset = knobRadius
-        val left = inset
-        val right = width - inset
-        val span = (right - left).coerceAtLeast(1f)
-        val radius = trackHeight / 2f
+        val top = (height - barHeight) / 2f
+        val bottom = top + barHeight
+        val left = pad
+        val right = width - pad
+        if (right <= left) return
+        val radius = barHeight / 2f
 
-        rect.set(left, cy - radius, right, cy + radius)
+        rect.set(left, top, right, bottom)
         canvas.drawRoundRect(rect, radius, radius, trackPaint)
 
         val progress = shown.coerceIn(0f, 1f)
-        val edge = left + span * progress
+        if (progress <= 0.001f) return
 
-        for (i in 1..3) {
-            val x = left + span * (i / 4f)
-            canvas.drawLine(x, cy - radius - 1.5f * density, x, cy + radius + 1.5f * density, segmentPaint)
+        val span = (right - left) * progress
+        val edge = left + span
+        val fillLeft = if (span < barHeight) edge - barHeight else left
+        rect.set(fillLeft.coerceAtLeast(left), top, edge, bottom)
+        canvas.drawRoundRect(rect, radius, radius, fillPaint)
+
+        if (span > barHeight * 2f) {
+            rect.set(left + radius, top + barHeight * 0.18f, edge - radius, top + barHeight * 0.42f)
+            canvas.drawRoundRect(rect, barHeight * 0.12f, barHeight * 0.12f, sheenPaint)
         }
 
-        if (progress > 0f) {
-            val fillLeft = if (edge - radius < left) left else edge - radius
-            rect.set(fillLeft, cy - radius, edge, cy + radius)
-            canvas.drawRoundRect(rect, radius, radius, fillPaint)
-
-            glowPaint.color = 0x33FF2D45
-            canvas.drawCircle(edge, cy, knobRadius * 2.1f, glowPaint)
-            canvas.drawCircle(edge, cy, knobRadius, knobRingPaint)
-            canvas.drawCircle(edge, cy, knobRadius - 1.2f * density, knobPaint)
-        }
+        canvas.drawCircle(edge - radius, (top + bottom) / 2f, radius, capPaint)
     }
 }

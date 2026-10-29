@@ -66,6 +66,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Switch
 
 internal object Flag {
 
@@ -483,6 +485,11 @@ private fun MapScreen() {
 @Composable
 private fun SettingsScreen() {
     val used = (Desk.limit - Desk.remaining).coerceAtLeast(0)
+    var routingOpen by remember { mutableStateOf(false) }
+    var chainOpen by remember { mutableStateOf(false) }
+    var routingLan by remember { mutableStateOf(Store.bypassLan()) }
+    var routingList by remember { mutableStateOf(Store.bypassList()) }
+    var chainText by remember { mutableStateOf(Store.chain()) }
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
         Spacer(Modifier.height(12.dp))
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -543,7 +550,29 @@ private fun SettingsScreen() {
                 OutlinedButton(onClick = { Desk.signOut() }, modifier = Modifier.weight(1f)) { Text("Sign out") }
             }
         }
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(18.dp))
+        Text(
+            "Routing and engines",
+            style = MaterialTheme.typography.titleSmall,
+            color = Palette.onSurfaceSoft
+        )
+        Spacer(Modifier.height(8.dp))
+        SettingRow(
+            "Smart routing",
+            if (routingLan || FoxRoute.split(routingList).isNotEmpty())
+                "Local network bypass · ${FoxRoute.split(routingList).size} rule(s)"
+            else
+                "Everything goes through the tunnel"
+        ) { routingOpen = true }
+        Spacer(Modifier.height(10.dp))
+        SettingRow(
+            "Proxy chain",
+            if (FoxUpstream.parse(chainText).isNotEmpty())
+                "${FoxUpstream.parse(chainText).size} hop(s) before Mozilla"
+            else
+                "Direct to Mozilla"
+        ) { chainOpen = true }
+        Spacer(Modifier.height(18.dp))
         SettingRow("Install shortcut", "Desktop and Start menu") { Shortcuts.ensure() }
         Spacer(Modifier.height(10.dp))
         SettingRow("Settings folder", "Session and preferences") { Shortcuts.openConfigFolder() }
@@ -553,6 +582,66 @@ private fun SettingsScreen() {
         }
         Spacer(Modifier.height(18.dp))
         Footer()
+    }
+    if (routingOpen) {
+        AlertDialog(
+            onDismissRequest = { routingOpen = false },
+            title = { Text("Smart routing") },
+            text = {
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Bypass local network", color = Palette.onSurface, modifier = Modifier.weight(1f))
+                        Switch(checked = routingLan, onCheckedChange = { routingLan = it })
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    OutlinedTextField(
+                        value = routingList,
+                        onValueChange = { routingList = it },
+                        label = { Text("Direct hosts") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    Store.setBypassLan(routingLan)
+                    Store.setBypassList(routingList)
+                    FoxRoute.apply(routingLan, routingList)
+                    routingOpen = false
+                }) { Text("Save") }
+            },
+            dismissButton = { TextButton(onClick = { routingOpen = false }) { Text("Cancel") } }
+        )
+    }
+    if (chainOpen) {
+        AlertDialog(
+            onDismissRequest = { chainOpen = false },
+            title = { Text("Proxy chain") },
+            text = {
+                Column {
+                    Text(
+                        "Tunnel the tunnel: traffic goes through these hops before Mozilla.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Palette.onSurfaceSoft
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    OutlinedTextField(
+                        value = chainText,
+                        onValueChange = { chainText = it },
+                        label = { Text("socks5://host:port") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    Store.setChain(chainText)
+                    FoxRoute.applyChain(chainText)
+                    chainOpen = false
+                }) { Text("Save") }
+            },
+            dismissButton = { TextButton(onClick = { chainOpen = false }) { Text("Cancel") } }
+        )
     }
 }
 
@@ -594,7 +683,6 @@ private fun LoginScreen() {
     var code by remember { mutableStateOf("") }
     var create by remember { mutableStateOf(false) }
     var localError by remember { mutableStateOf("") }
-    var socialNote by remember { mutableStateOf(false) }
     val step = Desk.needsStep()
     val link = Desk.isLinkStep()
 
@@ -768,66 +856,6 @@ private fun LoginScreen() {
                         )
                     }
                     if (!step) {
-                        Spacer(Modifier.height(20.dp))
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Box(Modifier.weight(1f).height(1.dp).background(line))
-                            Text(
-                                "or continue with",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = textDim,
-                                modifier = Modifier.padding(horizontal = 12.dp)
-                            )
-                            Box(Modifier.weight(1f).height(1.dp).background(line))
-                        }
-                        Spacer(Modifier.height(16.dp))
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            OutlinedButton(
-                                onClick = {
-                                    Shortcuts.openUrl("https://accounts.firefox.com/signin")
-                                    socialNote = true
-                                },
-                                shape = RoundedCornerShape(26.dp),
-                                border = BorderStroke(1.dp, line),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = textMain),
-                                modifier = Modifier.weight(1f).height(50.dp)
-                            ) {
-                                Image(
-                                    painter = painterResource("google_mark.png"),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(Modifier.width(8.dp))
-                                Text("Google", style = MaterialTheme.typography.labelLarge)
-                            }
-                            OutlinedButton(
-                                onClick = {
-                                    Shortcuts.openUrl("https://accounts.firefox.com/signin")
-                                    socialNote = true
-                                },
-                                shape = RoundedCornerShape(26.dp),
-                                border = BorderStroke(1.dp, line),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = textMain),
-                                modifier = Modifier.weight(1f).height(50.dp)
-                            ) {
-                                Image(
-                                    painter = painterResource("apple_mark.png"),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(Modifier.width(8.dp))
-                                Text("Apple", style = MaterialTheme.typography.labelLarge)
-                            }
-                        }
-                        if (socialNote) {
-                            Spacer(Modifier.height(10.dp))
-                            Text(
-                                "Google and Apple sign-in opens accounts.firefox.com in your browser. Mozilla accounts created that way need a password before Gozar can use them.",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = textDim,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
                         Spacer(Modifier.height(14.dp))
                         TextButton(
                             onClick = { create = !create; localError = "" },

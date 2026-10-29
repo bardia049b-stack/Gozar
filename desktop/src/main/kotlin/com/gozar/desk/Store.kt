@@ -52,6 +52,12 @@ object Store {
     fun remaining(): Long = get("remaining").toLongOrNull() ?: 0L
     fun reset(): String = get("reset")
     fun selected(): String = get("selected").ifEmpty { "REC" }
+    fun bypassLan(): Boolean = get("bypass_lan") == "1"
+    fun setBypassLan(value: Boolean) = put("bypass_lan" to if (value) "1" else "0")
+    fun bypassList(): String = get("bypass_list")
+    fun setBypassList(value: String) = put("bypass_list" to value)
+    fun chain(): String = get("chain")
+    fun setChain(value: String) = put("chain" to value)
 
     fun saveAccount(email: String, uid: String, access: String, refresh: String, expiresIn: Int) =
         put(

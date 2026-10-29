@@ -3,6 +3,7 @@ package com.gozar
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
 import java.io.ByteArrayOutputStream
+import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.Socket
 import javax.net.ssl.SSLSocket
@@ -287,8 +288,7 @@ object FoxTunnel {
     }
 
     private fun connect(location: FoxLocation, protocols: Array<String>, timeout: Int): SSLSocket {
-        val raw = Socket()
-        raw.connect(InetSocketAddress(location.host, location.port), timeout)
+        val raw = chain(location.host, location.port, timeout)
         raw.soTimeout = timeout
         val tls = (SSLSocketFactory.getDefault() as SSLSocketFactory)
             .createSocket(raw, location.host, location.port, true) as SSLSocket
@@ -299,6 +299,101 @@ object FoxTunnel {
         tls.startHandshake()
         FoxLog.add("tunnel", "tls alpn=" + (tls.applicationProtocol ?: "none") + " want=" + protocols.joinToString(","))
         return tls
+    }
+
+    private fun chain(host: String, port: Int, timeout: Int): Socket {
+        val hops = FoxUpstream.hops
+        val raw = Socket()
+        val first = if (hops.isEmpty()) host to port else hops.first().host to hops.first().port
+        raw.connect(InetSocketAddress(first.first, first.second), timeout)
+        raw.soTimeout = timeout
+        if (hops.isEmpty()) return raw
+        try {
+            for (index in 1 until hops.size) {
+                val hop = hops[index]
+                hopTo(raw, hops[index - 1].type, hop.host, hop.port)
+                FoxLog.add("chain", "hop " + hop.label)
+            }
+            hopTo(raw, hops.last().type, host, port)
+            FoxLog.add("chain", "exit " + host + ":" + port + " through " + hops.size + " hop(s)")
+            return raw
+        } catch (e: Exception) {
+            FoxLog.add("chain", "failed: " + (e.message ?: e.javaClass.simpleName))
+            try {
+                raw.close()
+            } catch (ignored: Exception) {
+            }
+            throw if (e is FoxError) e else FoxError("The proxy chain did not answer: " + (e.message ?: "no reply"))
+        }
+    }
+
+    private fun hopTo(socket: Socket, type: String, host: String, port: Int) {
+        val input = BufferedInputStream(socket.getInputStream())
+        val output = BufferedOutputStream(socket.getOutputStream())
+        if (type == "http") {
+            val target = "$host:$port"
+            val request = "CONNECT $target HTTP/1.1\r\nHost: $target\r\nProxy-Connection: keep-alive\r\n\r\n"
+            output.write(request.toByteArray(Charsets.US_ASCII))
+            output.flush()
+            val head = StringBuilder()
+            while (!head.endsWith("\r\n\r\n")) {
+                val c = input.read()
+                if (c < 0) throw FoxError("The proxy closed the connection")
+                head.append(c.toChar())
+                if (head.length > 8192) throw FoxError("The proxy sent a very long reply")
+            }
+            val status = head.lineSequence().firstOrNull()
+                ?.split(' ')?.getOrNull(1)?.toIntOrNull() ?: 0
+            if (status != 200) throw FoxError("The proxy refused the chain ($status)")
+            return
+        }
+        output.write(byteArrayOf(0x05, 0x01, 0x00))
+        output.flush()
+        val reply = ByteArray(2)
+        if (!fill(input, reply)) throw FoxError("The proxy did not answer")
+        if (reply[0].toInt() != 0x05 || reply[1].toInt() != 0x00) throw FoxError("The proxy wants authentication")
+        val name = host.toByteArray(Charsets.UTF_8)
+        val request = ByteArrayOutputStream()
+        request.write(byteArrayOf(0x05, 0x01, 0x00))
+        if (name.size <= 255 && !isAddress(host)) {
+            request.write(byteArrayOf(0x03, name.size.toByte()))
+            request.write(name)
+        } else {
+            val address = InetAddress.getByName(host).address
+            request.write(if (address.size == 16) 0x04 else 0x01)
+            request.write(address)
+        }
+        request.write(byteArrayOf(((port ushr 8) and 0xFF).toByte(), (port and 0xFF).toByte()))
+        output.write(request.toByteArray())
+        output.flush()
+        val answer = ByteArray(4)
+        if (!fill(input, answer)) throw FoxError("The proxy did not answer")
+        if (answer[1].toInt() != 0x00) throw FoxError("The proxy refused the chain (" + answer[1] + ")")
+        val skip = when (answer[3].toInt()) {
+            0x01 -> 4
+            0x04 -> 16
+            0x03 -> {
+                val size = input.read()
+                if (size < 0) throw FoxError("The proxy did not answer")
+                size
+            }
+            else -> throw FoxError("The proxy sent an unknown reply")
+        }
+        val tail = ByteArray(skip + 2)
+        if (!fill(input, tail)) throw FoxError("The proxy did not answer")
+    }
+
+    private fun isAddress(host: String): Boolean =
+        host.isNotEmpty() && host.all { it.isDigit() || it == '.' } || host.contains(':')
+
+    private fun fill(input: BufferedInputStream, buffer: ByteArray): Boolean {
+        var done = 0
+        while (done < buffer.size) {
+            val size = input.read(buffer, done, buffer.size - done)
+            if (size < 0) return false
+            done += size
+        }
+        return true
     }
 
     private fun settings(): ByteArray {

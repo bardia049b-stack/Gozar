@@ -356,5 +356,79 @@
             <ImageView style="@style/Gozar.Row.Chevron" />
         </LinearLayout>
 
+
+        <TextView
+            style="@style/Gozar.Section"
+            android:text="@string/advanced_section" />
+
+        <LinearLayout
+            android:id="@+id/rowRouting"
+            style="@style/Gozar.Row">
+
+            <ImageView
+                style="@style/Gozar.Tile"
+                android:background="@drawable/frame_gem"
+                android:backgroundTint="@color/tile_container"
+                android:contentDescription="@string/routing"
+                android:src="@drawable/ic_alt_route"
+                app:tint="@color/tile_on_container" />
+
+            <LinearLayout style="@style/Gozar.Row.Text">
+                <TextView
+                    style="@style/Gozar.Row.Title"
+                    android:text="@string/routing" />
+                <TextView
+                    android:id="@+id/tvRouting"
+                    style="@style/Gozar.Row.Subtitle" />
+            </LinearLayout>
+            <ImageView style="@style/Gozar.Row.Chevron" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/rowChain"
+            style="@style/Gozar.Row">
+
+            <ImageView
+                style="@style/Gozar.Tile"
+                android:background="@drawable/frame_clover"
+                android:backgroundTint="@color/tile_container"
+                android:contentDescription="@string/chain"
+                android:src="@drawable/ic_link"
+                app:tint="@color/tile_on_container" />
+
+            <LinearLayout style="@style/Gozar.Row.Text">
+                <TextView
+                    style="@style/Gozar.Row.Title"
+                    android:text="@string/chain" />
+                <TextView
+                    android:id="@+id/tvChain"
+                    style="@style/Gozar.Row.Subtitle" />
+            </LinearLayout>
+            <ImageView style="@style/Gozar.Row.Chevron" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/rowApps"
+            style="@style/Gozar.Row">
+
+            <ImageView
+                style="@style/Gozar.Tile"
+                android:background="@drawable/frame_hex"
+                android:backgroundTint="@color/tile_container"
+                android:contentDescription="@string/apps"
+                android:src="@drawable/ic_apps"
+                app:tint="@color/tile_on_container" />
+
+            <LinearLayout style="@style/Gozar.Row.Text">
+                <TextView
+                    style="@style/Gozar.Row.Title"
+                    android:text="@string/apps" />
+                <TextView
+                    android:id="@+id/tvApps"
+                    style="@style/Gozar.Row.Subtitle" />
+            </LinearLayout>
+            <ImageView style="@style/Gozar.Row.Chevron" />
+        </LinearLayout>
+
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

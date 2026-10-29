@@ -171,7 +171,11 @@ class FoxProxy(
         pump(input, output, tunnel)
     }
 
-    private fun open(host: String, port: Int): FoxDuplex? {
+    private fun open(host: String, port: Int): FoxPipe? {
+        if (FoxRoute.direct(host)) {
+            val direct = FoxSocketPipe.connect(host, port)
+            if (direct != null) return direct
+        }
         val access = pass() ?: return null
         val location = FoxLink.location ?: return null
         return try {
@@ -182,7 +186,7 @@ class FoxProxy(
         }
     }
 
-    private fun pump(input: InputStream, output: BufferedOutputStream, tunnel: FoxDuplex) {
+    private fun pump(input: InputStream, output: BufferedOutputStream, tunnel: FoxPipe) {
         val up = thread(isDaemon = true) {
             val buffer = ByteArray(16384)
             try {
