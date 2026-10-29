@@ -41,9 +41,11 @@ for name, downloads in rows:
 print()
 print('### What changed')
 print()
-print('- Desktop sign-in handles supported Mozilla security challenges and can show an image challenge in the app.')
-print('- Firefox account creation and email verification are available in the desktop app.')
-print('- Android has a language picker on the sign-in and home screens, with Persian, English and system language.')
+print('- Desktop DNS now uses HTTPS through the Firefox proxy, rather than the unsupported DNS port 53.')
+print('- Unsupported UDP is refused, allowing compatible browsers to fall back from QUIC to TCP.')
+print('- Windows routing commands run without opening console windows.')
+print('- Android sign-in keeps its fields visible and locked while a spinner appears inside the button.')
+print('- Android language selection remains on sign-in and in Settings, not on the home header.')
 print('- Desktop keeps its native Flutter Material 3 interface and Go core; no JVM is bundled.')
 print()
 print('### Install')
@@ -57,7 +59,7 @@ print('### Important limitations')
 print()
 print('The desktop tunnel and real Firefox account login and registration have not been verified live in this build. '
       'Mozilla may present an unsupported challenge or refuse a request. IPv6 can bypass the tunnel, and UDP other than DNS is not supported. '
-      'Do not rely on this experimental tunnel for privacy or complete device-wide coverage.')
+      'Mozilla also restricts destination ports. Do not rely on this experimental tunnel for privacy or complete device-wide coverage.')
 print()
 print('Desktop routing rules, per-app routing, proxy chains, tunnel-in-tunnel, the route map and automatic updates are not implemented. '
       'Access and refresh tokens are stored in a local configuration file, not the OS keychain. '

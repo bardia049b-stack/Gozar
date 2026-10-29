@@ -5,12 +5,12 @@ import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.view.inputmethod.EditorInfo
-import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.view.WindowCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.progressindicator.CircularProgressIndicator
 import android.text.InputType
 import android.widget.EditText
 import android.widget.ImageView
@@ -38,8 +38,7 @@ class LoginActivity : BaseActivity() {
     private lateinit var forgot: MaterialButton
     private lateinit var switchButton: MaterialButton
     private lateinit var languageButton: MaterialButton
-    private lateinit var busyRow: LinearLayout
-    private lateinit var notice: TextView
+    private lateinit var progress: CircularProgressIndicator
     private lateinit var error: TextView
 
     private var create = false
@@ -75,8 +74,7 @@ class LoginActivity : BaseActivity() {
         primary = findViewById(R.id.loginPrimary)
         forgot = findViewById(R.id.loginForgot)
         switchButton = findViewById(R.id.loginSwitch)
-        busyRow = findViewById(R.id.loginBusy)
-        notice = findViewById(R.id.loginNotice)
+        progress = findViewById(R.id.loginProgress)
         error = findViewById(R.id.loginError)
         reveal = findViewById(R.id.loginReveal)
         reveal.setOnClickListener {
@@ -151,6 +149,7 @@ class LoginActivity : BaseActivity() {
         error.visibility = View.GONE
         if (Fox.needsStep()) {
             if (Fox.isLinkStep()) Fox.confirmLink(this) else Fox.submitCode(this, codeInput.text?.toString().orEmpty().trim())
+            render()
             return
         }
         val address = mail.text?.toString()?.trim().orEmpty()
@@ -163,14 +162,15 @@ class LoginActivity : BaseActivity() {
             show(getString(R.string.login_mismatch))
             return
         }
-        secret.setText("")
-        confirm.setText("")
         if (create) Fox.signUp(this, address, password) else Fox.signIn(this, address, password)
+        render()
     }
 
     private fun render() {
         val signed = Fox.signedIn(this)
         if (signed && !Fox.busy) {
+            secret.text?.clear()
+            confirm.text?.clear()
             startActivity(Intent(this, MainActivity::class.java))
             finish()
             return
@@ -201,18 +201,21 @@ class LoginActivity : BaseActivity() {
             create -> getString(R.string.login_create_action)
             else -> getString(R.string.login_action)
         }
-        val stage = Fox.stage.ifEmpty { getString(R.string.login_working) }
-        notice.text = if (Fox.busy) stage else ""
-        busyRow.visibility = if (Fox.busy) View.VISIBLE else View.GONE
-        primary.text = if (Fox.busy) stage else action
-        primary.isEnabled = !Fox.busy
-        languageButton.isEnabled = !Fox.busy
-        mail.isEnabled = !Fox.busy
-        secret.isEnabled = !Fox.busy
-        confirm.isEnabled = !Fox.busy
-        codeInput.isEnabled = !Fox.busy
+        val busy = Fox.busy
+        primary.text = if (busy) "" else action
+        primary.contentDescription = if (busy) getString(R.string.login_working) else null
+        progress.visibility = if (busy) View.VISIBLE else View.GONE
+        primary.isEnabled = !busy
+        languageButton.isEnabled = !busy
+        mail.isEnabled = !busy
+        secret.isEnabled = !busy
+        confirm.isEnabled = !busy
+        codeInput.isEnabled = !busy
+        reveal.isEnabled = !busy
+        forgot.isEnabled = !busy
+        switchButton.isEnabled = !busy
 
-        val trouble = Fox.message.isNotEmpty() &&
+        val trouble = !busy && Fox.message.isNotEmpty() &&
             Fox.message != "code" && Fox.message != "link" &&
             Fox.message != "ping" && Fox.message != "servers" && Fox.message != "quota"
         if (trouble) {

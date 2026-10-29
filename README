@@ -5,7 +5,7 @@ Material 3 interface and a Go core. It does not use Kotlin, a JVM, a browser-bas
 an HTTP API for the interface. The Flutter process communicates with the Go process through a
 private standard-input/output pipe. The interface supports Persian, English, and the system
 language, and keeps the selected language between launches. Android also offers the language
-picker at the top of the sign-in and home screens. Desktop registration and email verification
+picker on the sign-in screen and in Settings. Desktop registration and email verification
 use native forms; supported Mozilla security checks and image challenges appear in the app. The
 account password is not saved; access and refresh tokens are kept in a local configuration file
 rather than an OS keychain.
@@ -16,13 +16,17 @@ TUN interface and uses a userspace network stack; it needs administrator privile
 the application requests elevation when it starts. On Linux and macOS, launch the application
 with appropriate administrator privileges to use the tunnel. The new desktop app does not set
 or automatically clear a system proxy. If an older version left a proxy behind, review the system
-proxy settings manually rather than assuming that a proxy belongs to Gozar.
+proxy settings manually rather than assuming that a proxy belongs to Gozar. Desktop DNS queries
+use DNS over HTTPS through the authenticated Firefox proxy; unsupported UDP is refused so clients
+can fall back to TCP when they support it. Windows route commands do not open console windows.
 
 The desktop tunnel is experimental. It has not been verified in a live connection in this
 revision. Firefox account sign-in and registration were checked with mock responses, not a real
 account. The non-interactive security check was also probed without account credentials. Mozilla
-may present an unsupported security challenge or refuse a request. IPv6 is not routed through the tunnel and may bypass it.
-UDP other than DNS is not supported. Do not rely on this build for privacy or as a complete device-wide VPN. Routing,
+may present an unsupported security challenge or refuse a request. IPv6 is not routed through
+the tunnel and may bypass it. UDP other than DNS is not supported. Mozilla's proxy supports only
+certain destination ports, including 80, 443, 8080, and 8443. Do not rely on this build for privacy
+or as a complete device-wide VPN. Routing,
 per-application rules, proxy chains, tunnel-in-tunnel, update checking, and the route map are not
 implemented in the new desktop interface.
 

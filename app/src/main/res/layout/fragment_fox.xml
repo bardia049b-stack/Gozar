@@ -46,15 +46,6 @@
         </LinearLayout>
 
         <ImageButton
-            android:id="@+id/foxLanguageButton"
-            android:layout_width="@dimen/icon_action"
-            android:layout_height="@dimen/icon_action"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/language"
-            android:src="@drawable/ic_language"
-            app:tint="@color/login_accent" />
-
-        <ImageButton
             android:id="@+id/foxAccountButton"
             android:layout_width="@dimen/icon_action"
             android:layout_height="@dimen/icon_action"

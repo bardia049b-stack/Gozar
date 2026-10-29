@@ -1,13 +1,15 @@
 package tundev
 
 import (
+	"context"
 	"errors"
 	"net"
 	"net/netip"
-	"os/exec"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/bardia049b-stack/gozar/go-desktop/internal/quiet"
 )
 
 type Config struct {
@@ -64,23 +66,14 @@ func isRoot() bool {
 }
 
 func command(name string, args ...string) (string, error) {
-	cmd := exec.Command(name, args...)
-	done := make(chan struct{})
-	var out []byte
-	var err error
-	go func() {
-		out, err = cmd.CombinedOutput()
-		close(done)
-	}()
-	select {
-	case <-done:
-		return string(out), err
-	case <-time.After(20 * time.Second):
-		if cmd.Process != nil {
-			cmd.Process.Kill()
-		}
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	cmd := quiet.CommandContext(ctx, name, args...)
+	out, err := cmd.CombinedOutput()
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
 		return "", errors.New(name + " timed out")
 	}
+	return string(out), err
 }
 
 func mustRun(name string, args ...string) error {

@@ -78,7 +78,6 @@ class FoxFragment : Fragment() {
             requireContext().getColor(R.color.fox_red_dark)
         )
 
-        view.findViewById<View>(R.id.foxLanguageButton).setOnClickListener { showLanguagePicker(requireActivity()) }
         view.findViewById<View>(R.id.foxAccountButton).setOnClickListener { accountMenu() }
         connect.setOnClickListener { toggle() }
         map.setOnClickListener { startActivity(Intent(requireContext(), RouteMapActivity::class.java)) }

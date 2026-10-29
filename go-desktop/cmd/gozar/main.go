@@ -17,7 +17,7 @@ import (
 	"github.com/bardia049b-stack/gozar/go-desktop/internal/tundev"
 )
 
-const version = "1.9.1"
+const version = "1.9.2"
 
 func main() {
 	rpcMode := flag.Bool("rpc", false, "")

@@ -14,8 +14,8 @@ android {
         applicationId 'com.gozar'
         minSdk 24
         targetSdk 35
-        versionCode 25
-        versionName '1.8.5'
+        versionCode 26
+        versionName '1.8.6'
         resourceConfigurations += ['en', 'fa']
     }
 
@@ -76,6 +76,13 @@ android {
         includeInBundle = false
     }
 
+    testOptions {
+        unitTests.includeAndroidResources = true
+        unitTests.all {
+            maxHeapSize = '384m'
+        }
+    }
+
     lint {
         checkReleaseBuilds false
         abortOnError false
@@ -83,6 +90,8 @@ android {
 }
 
 dependencies {
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.robolectric:robolectric:4.14.1'
     implementation project(':core')
     implementation 'com.google.zxing:core:3.5.3'
     implementation 'androidx.appcompat:appcompat:1.7.1'

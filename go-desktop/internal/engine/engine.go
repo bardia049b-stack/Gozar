@@ -25,12 +25,17 @@ const mtu = 1500
 
 type Dialer func(host string, port int) (io.ReadWriteCloser, error)
 
+type resolver interface {
+	Resolve([]byte) ([]byte, error)
+	Close()
+}
+
 type Engine struct {
 	stack  *stack.Stack
 	device *tundev.Device
 	config tundev.Config
 	dial   Dialer
-	dns    *dnsproxy.Resolver
+	dns    resolver
 	down   atomic.Int64
 	up     atomic.Int64
 	once   sync.Once
@@ -75,19 +80,17 @@ func Start(proxyHost string, dial Dialer, protect []netip.Addr) (*Engine, error)
 	})
 
 	engine := &Engine{stack: created, device: device, dial: dial}
-	engine.dns = &dnsproxy.Resolver{Dialer: dial, Server: dnsproxy.Address}
+	engine.dns = dnsproxy.New(dial)
 
 	tcpForwarder := tcp.NewForwarder(created, 0, 4096, engine.handleTCP)
 	created.SetTransportProtocolHandler(tcp.ProtocolNumber, tcpForwarder.HandlePacket)
 
-	udpForwarder := udp.NewForwarder(created, func(request *udp.ForwarderRequest) {
-		engine.handleUDP(request)
-	})
-	created.SetTransportProtocolHandler(udp.ProtocolNumber, udpForwarder.HandlePacket)
+	engine.listenUDP(created)
 
 	keep := append([]netip.Addr{}, protect...)
 	engine.config = tundev.Config{Interface: device.Name(), DNS: dnsproxy.Address, Keep: keep}
 	if err := tundev.Configure(&engine.config); err != nil {
+		engine.dns.Close()
 		device.Close()
 		created.Close()
 		return nil, err
@@ -101,7 +104,7 @@ func (e *Engine) handleTCP(request *tcp.ForwarderRequest) {
 		id := request.ID()
 		host := id.LocalAddress.String()
 		port := int(id.LocalPort)
-		if host == dnsproxy.Address && port == 53 {
+		if port == 53 {
 			queue := &waiter.Queue{}
 			endpoint, terr := request.CreateEndpoint(queue)
 			if terr != nil {
@@ -129,11 +132,17 @@ func (e *Engine) handleTCP(request *tcp.ForwarderRequest) {
 	}()
 }
 
-func (e *Engine) handleUDP(request *udp.ForwarderRequest) bool {
-	id := request.ID()
-	if id.LocalAddress.String() != dnsproxy.Address || id.LocalPort != 53 {
-		return false
-	}
+func (e *Engine) listenUDP(created *stack.Stack) {
+	forwarder := udp.NewForwarder(created, e.handleUDP)
+	created.SetTransportProtocolHandler(udp.ProtocolNumber, func(id stack.TransportEndpointID, packet *stack.PacketBuffer) bool {
+		if id.LocalPort != 53 {
+			return false
+		}
+		return forwarder.HandlePacket(id, packet)
+	})
+}
+
+func (e *Engine) handleUDP(request *udp.ForwarderRequest) {
 	go func() {
 		queue := &waiter.Queue{}
 		endpoint, terr := request.CreateEndpoint(queue)
@@ -142,21 +151,30 @@ func (e *Engine) handleUDP(request *udp.ForwarderRequest) bool {
 		}
 		conn := gonet.NewUDPConn(queue, endpoint)
 		defer conn.Close()
-		buffer := make([]byte, 4096)
+		buffer := make([]byte, 65535)
 		for {
+			if err := conn.SetReadDeadline(time.Now().Add(45 * time.Second)); err != nil {
+				return
+			}
 			count, err := conn.Read(buffer)
 			if err != nil || count == 0 {
 				return
 			}
-			answer, err := e.dns.Resolve(append([]byte{}, buffer[:count]...))
+			query := append([]byte{}, buffer[:count]...)
+			answer, err := e.dns.Resolve(query)
 			if err != nil {
+				answer = dnsproxy.Failure(query)
+			}
+			answer = dnsproxy.LimitUDP(query, answer)
+			if len(answer) == 0 {
 				continue
 			}
+			if _, err := conn.Write(answer); err != nil {
+				return
+			}
 			e.down.Add(int64(len(answer)))
-			conn.Write(answer)
 		}
 	}()
-	return true
 }
 
 func (e *Engine) relay(local *gonet.TCPConn, remote io.ReadWriteCloser) {
@@ -209,6 +227,9 @@ func (e *Engine) Device() string {
 func (e *Engine) Stop() {
 	e.once.Do(func() {
 		tundev.Restore(&e.config)
+		if e.dns != nil {
+			e.dns.Close()
+		}
 		if e.device != nil {
 			e.device.Close()
 		}
@@ -220,7 +241,7 @@ func (e *Engine) Stop() {
 	})
 }
 
-func (e *Engine) serveDNS(local *gonet.TCPConn) {
+func (e *Engine) serveDNS(local io.ReadWriteCloser) {
 	defer local.Close()
 	for {
 		size := make([]byte, 2)
@@ -228,7 +249,7 @@ func (e *Engine) serveDNS(local *gonet.TCPConn) {
 			return
 		}
 		length := int(size[0])<<8 | int(size[1])
-		if length == 0 || length > 4096 {
+		if length < 12 {
 			return
 		}
 		query := make([]byte, length)
@@ -237,6 +258,9 @@ func (e *Engine) serveDNS(local *gonet.TCPConn) {
 		}
 		answer, err := e.dns.Resolve(query)
 		if err != nil {
+			answer = dnsproxy.Failure(query)
+		}
+		if len(answer) == 0 || len(answer) > 65535 {
 			return
 		}
 		framed := make([]byte, 2+len(answer))

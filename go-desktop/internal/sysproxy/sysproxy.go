@@ -1,12 +1,15 @@
 package sysproxy
 
 import (
+	"context"
 	"net"
 	"os/exec"
 	"runtime"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/bardia049b-stack/gozar/go-desktop/internal/quiet"
 )
 
 func Set(port int) error {
@@ -100,21 +103,9 @@ func gnome(values ...string) bool {
 }
 
 func run(name string, args ...string) bool {
-	command := exec.Command(name, args...)
-	command.Stdout = nil
-	command.Stderr = nil
-	done := make(chan error, 1)
-	if err := command.Start(); err != nil {
-		return false
-	}
-	go func() { done <- command.Wait() }()
-	select {
-	case err := <-done:
-		return err == nil
-	case <-time.After(20 * time.Second):
-		command.Process.Kill()
-		return false
-	}
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	return quiet.CommandContext(ctx, name, args...).Run() == nil
 }
 
 func itoa(value int) string { return strconv.Itoa(value) }

@@ -158,37 +158,28 @@
                     android:layout_marginTop="6dp"
                     android:text="@string/login_forgot" />
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/loginPrimary"
-                    style="@style/Gozar.Login.Primary"
-                    android:layout_marginTop="14dp"
-                    android:text="@string/login_action" />
-
-                <LinearLayout
-                    android:id="@+id/loginBusy"
+                <FrameLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="14dp"
-                    android:gravity="center"
-                    android:orientation="horizontal"
-                    android:visibility="gone">
+                    android:layout_marginTop="14dp">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/loginPrimary"
+                        style="@style/Gozar.Login.Primary"
+                        android:text="@string/login_action" />
 
                     <com.google.android.material.progressindicator.CircularProgressIndicator
-                        android:layout_width="16dp"
-                        android:layout_height="16dp"
+                        android:id="@+id/loginProgress"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_gravity="center"
+                        android:importantForAccessibility="no"
                         android:indeterminate="true"
-                        app:indicatorColor="@color/login_accent"
-                        app:indicatorSize="16dp"
-                        app:trackThickness="2dp" />
-
-                    <TextView
-                        android:id="@+id/loginNotice"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="10dp"
-                        android:textAppearance="@style/TextAppearance.Gozar.BodySmall"
-                        android:textColor="@color/login_text_dim" />
-                </LinearLayout>
+                        android:visibility="gone"
+                        app:indicatorColor="@android:color/white"
+                        app:indicatorSize="24dp"
+                        app:trackThickness="3dp" />
+                </FrameLayout>
 
                 <TextView
                     android:id="@+id/loginError"

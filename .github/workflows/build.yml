@@ -24,6 +24,8 @@ jobs:
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" "platform-tools"
       - uses: gradle/actions/setup-gradle@v4
+      - name: Test Android sign-in interface
+        run: bash ./gradlew :app:testDebugUnitTest --no-daemon
       - name: Signing key
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -110,6 +112,11 @@ jobs:
         working-directory: go-desktop
         shell: bash
         run: go test ./...
+      - name: Test Windows child-process settings
+        if: matrix.platform == 'windows'
+        working-directory: go-desktop
+        shell: bash
+        run: go test ./internal/quiet
       - name: Inspect Flutter code
         working-directory: desktop_flutter
         shell: bash
@@ -270,6 +277,13 @@ jobs:
             printf '%s\n' "$assets" | grep -Fx "$f.sig" >/dev/null
           done
           printf '%s\n' "$assets" | grep -Fx gozar-public-key.asc >/dev/null
+          mkdir -p "$RUNNER_TEMP/published"
+          gh release download "$GITHUB_REF_NAME" --dir "$RUNNER_TEMP/published"
+          for f in collected/*; do
+            name=$(basename "$f")
+            test -s "$RUNNER_TEMP/published/$name"
+            cmp "$f" "$RUNNER_TEMP/published/$name"
+          done
       - name: Keep one release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
