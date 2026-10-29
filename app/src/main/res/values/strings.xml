@@ -321,4 +321,5 @@ AGPL-3.0-or-later</string>
     <string name="update_channel">Updates</string>
     <string name="update_action">Download</string>
     <string name="update_latest">You are on the latest version.</string>
+    <string name="login_code">6-digit code</string>
 </resources>

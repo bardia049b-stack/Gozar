@@ -321,4 +321,5 @@ AGPL-3.0-or-later</string>
     <string name="update_channel">به‌روزرسانی‌ها</string>
     <string name="update_action">دانلود</string>
     <string name="update_latest">شما آخرین نسخه را دارید.</string>
+    <string name="login_code">کد ۶ رقمی</string>
 </resources>

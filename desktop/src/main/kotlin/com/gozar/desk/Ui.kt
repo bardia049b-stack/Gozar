@@ -181,7 +181,7 @@ private fun HomeScreen() {
 private fun Header() {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Image(
-            painter = painterResource("fox_logo.png"),
+            painter = painterResource("app_mark.png"),
             contentDescription = "Gozar",
             modifier = Modifier.size(36.dp)
         )
@@ -592,7 +592,7 @@ private fun LoginScreen() {
             contentAlignment = Alignment.Center
         ) {
             Image(
-                painter = painterResource("fox_logo.png"),
+                painter = painterResource("app_mark.png"),
                 contentDescription = "Gozar",
                 modifier = Modifier.size(48.dp)
             )

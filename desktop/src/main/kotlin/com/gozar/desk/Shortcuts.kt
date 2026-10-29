@@ -22,7 +22,7 @@ object Shortcuts {
             if (!base.exists()) base.mkdirs()
             val target = if (os.contains("win")) File(base, "gozar.png") else File(base, "gozar.png")
             if (!target.exists() || target.length() < 1024L) {
-                Shortcuts::class.java.getResourceAsStream("/fox_logo.png")?.use { stream ->
+                Shortcuts::class.java.getResourceAsStream("/app_mark.png")?.use { stream ->
                     target.outputStream().use { out -> stream.copyTo(out) }
                 }
             }

@@ -23,9 +23,11 @@ class LoginActivity : BaseActivity() {
     private lateinit var mailBox: TextInputLayout
     private lateinit var secretBox: TextInputLayout
     private lateinit var confirmBox: TextInputLayout
+    private lateinit var codeBox: TextInputLayout
     private lateinit var mail: TextInputEditText
     private lateinit var secret: TextInputEditText
     private lateinit var confirm: TextInputEditText
+    private lateinit var codeInput: TextInputEditText
     private lateinit var primary: MaterialButton
     private lateinit var switchLine: TextView
     private lateinit var social: LinearLayout
@@ -44,9 +46,11 @@ class LoginActivity : BaseActivity() {
         mailBox = findViewById(R.id.loginMailBox)
         secretBox = findViewById(R.id.loginSecretBox)
         confirmBox = findViewById(R.id.loginConfirmBox)
+        codeBox = findViewById(R.id.loginCodeBox)
         mail = findViewById(R.id.loginMail)
         secret = findViewById(R.id.loginSecret)
         confirm = findViewById(R.id.loginConfirm)
+        codeInput = findViewById(R.id.loginCode)
         primary = findViewById(R.id.loginPrimary)
         switchLine = findViewById(R.id.loginSwitch)
         social = findViewById(R.id.loginSocial)
@@ -92,7 +96,7 @@ class LoginActivity : BaseActivity() {
         if (Fox.busy) return
         notice.visibility = View.GONE
         if (Fox.needsStep()) {
-            if (Fox.isLinkStep()) Fox.confirmLink(this) else Fox.submitCode(this)
+            if (Fox.isLinkStep()) Fox.confirmLink(this) else Fox.submitCode(this, codeInput.text?.toString().orEmpty().trim())
             return
         }
         val address = mail.text?.toString()?.trim().orEmpty()
@@ -122,6 +126,7 @@ class LoginActivity : BaseActivity() {
         mailBox.visibility = if (step) View.GONE else View.VISIBLE
         secretBox.visibility = if (step) View.GONE else View.VISIBLE
         confirmBox.visibility = if (create && !step) View.VISIBLE else View.GONE
+        codeBox.visibility = if (step && !link) View.VISIBLE else View.GONE
         social.visibility = if (step) View.GONE else View.VISIBLE
         divider.visibility = if (step) View.GONE else View.VISIBLE
         switchLine.visibility = if (step) View.GONE else View.VISIBLE
