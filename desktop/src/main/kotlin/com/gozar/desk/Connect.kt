@@ -30,15 +30,6 @@ class LocalProxy(private val port: Int, private val tunnel: (String, Int) -> com
         }
     }
 
-    fun release() {
-        TunEngine.stop()
-        proxy?.stop()
-        proxy = null
-        if (Desk.systemProxy || Desk.proxyPort > 0 || SystemProxy.stale()) SystemProxy.disable()
-        Desk.systemProxy = false
-        Desk.tunActive = false
-    }
-
     fun stop() {
         running = false
         TunEngine.stop()
@@ -320,6 +311,15 @@ object Connect {
                 Desk.connecting = false
             }
         }
+    }
+
+    fun release() {
+        TunEngine.stop()
+        proxy?.stop()
+        proxy = null
+        if (Desk.systemProxy || Desk.proxyPort > 0 || SystemProxy.stale()) SystemProxy.disable()
+        Desk.systemProxy = false
+        Desk.tunActive = false
     }
 
     fun stop() {
