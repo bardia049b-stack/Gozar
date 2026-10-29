@@ -226,7 +226,9 @@ object Wintun {
             if (session == null && reused) {
                 library.getFunction("WintunCloseAdapter").invoke(arrayOf(adapter))
                 adapter = createAdapter.invokePointer(arrayOf("Gozar", "Gozar", null))
-                if (adapter != null) session = startSession.invokePointer(arrayOf(adapter, RING))
+                if (adapter != null) {
+                    session = startSession.invokePointer(arrayOf(adapter, RING))
+                }
             }
             if (session == null) {
                 TunService.note("the wintun session did not start (error " + Native.getLastError() + ")")
