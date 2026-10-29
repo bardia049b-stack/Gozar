@@ -192,13 +192,15 @@ object Wintun {
     private const val RING = 0x400000
 
     fun create(library: NativeLibrary): TunDevice? {
-        return try {
+        try {
             val createAdapter = library.getFunction("WintunCreateAdapter")
             val startSession = library.getFunction("WintunStartSession")
             val receive = library.getFunction("WintunReceivePacket")
             val releasePacket = library.getFunction("WintunReleaseReceivePacket")
             val allocate = library.getFunction("WintunAllocateSendPacket")
             val send = library.getFunction("WintunSendPacket")
+            val closeAdapter = library.getFunction("WintunCloseAdapter")
+            val endSession = library.getFunction("WintunEndSession")
             val openAdapter = try {
                 library.getFunction("WintunOpenAdapter")
             } catch (e: Exception) {
@@ -210,8 +212,9 @@ object Wintun {
             } catch (e: Exception) {
                 null
             }
-            if (adapter != null) reused = true
-            if (adapter == null) {
+            if (adapter != null) {
+                reused = true
+            } else {
                 adapter = createAdapter.invokePointer(arrayOf("Gozar", "Gozar", null))
             }
             if (adapter == null) {
@@ -226,19 +229,70 @@ object Wintun {
             }
             var session = startSession.invokePointer(arrayOf(adapter, RING))
             if (session == null && reused) {
-                library.getFunction("WintunCloseAdapter").invoke(arrayOf(adapter))
+                closeAdapter.invoke(arrayOf(adapter))
                 adapter = createAdapter.invokePointer(arrayOf("Gozar", "Gozar", null))
                 if (adapter != null) {
                     session = startSession.invokePointer(arrayOf(adapter, RING))
                 }
             }
-            if (session == null) {
+            if (session == null || adapter == null) {
                 TunService.note("the wintun session did not start (error " + Native.getLastError() + ")")
                 return null
             }
+            val handle = adapter
+            val ring = session
+            val size = Memory(4)
+            val input = object : InputStream() {
+                override fun read(): Int {
+                    val one = ByteArray(1)
+                    return if (read(one, 0, 1) <= 0) -1 else one[0].toInt() and 0xFF
+                }
+
+                override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
+                    while (true) {
+                        val pointer = try {
+                            receive.invokePointer(arrayOf(ring, size))
+                        } catch (e: Exception) {
+                            null
+                        }
+                        if (pointer != null) {
+                            val total = size.getInt(0)
+                            val take = minOf(length, total)
+                            pointer.read(0, buffer, offset, take)
+                            releasePacket.invoke(arrayOf(ring, pointer))
+                            return take
+                        }
+                        Thread.sleep(1)
+                    }
+                }
+            }
+            val output = object : OutputStream() {
+                override fun write(b: Int) = write(byteArrayOf(b.toByte()), 0, 1)
+
+                override fun write(buffer: ByteArray, offset: Int, length: Int) {
+                    val packet = try {
+                        allocate.invokePointer(arrayOf(ring, length))
+                    } catch (e: Exception) {
+                        null
+                    } ?: return
+                    packet.write(0, buffer, offset, length)
+                    send.invoke(arrayOf(ring, packet))
+                }
+            }
+            TunService.note("windows adapter Gozar is ready")
+            return TunDevice("Gozar", input, output) {
+                try {
+                    endSession.invoke(arrayOf(ring))
+                } catch (e: Exception) {
+                }
+                try {
+                    closeAdapter.invoke(arrayOf(handle))
+                } catch (e: Exception) {
+                }
+            }
         } catch (e: Exception) {
             TunService.note("wintun failed: " + (e.message ?: e.javaClass.simpleName))
-            null
+            return null
         }
     }
 }
