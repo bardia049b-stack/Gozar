@@ -45,10 +45,8 @@ object FoxShield {
     }
 
     private fun solveHost(jar: FoxJar, host: String): Boolean {
-        FoxLog.add("shield", "page $host")
         val page = fetch(jar, host + "/", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8") ?: return false
         if (!page.contains("/_fs-ch-") || !page.contains("Client Challenge")) {
-            FoxLog.add("shield", "no challenge on $host")
             return false
         }
         val matcher = prefix.matcher(page)
@@ -80,11 +78,9 @@ object FoxShield {
             } catch (_: Exception) {
                 return false
             }
-            FoxLog.add("shield", "post-back round=$round ${back.optString("status")}")
             if (back.optString("status") == "success") {
                 val probe = fetch(jar, host + "/", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
                 val ok = probe != null && !probe.contains("Client Challenge") && jar.header().isNotEmpty()
-                FoxLog.add("shield", "cookie accepted=$ok")
                 return ok
             }
             val next = back.optJSONArray("ch") ?: return false

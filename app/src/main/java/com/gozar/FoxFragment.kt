@@ -117,7 +117,6 @@ class FoxFragment : Fragment() {
 
     private fun disconnect() {
         val c = requireContext()
-        FoxLog.add("link", "disconnect from the card")
         FoxVpnService.stop(c)
         FoxLink.stop()
         render()
@@ -176,7 +175,7 @@ class FoxFragment : Fragment() {
         val mail = FoxStore.email(c)
         val signed = Fox.signedIn(c)
         val live = FoxLink.connected
-        val busy = FoxLink.connecting || (FoxVpnService.isAlive() && !live)
+        val busy = FoxLink.connecting || (FoxVpnService.isAlive() && !live && FoxLink.error.isEmpty())
 
         account.text = if (mail.isEmpty()) getString(R.string.fox_signed_out) else mail
 

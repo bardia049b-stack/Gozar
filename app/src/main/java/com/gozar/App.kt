@@ -6,7 +6,7 @@ import androidx.appcompat.app.AppCompatDelegate
 class App : Application() {
     override fun onCreate() {
         super.onCreate()
-        Crash.install(this)
+        deleteFile("last-crash.txt")
         AppCompatDelegate.setDefaultNightMode(nightModeOf(Store.theme(this)))
         UpdateChecker.schedule(this)
         UpdateChecker.check(this)

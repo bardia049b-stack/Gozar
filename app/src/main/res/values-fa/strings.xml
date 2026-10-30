@@ -260,6 +260,7 @@ AGPL-3.0-or-later</string>
     <string name="fox_measure_all">پینگ همه</string>
     <string name="fox_create_toggle">ساخت حساب جدید فایرفاکس</string>
     <string name="fox_create">ساخت حساب</string>
+    <string name="fox_secure_connection_error">اتصال امن به سرور VPN تأیید نشد. تاریخ و ساعت دستگاه را بررسی کنید یا شبکهٔ دیگری را امتحان کنید. برای قطع، دکمه را بزنید.</string>
     <string name="fox_no_device">اندروید اجازه‌ی باز کردن دستگاه تانل را نداد</string>
     <string name="fox_email_bad">یک ایمیل معتبر وارد کنید</string>
     <string name="fox_password_bad">رمز باید حداقل ۸ کاراکتر باشد</string>

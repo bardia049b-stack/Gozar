@@ -24,8 +24,8 @@ jobs:
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" "platform-tools"
       - uses: gradle/actions/setup-gradle@v4
-      - name: Test Android sign-in interface
-        run: bash ./gradlew :app:testDebugUnitTest --no-daemon
+      - name: Test Android security, tunnel and interface
+        run: bash ./gradlew :core:test :app:testDebugUnitTest --no-daemon
       - name: Signing key
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -42,6 +42,20 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: bash ./gradlew assembleRelease --no-daemon --stacktrace
+      - name: Verify Android signing identity
+        run: |
+          set -e
+          expected=bc9d3368f2671175f81be047a1ff72bca0cfc58e8b1b8f9f87e24694ba45f5b1
+          for apk in app/build/outputs/apk/release/*.apk; do
+            test -s "$apk"
+            info=$("$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$apk")
+            printf '%s\n' "$info" | grep -Fx 'Number of signers: 1' >/dev/null
+            actual=$(printf '%s\n' "$info" | awk '/Signer #1 certificate SHA-256 digest:/ {print $NF}')
+            if [ "$actual" != "$expected" ]; then
+              echo "::error::Android signing certificate does not match the official Gozar key"
+              exit 1
+            fi
+          done
       - name: Collect APKs
         run: |
           set -e
@@ -232,6 +246,10 @@ jobs:
           printf '%s\n' "$GPG_PRIVATE_KEY" > "$RUNNER_TEMP/gpg.asc"
           gpg --batch --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" --import "$RUNNER_TEMP/gpg.asc"
           FPR=$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr/ {print $10; exit}')
+          if [ "$FPR" != '4C83608102387A6EFFEB12E181A19769C40808F7' ]; then
+            echo "::error::OpenPGP signing key does not match the published Gozar key"
+            exit 1
+          fi
           gpg --armor --export "$FPR" > collected/gozar-public-key.asc
       - name: Sign archives and APKs
         env:
@@ -260,7 +278,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: ${{ format('Gozar Desktop {0}', steps.version.outputs.desktop) }}
+          name: ${{ format('Gozar Android {0} / Desktop {1}', steps.version.outputs.android, steps.version.outputs.desktop) }}
           body_path: ${{ runner.temp }}/notes.md
           make_latest: true
           files: collected/*
@@ -285,6 +303,7 @@ jobs:
             cmp "$f" "$RUNNER_TEMP/published/$name"
           done
       - name: Keep one release
+        if: github.ref_name != 'v1.8.7-desktop'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

@@ -23,11 +23,12 @@ object FoxLink {
 
     private var socks: FoxProxy? = null
     private var web: FoxProxy? = null
+    private val stateLock = Any()
+    private var generation = 0L
     private val main = Handler(Looper.getMainLooper())
     private var lastDown = 0L
     private var lastUp = 0L
     private var lastAt = 0L
-    private var lastReport = 0L
     private var ticker: Thread? = null
 
     var onChange: (() -> Unit)? = null
@@ -46,39 +47,50 @@ object FoxLink {
     }
 
     fun start(c: Context) {
-        if (connected || connecting) return
         val app = c.applicationContext
-        connecting = true
-        error = ""
+        val attempt = synchronized(stateLock) {
+            if (connected || connecting) return
+            generation += 1
+            connecting = true
+            error = ""
+            generation
+        }
         tick()
         thread {
             try {
-                FoxLog.add("link", "connect start, account=" + FoxStore.email(app))
                 FoxRoute.apply(Store.bypassLan(app), Store.bypassList(app))
                 FoxRoute.applyChain(Store.chain(app))
                 val access = Fox.validAccess(app)
-                FoxLog.secret("access", access)
+                if (!current(attempt)) return@thread
                 var pass = FoxApi.pass(access)
+                if (!current(attempt)) return@thread
                 FoxStore.saveUsage(app, pass)
-                if (Fox.servers.isEmpty()) Fox.servers = FoxApi.servers()
+                if (Fox.servers.isEmpty()) {
+                    val servers = FoxApi.servers()
+                    if (!current(attempt)) return@thread
+                    Fox.servers = servers
+                }
                 val chosen = Fox.selectedLocation(app) ?: throw FoxError("No server available")
-                FoxLog.add("link", "server=" + chosen.host + ":" + chosen.port + " quota=" + pass.remaining + "/" + pass.limit)
                 val lower = pass.limit > 0 && pass.remaining <= 0
                 if (lower) throw FoxError("Your 50 GB for this month is used up")
-                location = chosen
-                socks = FoxProxy(SOCKS_PORT) { FoxStore.pass(app).ifEmpty { null } }
-                web = FoxProxy(WEB_PORT) { FoxStore.pass(app).ifEmpty { null } }
-                if (socks?.start() != true || web?.start() != true) {
-                    throw FoxError("The local proxy did not start")
+                synchronized(stateLock) {
+                    if (attempt != generation) return@thread
+                    location = chosen
+                    socks = FoxProxy(SOCKS_PORT) { FoxStore.pass(app).ifEmpty { null } }
+                    web = FoxProxy(WEB_PORT) { FoxStore.pass(app).ifEmpty { null } }
+                    if (socks?.start() != true || web?.start() != true) {
+                        throw FoxError("The local proxy did not start")
+                    }
                 }
-                FoxLog.add("link", "proxy on ${FoxLink.SOCKS_PORT}/${FoxLink.WEB_PORT}")
-                exitIp = try {
+                val detected = try {
                     FoxTunnel.probe(chosen, pass.token)
                 } catch (e: Exception) {
+                    if (FoxTunnel.isTlsFailure(e)) throw e
                     val reason = e.message ?: ""
-                    FoxLog.add("link", "probe failed: " + reason)
                     if (reason.contains("rejected the pass") || reason.contains("pass was refused") || reason.contains("no status")) {
+                        if (!current(attempt)) return@thread
                         pass = FoxApi.pass(Fox.validAccess(app))
+                        if (!current(attempt)) return@thread
                         FoxStore.saveUsage(app, pass)
                         FoxTunnel.probe(chosen, pass.token)
                     } else if (reason.contains("allowance") || reason.contains("region") || reason.contains("access") || reason.contains("rejected") || reason.contains("closed the connection")) {
@@ -87,36 +99,50 @@ object FoxLink {
                         ""
                     }
                 }
-                FoxLog.add("link", "connected, exit=" + exitIp)
-                connected = true
-                connecting = false
-                since = System.currentTimeMillis()
-                down = 0L
-                up = 0L
-                error = ""
-                startTicker()
+                synchronized(stateLock) {
+                    if (attempt != generation) return@thread
+                    exitIp = detected
+                    connected = true
+                    connecting = false
+                    since = System.currentTimeMillis()
+                    down = 0L
+                    up = 0L
+                    error = ""
+                    startTicker()
+                }
                 tick()
             } catch (e: Exception) {
-                connected = false
-                connecting = false
-                error = e.message ?: "Could not connect"
-                stopServers()
+                synchronized(stateLock) {
+                    if (attempt != generation) return@thread
+                    connected = false
+                    connecting = false
+                    error = if (FoxTunnel.isTlsFailure(e)) {
+                        app.getString(R.string.fox_secure_connection_error)
+                    } else {
+                        e.message ?: "Could not connect"
+                    }
+                    stopServers()
+                }
                 tick()
             }
         }
     }
 
+    private fun current(attempt: Long): Boolean = synchronized(stateLock) { attempt == generation }
+
     fun stop() {
-        FoxLog.add("link", "disconnect")
-        stopServers()
-        connected = false
-        connecting = false
-        exitIp = ""
-        downRate = 0.0
-        upRate = 0.0
-        since = 0L
-        error = ""
-        stopTicker()
+        synchronized(stateLock) {
+            generation += 1
+            stopServers()
+            connected = false
+            connecting = false
+            exitIp = ""
+            downRate = 0.0
+            upRate = 0.0
+            since = 0L
+            error = ""
+            stopTicker()
+        }
         tick()
     }
 
@@ -141,16 +167,10 @@ object FoxLink {
                 }
                 if (!FoxVpnService.isAlive()) {
                     error = "The system closed the tunnel"
-                    FoxLog.add("link", "the vpn service is gone, resetting")
                     stop()
                     break
                 }
                 val now = System.currentTimeMillis()
-                if (now - lastReport > 20000L) {
-                    FoxLog.add("link", "traffic down=" + fmtBytes(down) + " up=" + fmtBytes(up) +
-                        " rate=" + fmtSpeed(downRate) + "/" + fmtSpeed(upRate))
-                    lastReport = now
-                }
                 val span = (now - lastAt).coerceAtLeast(1)
                 downRate = (down - lastDown) * 1000.0 / span
                 upRate = (up - lastUp) * 1000.0 / span

@@ -10,6 +10,16 @@ use native forms; supported Mozilla security checks and image challenges appear 
 account password is not saved; access and refresh tokens are kept in a local configuration file
 rather than an OS keychain.
 
+Android adds the GlobalSign E46 and R46 roots only for fastly-masque.net and its subdomains,
+while continuing to verify certificate chains and server hostnames. Its HTTP/2 and HTTP/1.1
+CONNECT paths and packet handling have loopback and in-memory tests. The trust-store change has
+not yet been verified on a physical Android 13 device or with a real Firefox account. The app
+does not keep its previous in-memory diagnostics or crash file.
+
+For a separate local Android test installation, build with `-PgozarDiagnostic`. This uses the
+`com.gozar.diagnostic` package and a separate app data directory. Without the official signing
+credentials, a local build is not an update to the official Gozar installation.
+
 Desktop builds are archives containing the application and its runtime libraries; they are not
 MSI, DMG, or DEB installers. The Windows build contains Wintun. The desktop tunnel configures a
 TUN interface and uses a userspace network stack; it needs administrator privileges. On Windows,

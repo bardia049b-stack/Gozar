@@ -20,9 +20,24 @@ class FoxDuplex(
     private val lock = Object()
     private var sendWindow = 65535L
     private var connectionWindow = 65535L
+    private var pending = ByteArray(0)
+    private var pendingOffset = 0
+    private var ended = false
 
     override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
         if (!h2) return input.read(buffer, offset, length)
+        if (length == 0) return 0
+        if (pendingOffset < pending.size) {
+            val take = minOf(pending.size - pendingOffset, length)
+            System.arraycopy(pending, pendingOffset, buffer, offset, take)
+            pendingOffset += take
+            if (pendingOffset == pending.size) {
+                pending = ByteArray(0)
+                pendingOffset = 0
+            }
+            return take
+        }
+        if (ended) return -1
         while (true) {
             val header = ByteArray(9)
             if (!fill(header)) return -1
@@ -36,18 +51,23 @@ class FoxDuplex(
             if (size > 0 && !fill(payload)) return -1
             when (type) {
                 0x00 -> if (id == streamId) {
+                    if (flags and 0x01 != 0) ended = true
                     if (size > 0) {
                         grow(size)
                         val take = minOf(size, length)
                         System.arraycopy(payload, 0, buffer, offset, take)
                         if (take < size) {
-                            return take
+                            pending = payload
+                            pendingOffset = take
                         }
                         return take
                     }
-                    if (flags and 0x01 != 0) return -1
+                    if (ended) return -1
                 }
-                0x01 -> if (id == streamId && flags and 0x01 != 0) return -1
+                0x01 -> if (id == streamId && flags and 0x01 != 0) {
+                    ended = true
+                    return -1
+                }
                 0x03, 0x07 -> return -1
                 0x04 -> if (flags and 0x01 == 0) send(frame(0x04, 0x01, 0, ByteArray(0)))
                 0x06 -> if (flags and 0x01 == 0) send(frame(0x06, 0x01, 0, payload))
@@ -168,7 +188,6 @@ object FoxTunnel {
         val overH2 = if (System.currentTimeMillis() < h2DownUntil) null else try {
             openH2(location, host, port, pass, timeout)
         } catch (e: Exception) {
-            FoxLog.add("tunnel", "h2 failed: " + (e.message ?: e.javaClass.simpleName))
             h2DownUntil = System.currentTimeMillis() + 600000
             firstError = e
             null
@@ -177,87 +196,111 @@ object FoxTunnel {
         return try {
             openH1(location, host, port, pass, timeout)
         } catch (e: Exception) {
-            FoxLog.add("tunnel", "h1 failed: " + (e.message ?: e.javaClass.simpleName))
+            if (isTlsFailure(e)) throw e
             throw firstError ?: e
         }
+    }
+
+    fun isTlsFailure(error: Throwable): Boolean {
+        val seen = HashSet<Throwable>()
+        var current: Throwable? = error
+        while (current != null && seen.add(current)) {
+            if (current is javax.net.ssl.SSLException ||
+                current is java.security.cert.CertificateException ||
+                current is java.security.cert.CertPathValidatorException) return true
+            current = current.cause
+        }
+        return false
     }
 
     private fun authority(host: String, port: Int) = "$host:$port"
 
     private fun openH1(location: FoxLocation, host: String, port: Int, pass: String, timeout: Int): FoxDuplex {
         val socket = connect(location, arrayOf("http/1.1"), timeout)
-        val target = authority(host, port)
-        val output = BufferedOutputStream(socket.outputStream)
-        val request = "CONNECT $target HTTP/1.1\r\nHost: $target\r\nProxy-Authorization: Bearer $pass\r\n" +
-            "User-Agent: $AGENT\r\n\r\n"
-        output.write(request.toByteArray(Charsets.UTF_8))
-        output.flush()
-        FoxLog.add("tunnel", "h1 CONNECT $target ${location.host}:${location.port}")
-        val input = BufferedInputStream(socket.inputStream)
-        val (status, headers) = response(input)
-        FoxLog.add("tunnel", "h1 → $status " + headers.entries.joinToString(" ") { it.key + "=" + it.value.take(40) })
-        if (status == 200) {
-            socket.soTimeout = 0
-            return FoxDuplex(socket, input, output, false, 1)
+        try {
+            val target = authority(host, port)
+            val output = BufferedOutputStream(socket.outputStream)
+            val request = "CONNECT $target HTTP/1.1\r\nHost: $target\r\nProxy-Authorization: Bearer $pass\r\n" +
+                "User-Agent: $AGENT\r\n\r\n"
+            output.write(request.toByteArray(Charsets.UTF_8))
+            output.flush()
+            val input = BufferedInputStream(socket.inputStream)
+            val (status, headers) = response(input)
+            if (status == 200) {
+                socket.soTimeout = 0
+                return FoxDuplex(socket, input, output, false, 1)
+            }
+            socket.close()
+            throw java.io.IOException(reason(status, headers))
+        } catch (e: Exception) {
+            try {
+                socket.close()
+            } catch (_: Exception) {
+            }
+            throw e
         }
-        socket.close()
-        throw java.io.IOException(reason(status, headers))
     }
 
     private fun openH2(location: FoxLocation, host: String, port: Int, pass: String, timeout: Int): FoxDuplex {
         val socket = connect(location, arrayOf("h2"), timeout)
-        val output = BufferedOutputStream(socket.outputStream)
-        val target = authority(host, port)
-        output.write("PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".toByteArray(Charsets.US_ASCII))
-        output.write(frame(0x04, 0, 0, settings()))
-        val block = ByteArrayOutputStream()
-        block.write(pair(":method", "CONNECT"))
-        block.write(pair(":authority", target))
-        block.write(pair("proxy-authorization", "Bearer $pass"))
-        block.write(pair("user-agent", AGENT))
-        output.write(frame(0x01, 0x04, 1, block.toByteArray()))
-        output.flush()
-        FoxLog.add("tunnel", "h2 CONNECT $target ${location.host}:${location.port}")
+        try {
+            val output = BufferedOutputStream(socket.outputStream)
+            val target = authority(host, port)
+            output.write("PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".toByteArray(Charsets.US_ASCII))
+            output.write(frame(0x04, 0, 0, settings()))
+            val block = ByteArrayOutputStream()
+            block.write(pair(":method", "CONNECT"))
+            block.write(pair(":authority", target))
+            block.write(pair("proxy-authorization", "Bearer $pass"))
+            block.write(pair("user-agent", AGENT))
+            output.write(frame(0x01, 0x04, 1, block.toByteArray()))
+            output.flush()
 
-        val input = BufferedInputStream(socket.inputStream)
-        val deadline = System.currentTimeMillis() + timeout
-        while (System.currentTimeMillis() < deadline) {
-            val header = ByteArray(9)
-            if (!readFully(input, header)) throw java.io.IOException("the proxy closed the connection")
-            val size = ((header[0].toInt() and 0xFF) shl 16) or ((header[1].toInt() and 0xFF) shl 8) or
-                (header[2].toInt() and 0xFF)
-            val type = header[3].toInt() and 0xFF
-            val flags = header[4].toInt() and 0xFF
-            val id = ((header[5].toInt() and 0x7F) shl 24) or ((header[6].toInt() and 0xFF) shl 16) or
-                ((header[7].toInt() and 0xFF) shl 8) or (header[8].toInt() and 0xFF)
-            val payload = ByteArray(size)
-            if (size > 0 && !readFully(input, payload)) throw java.io.IOException("the proxy closed the connection")
-            when (type) {
-                0x04 -> if (flags and 0x01 == 0) {
-                    output.write(frame(0x04, 0x01, 0, ByteArray(0)))
-                    output.flush()
-                }
-                0x06 -> if (flags and 0x01 == 0) {
-                    output.write(frame(0x06, 0x01, 0, payload))
-                    output.flush()
-                }
-                0x01 -> {
-                    if (id != 1) continue
-                    val status = status(payload)
-                    FoxLog.add("tunnel", "h2 → status=$status")
-                    if (status == 200) {
-                        socket.soTimeout = 0
-                        return FoxDuplex(socket, input, output, true, 1)
+            val input = BufferedInputStream(socket.inputStream)
+            val deadline = System.currentTimeMillis() + timeout
+            while (System.currentTimeMillis() < deadline) {
+                val header = ByteArray(9)
+                if (!readFully(input, header)) throw java.io.IOException("the proxy closed the connection")
+                val size = ((header[0].toInt() and 0xFF) shl 16) or ((header[1].toInt() and 0xFF) shl 8) or
+                    (header[2].toInt() and 0xFF)
+                val type = header[3].toInt() and 0xFF
+                val flags = header[4].toInt() and 0xFF
+                val id = ((header[5].toInt() and 0x7F) shl 24) or ((header[6].toInt() and 0xFF) shl 16) or
+                    ((header[7].toInt() and 0xFF) shl 8) or (header[8].toInt() and 0xFF)
+                val payload = ByteArray(size)
+                if (size > 0 && !readFully(input, payload)) throw java.io.IOException("the proxy closed the connection")
+                when (type) {
+                    0x04 -> if (flags and 0x01 == 0) {
+                        output.write(frame(0x04, 0x01, 0, ByteArray(0)))
+                        output.flush()
                     }
-                    socket.close()
-                    throw java.io.IOException(reason(status, mapOf()))
+                    0x06 -> if (flags and 0x01 == 0) {
+                        output.write(frame(0x06, 0x01, 0, payload))
+                        output.flush()
+                    }
+                    0x01 -> {
+                        if (id != 1) continue
+                        val status = status(payload)
+                        if (status == 200) {
+                            socket.soTimeout = 0
+                            return FoxDuplex(socket, input, output, true, 1)
+                        }
+                        socket.close()
+                        throw java.io.IOException(reason(status, mapOf()))
+                    }
+                    0x03 -> throw java.io.IOException("the proxy reset the tunnel (${code(payload)})")
+                    0x07 -> throw java.io.IOException("the proxy closed the connection (${code(payload)})")
                 }
-                0x03 -> throw java.io.IOException("the proxy reset the tunnel (${code(payload)})")
-                0x07 -> throw java.io.IOException("the proxy closed the connection (${code(payload)})")
             }
+            socket.close()
+            throw java.io.IOException("the proxy did not answer in time")
+        } catch (e: Exception) {
+            try {
+                socket.close()
+            } catch (_: Exception) {
+            }
+            throw e
         }
-        socket.close()
-        throw java.io.IOException("the proxy did not answer in time")
     }
 
     fun probe(location: FoxLocation, pass: String): String {
@@ -280,7 +323,6 @@ object FoxTunnel {
             }
             val text = out.toString("UTF-8")
             val body = text.substringAfter("\r\n\r\n", "").trim()
-            FoxLog.add("tunnel", "probe read " + out.size() + "b: " + body.take(80))
             return body.lines().firstOrNull { it.isNotBlank() }?.trim()?.take(64) ?: ""
         } finally {
             tunnel.close()
@@ -289,16 +331,29 @@ object FoxTunnel {
 
     private fun connect(location: FoxLocation, protocols: Array<String>, timeout: Int): SSLSocket {
         val raw = chain(location.host, location.port, timeout)
-        raw.soTimeout = timeout
-        val tls = (SSLSocketFactory.getDefault() as SSLSocketFactory)
-            .createSocket(raw, location.host, location.port, true) as SSLSocket
-        tls.sslParameters = tls.sslParameters.apply {
-            applicationProtocols = protocols
-            serverNames = listOf(javax.net.ssl.SNIHostName(location.host))
+        var tls: SSLSocket? = null
+        try {
+            raw.soTimeout = timeout
+            tls = (SSLSocketFactory.getDefault() as SSLSocketFactory)
+                .createSocket(raw, location.host, location.port, true) as SSLSocket
+            tls.sslParameters = tls.sslParameters.apply {
+                applicationProtocols = protocols
+                serverNames = listOf(javax.net.ssl.SNIHostName(location.host))
+                endpointIdentificationAlgorithm = "HTTPS"
+            }
+            tls.startHandshake()
+            return tls
+        } catch (e: Exception) {
+            try {
+                tls?.close()
+            } catch (_: Exception) {
+            }
+            try {
+                raw.close()
+            } catch (_: Exception) {
+            }
+            throw e
         }
-        tls.startHandshake()
-        FoxLog.add("tunnel", "tls alpn=" + (tls.applicationProtocol ?: "none") + " want=" + protocols.joinToString(","))
-        return tls
     }
 
     private fun chain(host: String, port: Int, timeout: Int): Socket {
@@ -312,13 +367,10 @@ object FoxTunnel {
             for (index in 1 until hops.size) {
                 val hop = hops[index]
                 hopTo(raw, hops[index - 1].type, hop.host, hop.port)
-                FoxLog.add("chain", "hop " + hop.label)
             }
             hopTo(raw, hops.last().type, host, port)
-            FoxLog.add("chain", "exit " + host + ":" + port + " through " + hops.size + " hop(s)")
             return raw
         } catch (e: Exception) {
-            FoxLog.add("chain", "failed: " + (e.message ?: e.javaClass.simpleName))
             try {
                 raw.close()
             } catch (ignored: Exception) {

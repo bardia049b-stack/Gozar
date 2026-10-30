@@ -32,9 +32,7 @@ object FoxNet {
         timeout: Int = 25000
     ): FoxReply {
         if (url.startsWith(AUTH) && jar.header().isEmpty()) FoxShield.solve(jar)
-        FoxLog.add("http", "$method $url" + (if (body != null) " body=${body.length}b" else ""))
         var reply = once(url, method, body, headers, timeout)
-        FoxLog.add("http", "→ ${reply.code} ${reply.body.length}b ${snippet(reply)}")
         var round = 0
         while (reply.code == 406 && round < 4) {
             round++
@@ -45,17 +43,10 @@ object FoxNet {
                 "https://accounts.firefox.com"
             }
             val solved = FoxShield.solve(jar, origin)
-            FoxLog.add("shield", "406 → solve($origin)=" + solved + " cookies=" + jar.header().length + "b")
             if (!solved) break
             reply = once(url, method, body, headers, timeout)
-            FoxLog.add("http", "retry → ${reply.code} ${reply.body.length}b ${snippet(reply)}")
         }
         return reply
-    }
-
-    private fun snippet(reply: FoxReply): String {
-        val body = reply.body.trim()
-        return if (body.isEmpty()) "" else body.take(160)
     }
 
     private fun once(

@@ -260,6 +260,7 @@ AGPL-3.0-or-later</string>
     <string name="fox_measure_all">Measure all</string>
     <string name="fox_create_toggle">Create a new Firefox account</string>
     <string name="fox_create">Create account</string>
+    <string name="fox_secure_connection_error">Could not verify the VPN server’s secure connection. Check your device’s date and time or try another network. Tap to disconnect.</string>
     <string name="fox_no_device">Android refused to open the tunnel device</string>
     <string name="fox_email_bad">Enter a valid email address</string>
     <string name="fox_password_bad">Password must be at least 8 characters</string>

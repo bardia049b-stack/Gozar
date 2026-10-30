@@ -101,7 +101,6 @@ object Fox {
 
     fun signUp(c: Context, mail: String, password: String) {
         val clean = mail.trim()
-        FoxLog.add("auth", "sign up $clean")
         work(c, R.string.fox_stage_signup) {
             val session = try {
                 FoxApi.register(clean, password)
@@ -177,7 +176,6 @@ object Fox {
 
     fun signIn(c: Context, mail: String, password: String) {
         val clean = mail.trim()
-        FoxLog.add("auth", "sign in $clean")
         work(c, R.string.fox_stage_signin) {
             signInNow(c.applicationContext, clean, password, false)
         }
@@ -235,15 +233,12 @@ object Fox {
 
     private fun finish(c: Context, sessionToken: String, uid: String, mail: String, password: String) {
         say(c, R.string.fox_stage_pass)
-        FoxLog.add("auth", "verified, getting the OAuth token")
         val tokens = FoxApi.tokens(sessionToken)
-        FoxLog.secret("oauth", tokens.access)
         FoxStore.saveAccount(c, mail, uid, tokens)
         step = STEP_NONE
         byLink = false
         pendingPassword = ""
         val pass = FoxApi.pass(tokens.access)
-        FoxLog.add("auth", "guardian pass ok, quota=" + pass.remaining + "/" + pass.limit)
         FoxStore.saveUsage(c, pass)
         message = ""
     }

@@ -73,7 +73,6 @@ class FoxVpnService : VpnService() {
         val fd = try {
             builder.establish()
         } catch (e: Exception) {
-            FoxLog.add("vpn", "cannot open the tunnel device: " + (e.message ?: "unknown"))
             null
         }
         if (fd == null) {
@@ -97,12 +96,10 @@ class FoxVpnService : VpnService() {
         )
         engine.start()
         stack = engine
-        FoxLog.add("vpn", "device open, routes and dns are live")
         FoxLink.start(this)
     }
 
     override fun onRevoke() {
-        FoxLog.add("vpn", "another vpn took over")
         close()
         super.onRevoke()
     }
@@ -115,7 +112,6 @@ class FoxVpnService : VpnService() {
     }
 
     private fun close() {
-        FoxLog.add("vpn", "closing the device")
         release()
         try {
             stopForeground(STOP_FOREGROUND_REMOVE)

@@ -232,7 +232,6 @@ object FoxApi {
             ""
         }
         if (token.isEmpty()) throw FoxError("Mozilla did not return a proxy pass", status = reply.code)
-        FoxLog.secret("guardian", token)
         val usage = quota(reply) ?: FoxPass(token, 0, 0, "")
         return FoxPass(token, usage.limit, usage.remaining, usage.reset)
     }

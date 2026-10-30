@@ -30,36 +30,63 @@ rows = [
     ('**Linux**', badge('TAR.XZ', 'amd64', 'e36209', 'linux', 'Gozar-Linux-amd64.tar.xz')),
 ]
 
-print(f'# Gozar Desktop {version}')
+print(f'# Gozar Android {android} / Desktop {version}')
 print()
-print(f'Firefox-only Gozar for Android {android}, Windows, macOS and Linux.')
+print('Firefox-only Gozar for Android, Windows, macOS and Linux.')
 print()
 print('| System | Download |')
 print('|:--:|:--:|')
 for name, downloads in rows:
     print(f'| {name} | {downloads} |')
 print()
-print('### What changed')
+print('### Android: certificate error on some Android 13 devices')
 print()
-print('- Desktop DNS now uses HTTPS through the Firefox proxy, rather than the unsupported DNS port 53.')
-print('- Unsupported UDP is refused, allowing compatible browsers to fall back from QUIC to TCP.')
-print('- Windows routing commands run without opening console windows.')
-print('- Android sign-in keeps its fields visible and locked while a spinner appears inside the button.')
-print('- Android language selection remains on sign-in and in Settings, not on the home header.')
-print('- Desktop keeps its native Flutter Material 3 interface and Go core; no JVM is bundled.')
+print('Some devices may report `Trust anchor for certification path not found` when connecting to a Firefox VPN server. '
+      'A likely cause is that an older Android system certificate store does not contain the GlobalSign root used by the server. '
+      'A public Fastly VPN server was observed using GlobalSign Root E46; device and server certificate chains can vary.')
+print()
+print('This release adds the verified GlobalSign E46 and R46 roots alongside Android system roots, '
+      'only for `fastly-masque.net` and its subdomains. Certificate-chain and HTTPS hostname verification remain enabled. '
+      'TLS failures during the connection probe are shown as errors instead of being reported as a successful connection. '
+      'The Android HTTP/2 tunnel also retains data when a frame is larger than a read buffer, and the previous diagnostic and crash logging has been removed.')
+print()
+print('**This is an attempted fix, not a confirmed solution.** It was checked with public certificate chains and local tunnel simulations, '
+      'but not on the affected physical Android 13 device or with a real Firefox account. '
+      'Another certificate chain, an incorrect device date, network interception, or a future VPN server on a different base domain could still cause the error. '
+      'The added roots do not apply to unrelated domains.')
+print()
+print('If the problem continues, check the device date and time, try another network or server, and report the Android version, device model and exact error. '
+      'Please do not share passwords, access tokens or screenshots containing credentials.')
+print()
+print('### Windows: Wi-Fi icon may say “No Internet”')
+print()
+print('While Gozar is connected, Windows may display “No Internet” on the Wi-Fi or network icon even when websites continue to work. '
+      'Windows determines that icon using its Network Connectivity Status Indicator (NCSI) probes. '
+      'With virtual VPN interfaces such as Wintun, routing, DNS or probe settings can cause the indicator to disagree with actual connectivity. '
+      'This can be a cosmetic status-detection behavior and does not, by itself, mean your internet connection is down.')
+print()
+print('Open a website or test an application to check the connection. If traffic also fails, there may be a genuine network or VPN problem. '
+      'This release does not change Windows routing and does not claim to fix the icon.')
+print()
+print('### Other information')
+print()
+print('- Desktop DNS uses HTTPS through the Firefox proxy; unsupported non-DNS UDP is refused so compatible apps can fall back to TCP.')
+print('- Windows routing commands run without opening console windows. The desktop interface uses Flutter and a Go core, without a JVM.')
+print('- Android sign-in keeps its fields visible and locked while a spinner appears inside the button. Language selection remains on sign-in and in Settings.')
 print()
 print('### Install')
 print()
-print('- **Android**: install the universal APK or the file named for your device. The APKs contain no native ABI-specific libraries and may be identical.')
+print('- **Android**: install the universal APK or the file named for your device. The APKs contain no ABI-specific native libraries and may be identical.')
 print('- **Windows**: extract the ZIP and run `gozar.exe`. Keep all extracted files together. Administrator permission is requested for TUN.')
 print('- **macOS**: extract with `tar -xJf ARCHIVE.tar.xz` and open `Gozar.app`. The app is ad-hoc signed, not notarized.')
 print('- **Linux**: extract the archive, keep the bundle together, and launch with the permissions needed for TUN.')
 print()
 print('### Important limitations')
 print()
-print('The desktop tunnel and real Firefox account login and registration have not been verified live in this build. '
-      'Mozilla may present an unsupported challenge or refuse a request. IPv6 can bypass the tunnel, and UDP other than DNS is not supported. '
-      'Mozilla also restricts destination ports. Do not rely on this experimental tunnel for privacy or complete device-wide coverage.')
+print('The desktop tunnel has not been independently verified on a live connection in this build. '
+      'Mozilla may present an unsupported authentication challenge or refuse a request. '
+      'IPv6 can bypass the tunnel, and UDP other than DNS is not supported. Mozilla also restricts destination ports. '
+      'Do not rely on this experimental tunnel for privacy or complete device-wide coverage.')
 print()
 print('Desktop routing rules, per-app routing, proxy chains, tunnel-in-tunnel, the route map and automatic updates are not implemented. '
       'Access and refresh tokens are stored in a local configuration file, not the OS keychain. '

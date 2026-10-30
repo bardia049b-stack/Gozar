@@ -1,0 +1,430 @@
+package com.gozar
+
+import java.io.BufferedInputStream
+import java.io.ByteArrayOutputStream
+import java.io.Closeable
+import java.io.EOFException
+import java.io.InputStream
+import java.net.InetAddress
+import java.net.ServerSocket
+import java.net.Socket
+import java.net.SocketException
+import java.security.KeyStore
+import java.security.SecureRandom
+import java.security.cert.CertificateFactory
+import java.util.Collections
+import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.TimeUnit
+import javax.net.ssl.KeyManagerFactory
+import javax.net.ssl.SSLContext
+import javax.net.ssl.SSLException
+import javax.net.ssl.SSLSocket
+import javax.net.ssl.TrustManagerFactory
+import kotlin.concurrent.thread
+import org.junit.After
+import org.junit.Assert.assertArrayEquals
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
+import org.junit.Before
+import org.junit.Test
+
+class FoxTunnelTest {
+    private lateinit var originalContext: SSLContext
+    private lateinit var originalHops: List<FoxHop>
+
+    @Before
+    fun prepare() {
+        originalContext = SSLContext.getDefault()
+        originalHops = FoxUpstream.hops
+        SSLContext.setDefault(clientContext("test-ca.pem"))
+        resetH2()
+    }
+
+    @After
+    fun restore() {
+        SSLContext.setDefault(originalContext)
+        FoxUpstream.hops = originalHops
+        resetH2()
+    }
+
+    @Test
+    fun h2TunnelAuthenticatesAndPreservesLargeFramesAcrossSmallReads() {
+        LocalProxy().use { proxy ->
+            val reply = exchange(proxy)
+            assertArrayEquals(proxy.reply, reply)
+            assertEquals(listOf("h2"), proxy.protocols.toList())
+            assertEquals("upload-over-tunnel", String(proxy.upload.toByteArray(), Charsets.US_ASCII))
+            assertTrue(proxy.connectHeads.single().contains("CONNECT edge.fastly.invalid:2499"))
+            assertTrue(proxy.authHeads.single().contains("Bearer local-test-only"))
+            assertTrue(proxy.problems.isEmpty())
+        }
+    }
+
+    @Test
+    fun h2FailureFallsBackToVerifiedH1Tunnel() {
+        LocalProxy(rejectH2 = true).use { proxy ->
+            val reply = exchange(proxy)
+            assertArrayEquals(proxy.reply, reply)
+            assertEquals(listOf("h2", "http/1.1"), proxy.protocols.toList())
+            assertTrue(proxy.authHeads.last().contains("Proxy-Authorization: Bearer local-test-only"))
+            assertEquals("upload-over-tunnel", String(proxy.upload.toByteArray(), Charsets.US_ASCII))
+            assertTrue(proxy.problems.isEmpty())
+        }
+    }
+
+    @Test
+    fun packetStackAndVerifiedH2TunnelWorkTogetherWithoutAnOsDevice() {
+        LocalProxy().use { proxy ->
+            val input = PacketInput()
+            val output = PacketOutput()
+            FoxUpstream.hops = listOf(FoxHop("http", "127.0.0.1", proxy.port))
+            val location = FoxLocation("", "", "", "edge.fastly.invalid", 2499, false)
+            val stack = FoxStack(input, output, 0x0a6f0002, FoxResolver(0), { host, port ->
+                FoxTunnel.open(location, host, port, "local-test-only", 4000)
+            }, { _, _ -> })
+            stack.start()
+            try {
+                val sequence = 1000L
+                input.offer(tcp(sequence, 0, 0x02, byteArrayOf()))
+                val synAck = output.next()
+                assertEquals(0x12, synAck[33].toInt() and 0xff)
+                val serverSequence = u32(synAck, 24) + 1
+                input.offer(tcp(sequence + 1, serverSequence, 0x10, byteArrayOf()))
+                val request = "upload-over-tunnel".toByteArray(Charsets.US_ASCII)
+                input.offer(tcp(sequence + 1, serverSequence, 0x18, request))
+                val received = ByteArrayOutputStream()
+                while (received.size() < proxy.reply.size) {
+                    val packet = output.next()
+                    if ((packet[9].toInt() and 0xff) == 6 && packet.size > 40) {
+                        received.write(packet, 40, packet.size - 40)
+                    }
+                }
+                assertArrayEquals(proxy.reply, received.toByteArray())
+                assertEquals("upload-over-tunnel", String(proxy.upload.toByteArray(), Charsets.US_ASCII))
+                assertTrue(proxy.authHeads.single().contains("203.0.113.7:443"))
+                assertTrue(proxy.authHeads.single().contains("Bearer local-test-only"))
+            } finally {
+                stack.stop()
+                input.close()
+            }
+        }
+    }
+
+    @Test
+    fun mismatchedHostnameIsRejectedBeforeAuthorization() {
+        LocalProxy().use { proxy ->
+            val error = failure { open(proxy, "other.fastly.invalid") }
+            assertTrue(FoxTunnel.isTlsFailure(error))
+            assertTrue(proxy.authHeads.isEmpty())
+        }
+    }
+
+    @Test
+    fun unknownRootIsRejectedBeforeAuthorization() {
+        SSLContext.setDefault(clientContext("other-ca.pem"))
+        LocalProxy().use { proxy ->
+            val error = failure { open(proxy) }
+            assertTrue(FoxTunnel.isTlsFailure(error))
+            assertTrue(proxy.authHeads.isEmpty())
+        }
+    }
+
+    @Test
+    fun expiredCertificateIsRejectedBeforeAuthorization() {
+        LocalProxy(alwaysExpired = true).use { proxy ->
+            val error = failure { open(proxy) }
+            assertTrue(FoxTunnel.isTlsFailure(error))
+            assertTrue(proxy.authHeads.isEmpty())
+        }
+    }
+
+    @Test
+    fun fallbackCertificateFailureIsNotHiddenByFirstProtocolError() {
+        LocalProxy(rejectH2 = true, secondExpired = true).use { proxy ->
+            val error = failure { open(proxy) }
+            assertTrue(FoxTunnel.isTlsFailure(error))
+            assertEquals(listOf("h2"), proxy.protocols.toList())
+        }
+    }
+
+    @Test
+    fun classifiesNestedSecurityErrorsWithoutTreatingOrdinaryIoAsTls() {
+        assertTrue(FoxTunnel.isTlsFailure(IllegalStateException("outer", java.security.cert.CertificateException("bad"))))
+        assertFalse(FoxTunnel.isTlsFailure(java.io.IOException("timeout")))
+    }
+
+    private fun exchange(proxy: LocalProxy): ByteArray {
+        val pipe = open(proxy)
+        try {
+            val request = "upload-over-tunnel".toByteArray(Charsets.US_ASCII)
+            pipe.write(request, 0, request.size)
+            val result = ByteArrayOutputStream()
+            val small = ByteArray(137)
+            while (true) {
+                val count = pipe.read(small, 0, small.size)
+                if (count < 0) break
+                result.write(small, 0, count)
+            }
+            return result.toByteArray()
+        } finally {
+            pipe.close()
+        }
+    }
+
+    private fun open(proxy: LocalProxy, name: String = "edge.fastly.invalid"): FoxDuplex {
+        FoxUpstream.hops = listOf(FoxHop("http", "127.0.0.1", proxy.port))
+        val location = FoxLocation("", "", "", name, 2499, false)
+        return FoxTunnel.open(location, "target.example.invalid", 443, "local-test-only", 4000)
+    }
+
+    private fun failure(block: () -> Unit): Exception {
+        try {
+            block()
+            fail("expected a TLS failure")
+        } catch (error: Exception) {
+            return error
+        }
+        throw AssertionError("expected a TLS failure")
+    }
+
+    private fun resetH2() {
+        val field = FoxTunnel::class.java.getDeclaredField("h2DownUntil")
+        field.isAccessible = true
+        field.setLong(null, 0L)
+    }
+
+    private fun clientContext(root: String): SSLContext {
+        val certificate = resource(root).use { CertificateFactory.getInstance("X.509").generateCertificate(it) }
+        val store = KeyStore.getInstance(KeyStore.getDefaultType())
+        store.load(null, null)
+        store.setCertificateEntry("loopback-root", certificate)
+        val trust = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
+        trust.init(store)
+        return SSLContext.getInstance("TLS").apply { init(null, trust.trustManagers, SecureRandom()) }
+    }
+
+    private class LocalProxy(
+        private val rejectH2: Boolean = false,
+        private val alwaysExpired: Boolean = false,
+        private val secondExpired: Boolean = false
+    ) : Closeable {
+        val reply = ByteArray(8000) { (it % 251).toByte() }
+        val upload = ByteArrayOutputStream()
+        val protocols = Collections.synchronizedList(mutableListOf<String>())
+        val connectHeads = Collections.synchronizedList(mutableListOf<String>())
+        val authHeads = Collections.synchronizedList(mutableListOf<String>())
+        val problems = ConcurrentLinkedQueue<Throwable>()
+        private val server = ServerSocket(0, 16, InetAddress.getByName("127.0.0.1"))
+        private val valid = serverContext("server.p12")
+        private val expired = serverContext("expired-server.p12")
+        val port: Int get() = server.localPort
+        private val worker = thread(isDaemon = true, name = "loopback-proxy-test") {
+            var count = 0
+            while (!server.isClosed) {
+                val raw = try {
+                    server.accept()
+                } catch (_: SocketException) {
+                    break
+                }
+                count++
+                try {
+                    raw.use { handle(it, count) }
+                } catch (_: SSLException) {
+                } catch (_: SocketException) {
+                } catch (_: EOFException) {
+                } catch (error: Throwable) {
+                    problems.add(error)
+                }
+            }
+        }
+
+        private fun handle(raw: Socket, count: Int) {
+            raw.soTimeout = 5000
+            val rawInput = BufferedInputStream(raw.getInputStream())
+            connectHeads.add(readHead(rawInput))
+            raw.getOutputStream().apply {
+                write("HTTP/1.1 200 Connection Established\r\n\r\n".toByteArray(Charsets.US_ASCII))
+                flush()
+            }
+            val context = if (alwaysExpired || (secondExpired && count == 2)) expired else valid
+            val socket = context.socketFactory.createSocket(raw, "127.0.0.1", raw.port, true) as SSLSocket
+            socket.use {
+                socket.useClientMode = false
+                socket.sslParameters = socket.sslParameters.apply { applicationProtocols = arrayOf("h2", "http/1.1") }
+                socket.startHandshake()
+                val protocol = socket.applicationProtocol
+                protocols.add(protocol)
+                if (protocol == "h2") h2(socket) else if (protocol == "http/1.1") h1(socket) else error("unexpected ALPN: $protocol")
+            }
+        }
+
+        private fun h2(socket: SSLSocket) {
+            val input = BufferedInputStream(socket.inputStream)
+            val preface = ByteArray(24)
+            readFully(input, preface)
+            check(String(preface, Charsets.US_ASCII) == "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n")
+            check(readFrame(input).first == 4)
+            val headers = readFrame(input)
+            check(headers.first == 1)
+            authHeads.add(String(headers.second, Charsets.UTF_8))
+            val output = socket.outputStream
+            if (rejectH2) {
+                output.write(frame(7, 0, 0, ByteArray(8)))
+                output.flush()
+                return
+            }
+            output.write(frame(4, 0, 0, ByteArray(0)))
+            output.write(frame(1, 4, 1, byteArrayOf(0x88.toByte())))
+            output.flush()
+            while (true) {
+                val data = readFrame(input)
+                if (data.first == 0) {
+                    upload.write(data.second)
+                    break
+                }
+            }
+            output.write(frame(0, 1, 1, reply))
+            output.flush()
+        }
+
+        private fun h1(socket: SSLSocket) {
+            val input = BufferedInputStream(socket.inputStream)
+            authHeads.add(readHead(input))
+            val output = socket.outputStream
+            output.write("HTTP/1.1 200 Connection Established\r\n\r\n".toByteArray(Charsets.US_ASCII))
+            output.flush()
+            val data = ByteArray("upload-over-tunnel".length)
+            readFully(input, data)
+            upload.write(data)
+            output.write(reply)
+            output.flush()
+        }
+
+        override fun close() {
+            server.close()
+            worker.join(2000)
+        }
+    }
+
+    private class PacketInput : InputStream() {
+        private val packets = LinkedBlockingQueue<ByteArray>()
+        fun offer(packet: ByteArray) = packets.put(packet)
+        override fun read(): Int = throw UnsupportedOperationException()
+        override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
+            val packet = packets.poll(5, TimeUnit.SECONDS) ?: return -1
+            if (packet.isEmpty()) return -1
+            System.arraycopy(packet, 0, buffer, offset, packet.size)
+            return packet.size
+        }
+        override fun close() {
+            packets.offer(byteArrayOf())
+        }
+    }
+
+    private class PacketOutput : java.io.OutputStream() {
+        private val packets = LinkedBlockingQueue<ByteArray>()
+        override fun write(value: Int) = throw UnsupportedOperationException()
+        override fun write(buffer: ByteArray, offset: Int, length: Int) {
+            packets.put(buffer.copyOfRange(offset, offset + length))
+        }
+        fun next(): ByteArray = packets.poll(5, TimeUnit.SECONDS) ?: throw AssertionError("no packet returned")
+    }
+
+    companion object {
+        private fun tcp(sequence: Long, acknowledgment: Long, flags: Int, data: ByteArray): ByteArray {
+            val packet = ByteArray(40 + data.size)
+            packet[0] = 0x45
+            packet[8] = 64
+            packet[9] = 6
+            put16(packet, 2, packet.size)
+            byteArrayOf(10, 111, 0, 2).copyInto(packet, 12)
+            byteArrayOf(203.toByte(), 0, 113, 7).copyInto(packet, 16)
+            put16(packet, 20, 40000)
+            put16(packet, 22, 443)
+            put32(packet, 24, sequence)
+            put32(packet, 28, acknowledgment)
+            packet[32] = 0x50
+            packet[33] = flags.toByte()
+            put16(packet, 34, 64000)
+            data.copyInto(packet, 40)
+            return packet
+        }
+
+        private fun put16(data: ByteArray, offset: Int, value: Int) {
+            data[offset] = (value ushr 8).toByte()
+            data[offset + 1] = value.toByte()
+        }
+
+        private fun put32(data: ByteArray, offset: Int, value: Long) {
+            data[offset] = (value ushr 24).toByte()
+            data[offset + 1] = (value ushr 16).toByte()
+            data[offset + 2] = (value ushr 8).toByte()
+            data[offset + 3] = value.toByte()
+        }
+
+        private fun u32(data: ByteArray, offset: Int): Long =
+            ((data[offset].toLong() and 255) shl 24) or ((data[offset + 1].toLong() and 255) shl 16) or
+                ((data[offset + 2].toLong() and 255) shl 8) or (data[offset + 3].toLong() and 255)
+
+        private fun resource(name: String): InputStream =
+            FoxTunnelTest::class.java.getResourceAsStream("/tls/$name") ?: error("missing test resource $name")
+
+        private fun serverContext(name: String): SSLContext {
+            val store = KeyStore.getInstance("PKCS12")
+            resource(name).use { store.load(it, "local-test-only".toCharArray()) }
+            val managers = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
+            managers.init(store, "local-test-only".toCharArray())
+            return SSLContext.getInstance("TLS").apply { init(managers.keyManagers, null, SecureRandom()) }
+        }
+
+        private fun readHead(input: InputStream): String {
+            val out = ByteArrayOutputStream()
+            while (out.size() < 8192) {
+                val c = input.read()
+                if (c < 0) throw EOFException()
+                out.write(c)
+                val bytes = out.toByteArray()
+                if (bytes.size >= 4 && bytes.takeLast(4) == listOf(13.toByte(), 10.toByte(), 13.toByte(), 10.toByte())) {
+                    return String(bytes, Charsets.US_ASCII)
+                }
+            }
+            error("header too long")
+        }
+
+        private fun readFully(input: InputStream, data: ByteArray) {
+            var position = 0
+            while (position < data.size) {
+                val size = input.read(data, position, data.size - position)
+                if (size < 0) throw EOFException()
+                position += size
+            }
+        }
+
+        private fun readFrame(input: InputStream): Pair<Int, ByteArray> {
+            val head = ByteArray(9)
+            readFully(input, head)
+            val size = ((head[0].toInt() and 255) shl 16) or ((head[1].toInt() and 255) shl 8) or (head[2].toInt() and 255)
+            val payload = ByteArray(size)
+            readFully(input, payload)
+            return (head[3].toInt() and 255) to payload
+        }
+
+        private fun frame(type: Int, flags: Int, id: Int, payload: ByteArray): ByteArray {
+            val out = ByteArray(9 + payload.size)
+            out[0] = (payload.size ushr 16).toByte()
+            out[1] = (payload.size ushr 8).toByte()
+            out[2] = payload.size.toByte()
+            out[3] = type.toByte()
+            out[4] = flags.toByte()
+            out[5] = ((id ushr 24) and 0x7f).toByte()
+            out[6] = (id ushr 16).toByte()
+            out[7] = (id ushr 8).toByte()
+            out[8] = id.toByte()
+            System.arraycopy(payload, 0, out, 9, payload.size)
+            return out
+        }
+    }
+}
