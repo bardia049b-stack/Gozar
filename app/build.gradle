@@ -14,8 +14,8 @@ android {
         applicationId 'com.gozar'
         minSdk 24
         targetSdk 35
-        versionCode 28
-        versionName '1.8.8'
+        versionCode 29
+        versionName '1.8.9'
         manifestPlaceholders.appLabel = '@string/app_name'
         if (project.hasProperty('gozarDiagnostic')) {
             applicationIdSuffix '.diagnostic'

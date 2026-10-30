@@ -185,13 +185,39 @@ jobs:
           flutter build macos --release
           APP=build/macos/Build/Products/Release/Gozar.app
           test -d "$APP"
+          case "$GOARCH" in
+            amd64) ARCH=x86_64 ;;
+            arm64) ARCH=arm64 ;;
+            *) echo "Unsupported macOS architecture"; exit 1 ;;
+          esac
+          for binary in \
+            "$APP/Contents/MacOS/Gozar" \
+            "$APP/Contents/Frameworks/FlutterMacOS.framework/Versions/A/FlutterMacOS" \
+            "$APP/Contents/Frameworks/App.framework/Versions/A/App"; do
+            test -f "$binary"
+            if [ "$(lipo -archs "$binary")" != "$ARCH" ]; then
+              lipo "$binary" -thin "$ARCH" -output "$binary.thin"
+              chmod 755 "$binary.thin"
+              mv "$binary.thin" "$binary"
+            fi
+            test "$(lipo -archs "$binary")" = "$ARCH"
+          done
           (cd ../go-desktop && CGO_ENABLED=0 GOOS=darwin GOARCH="$GOARCH" go build -trimpath -ldflags='-s -w' -o "../desktop_flutter/$APP/Contents/MacOS/gozar-core" ./cmd/gozar)
+          test "$(lipo -archs "$APP/Contents/MacOS/gozar-core")" = "$ARCH"
           cp ../LICENSE ../NOTICE ../WINTUN-LICENSE.txt "$APP/Contents/Resources/"
           codesign --force --deep --sign - "$APP"
           mkdir -p out "$RUNNER_TEMP/gozar-extracted"
           python3 ../scripts/archive_macos.py "$APP" "out/Gozar-$ARTIFACT_NAME.tar.xz"
           tar -xJf "out/Gozar-$ARTIFACT_NAME.tar.xz" -C "$RUNNER_TEMP/gozar-extracted"
           codesign --verify --deep --strict "$RUNNER_TEMP/gozar-extracted/Gozar.app"
+          EXTRACTED="$RUNNER_TEMP/gozar-extracted/Gozar.app"
+          for binary in \
+            "$EXTRACTED/Contents/MacOS/Gozar" \
+            "$EXTRACTED/Contents/MacOS/gozar-core" \
+            "$EXTRACTED/Contents/Frameworks/FlutterMacOS.framework/Versions/A/FlutterMacOS" \
+            "$EXTRACTED/Contents/Frameworks/App.framework/Versions/A/App"; do
+            test "$(lipo -archs "$binary")" = "$ARCH"
+          done
           ls -lh out/*
       - name: Check download size
         working-directory: desktop_flutter

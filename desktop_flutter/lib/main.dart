@@ -826,7 +826,7 @@ class _GozarScreenState extends State<GozarScreen> {
           as Map<String, dynamic>;
       final tag = data['tag_name'] as String? ?? '';
       final url = data['html_url'] as String? ?? '';
-      const current = '1.8.8';
+      const current = '1.8.9';
       List<int> version(String value) => RegExp(r'\d+')
           .allMatches(value)
           .take(3)
