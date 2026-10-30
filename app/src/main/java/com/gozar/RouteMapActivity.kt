@@ -89,7 +89,10 @@ class RouteMapActivity : BaseActivity() {
         return IpInfo(ip = ip, city = place.city, country = place.country, code = place.code, provider = "Firefox VPN")
     }
 
-    private fun origin(): IpInfo = IpInfo(ip = "", city = "", country = ipCountry("IR"), code = "IR", provider = "")
+    private fun origin(): IpInfo {
+        val code = if (Store.geolocation(this)) Ip.carrierCountry(this).orEmpty() else ""
+        return IpInfo(ip = "", city = "", country = if (code.isEmpty()) "" else ipCountry(code), code = code, provider = "")
+    }
 
     private fun render() {
         if (!this::routeMap.isInitialized) return

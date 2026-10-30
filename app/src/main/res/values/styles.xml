@@ -33,7 +33,7 @@
         <item name="android:background">@drawable/row_card</item>
         <item name="android:clickable">true</item>
         <item name="android:focusable">true</item>
-        <item name="android:foreground">?attr/selectableItemBackground</item>
+        <item name="android:foreground">@drawable/ripple_row</item>
     </style>
 
     <style name="Gozar.Row.Static" parent="@style/Gozar.Row">

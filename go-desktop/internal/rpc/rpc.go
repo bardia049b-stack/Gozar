@@ -10,6 +10,7 @@ import (
 
 	"github.com/bardia049b-stack/gozar/go-desktop/internal/app"
 	"github.com/bardia049b-stack/gozar/go-desktop/internal/fxa"
+	"github.com/bardia049b-stack/gozar/go-desktop/internal/systemaccounts"
 )
 
 type Request struct {
@@ -80,12 +81,32 @@ func (s *Server) handle(request Request) Response {
 				response.Reply = map[string]any{"captcha_image": challenge.Image}
 			}
 		}
+	case "system_accounts":
+		accounts, err := systemaccounts.Emails()
+		if err != nil {
+			response.Error = err.Error()
+		} else {
+			response.Reply = map[string]any{"emails": accounts}
+		}
 	case "cancel_auth":
 		s.app.CancelAuthentication()
 	case "logout":
-		s.app.SignOut()
+		if err := s.app.SignOut(); err != nil {
+			response.Error = err.Error()
+		}
+	case "switch_account":
+		var body struct {
+			ID string `json:"id"`
+		}
+		if err := json.Unmarshal(request.Params, &body); err != nil || body.ID == "" {
+			response.Error = "invalid account"
+		} else if err := s.app.SwitchAccount(body.ID); err != nil {
+			response.Error = err.Error()
+		}
 	case "usage":
-		s.app.RefreshUsage()
+		if err := s.app.RefreshUsage(); err != nil {
+			response.Error = err.Error()
+		}
 	case "connect":
 		if err := s.app.Connect(); err != nil {
 			response.Error = err.Error()
@@ -111,6 +132,33 @@ func (s *Server) handle(request Request) Response {
 		}
 		json.Unmarshal(request.Params, &body)
 		if err := s.app.SetLanguage(body.Language); err != nil {
+			response.Error = err.Error()
+		}
+	case "theme":
+		var body struct {
+			Theme string `json:"theme"`
+		}
+		if err := json.Unmarshal(request.Params, &body); err != nil {
+			response.Error = "invalid theme"
+		} else if err := s.app.SetTheme(body.Theme); err != nil {
+			response.Error = err.Error()
+		}
+	case "recents":
+		var body struct {
+			Enabled *bool `json:"enabled"`
+		}
+		if err := json.Unmarshal(request.Params, &body); err != nil || body.Enabled == nil {
+			response.Error = "invalid recent-server setting"
+		} else if err := s.app.SetRecents(*body.Enabled); err != nil {
+			response.Error = err.Error()
+		}
+	case "chain":
+		var body struct {
+			Hops []string `json:"hops"`
+		}
+		if err := json.Unmarshal(request.Params, &body); err != nil || body.Hops == nil {
+			response.Error = "invalid proxy chain"
+		} else if err := s.app.SetChain(body.Hops); err != nil {
 			response.Error = err.Error()
 		}
 	case "mode":

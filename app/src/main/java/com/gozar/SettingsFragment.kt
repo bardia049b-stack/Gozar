@@ -1,5 +1,8 @@
 package com.gozar
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -7,6 +10,9 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import android.text.BidiFormatter
+import android.text.TextDirectionHeuristics
+import java.util.Locale
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.fragment.app.Fragment
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -14,6 +20,7 @@ import com.google.android.material.materialswitch.MaterialSwitch
 
 class SettingsFragment : Fragment() {
 
+    private val tonAddress = "UQDxiU-jPFK_TgB0wOzZndhf3IKJLTLm8Vg_Uaif7_C2eCL3"
     private var updateChecking = false
     private val listener: () -> Unit = { if (isAdded && view != null) paint() }
 
@@ -36,6 +43,8 @@ class SettingsFragment : Fragment() {
         find<View>(R.id.rowRouting).setOnClickListener { pickRouting() }
         find<View>(R.id.rowChain).setOnClickListener { editChain() }
         find<View>(R.id.rowApps).setOnClickListener { pickApps() }
+        find<View>(R.id.rowDonate).setOnClickListener { showDonation() }
+        find<View>(R.id.btnAccounts).setOnClickListener { showAccounts() }
         find<View>(R.id.btnAccountRefresh).setOnClickListener {
             Fox.refreshUsage(requireContext())
             toast(R.string.account_refreshing)
@@ -79,15 +88,12 @@ class SettingsFragment : Fragment() {
         val used = (limit - Fox.remaining).coerceAtLeast(0)
         val left = Fox.remaining.coerceAtLeast(0)
         val percent = if (limit > 0) ((used * 100) / limit).toInt().coerceIn(0, 100) else 0
-        find<TextView>(R.id.tvAccountPlan).text = when {
-            limit <= 0 -> getString(R.string.account_free)
-            else -> getString(R.string.account_usage, plain(used), plain(limit))
-        }
+        find<TextView>(R.id.tvAccountPlan).text = getString(R.string.account_free)
         find<TextView>(R.id.tvUsagePercent).text = "$percent%"
         find<TextView>(R.id.tvUsageUsed).text =
-            if (limit > 0) getString(R.string.account_usage, plain(used), plain(limit)) else getString(R.string.account_free)
+            if (limit > 0) getString(R.string.account_usage, ltr(plain(used)), ltr(plain(limit))) else getString(R.string.account_free)
         find<TextView>(R.id.tvUsageLeft).text =
-            if (limit > 0) getString(R.string.usage_left, plain(left)) else ""
+            if (limit > 0) getString(R.string.usage_left, ltr(plain(left))) else ""
         find<UsageMeterView>(R.id.usageMeter).setProgress(percent)
         find<View>(R.id.btnAccountRefresh).isEnabled = signed
 
@@ -206,12 +212,63 @@ class SettingsFragment : Fragment() {
         }
     }
 
+    private fun showAccounts() {
+        val context = requireContext()
+        val accounts = FoxStore.accounts(context)
+        val labels = accounts.map { account ->
+            if (account.active) "${ltr(account.email)} · ${getString(R.string.account_active)}" else ltr(account.email)
+        }.toTypedArray()
+        MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.manage_accounts)
+            .setItems(labels) { _, which ->
+                val target = accounts[which]
+                if (!target.active) withDisconnected {
+                    if (!Fox.switchAccount(context, target.id)) toast(R.string.account_wait)
+                    paint()
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.add_account) { _, _ ->
+                withDisconnected {
+                    FoxVpnService.stop(context)
+                    Fox.cancelLogin()
+                    startActivity(Intent(context, LoginActivity::class.java).putExtra(LoginActivity.ADD_ACCOUNT, true))
+                }
+            }
+            .show()
+    }
+
+    private fun withDisconnected(action: () -> Unit) {
+        if (Fox.busy) {
+            toast(R.string.account_wait)
+            return
+        }
+        if (FoxLink.connected || FoxLink.connecting || FoxVpnService.isAlive()) {
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.manage_accounts)
+                .setMessage(R.string.switch_account_disconnect)
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton(R.string.ok) { _, _ ->
+                    if (Fox.busy) toast(R.string.account_wait) else action()
+                }
+                .show()
+        } else {
+            action()
+        }
+    }
+
     private fun askSignOut() {
+        if (Fox.busy) {
+            toast(R.string.account_wait)
+            return
+        }
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.fox_sign_out)
             .setMessage(R.string.sign_out_confirm)
             .setNegativeButton(R.string.cancel, null)
-            .setPositiveButton(R.string.fox_sign_out) { _, _ -> signOut() }
+            .setPositiveButton(R.string.fox_sign_out) { _, _ ->
+                if (Fox.busy) toast(R.string.account_wait) else signOut()
+            }
             .show()
     }
 
@@ -273,6 +330,39 @@ class SettingsFragment : Fragment() {
             .show()
     }
 
+    private fun showDonation() {
+        val context = requireContext()
+        val content = android.widget.LinearLayout(context).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            val pad = (24 * resources.displayMetrics.density).toInt()
+            setPadding(pad, 0, pad, 0)
+        }
+        content.addView(TextView(context).apply {
+            text = getString(R.string.donate_message)
+            setTextColor(com.google.android.material.color.MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurface))
+        })
+        content.addView(TextView(context).apply {
+            text = tonAddress
+            textDirection = View.TEXT_DIRECTION_LTR
+            textAlignment = View.TEXT_ALIGNMENT_VIEW_START
+            setTextIsSelectable(true)
+            setPadding(0, (16 * resources.displayMetrics.density).toInt(), 0, 0)
+        })
+        MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.donate_section)
+            .setView(content)
+            .setNegativeButton(R.string.close, null)
+            .setPositiveButton(R.string.donate_copy) { _, _ ->
+                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                clipboard.setPrimaryClip(ClipData.newPlainText("TON", tonAddress))
+                toast(R.string.donate_copied)
+            }
+            .show()
+    }
+
+    private fun ltr(value: String): String =
+        BidiFormatter.getInstance(resources.configuration.locales[0]).unicodeWrap(value, TextDirectionHeuristics.LTR)
+
     private fun openProject() = openUrl("https://github.com/bardia049b-stack/Gozar")
 
     private fun openUrl(url: String) {
@@ -308,6 +398,6 @@ class SettingsFragment : Fragment() {
             size /= 1024
             unit++
         }
-        return String.format("%.1f %s", size, units[unit])
+        return String.format(Locale.US, "%.1f %s", size, units[unit])
     }
 }

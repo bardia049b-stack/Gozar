@@ -16,11 +16,6 @@ data class IpInfo(
 )
 
 object Ip {
-    /**
-     * Resolves the egress metadata of the network active for this process.
-     * Each request explicitly closes its HTTP connection so post-tunnel lookup cannot reuse the
-     * direct-network keep-alive connection used to sample the pre-tunnel origin.
-     */
     fun fetch(): IpInfo? {
         return fetchFrom("https://ipapi.co/json/", "ip", "country_name", "country_code") { it.optString("org") }
             ?: fetchFrom("https://ipwho.is/", "ip", "country", "country_code") {
@@ -32,11 +27,6 @@ object Ip {
             ?: fetchIpOnly()
     }
 
-    /**
-     * Captures the pre-tunnel origin. IP geolocation databases can lag or place mobile egress IPs
-     * in a neighbouring country, so an available active carrier country is used as a tie-breaker.
-     * No GPS/location permission is requested or used.
-     */
     fun fetchOrigin(context: Context): IpInfo? {
         val networkInfo = fetch()
         val carrierCode = carrierCountry(context) ?: return networkInfo
@@ -71,7 +61,6 @@ object Ip {
         }
     }
 
-    /** A separate provider with a useful ASN/organisation name when the first two are unavailable. */
     private fun fetchIpInfo(): IpInfo? {
         return try {
             val json = JSONObject(request("https://ipinfo.io/json") ?: return null)
@@ -90,10 +79,6 @@ object Ip {
         }
     }
 
-    /**
-     * Cloudflare's trace endpoint supplies the egress IP and visitor country without pretending
-     * that the Cloudflare POP is the VPN provider. It is a location fallback for the offline map.
-     */
     private fun fetchCloudflareTrace(): IpInfo? {
         return try {
             val fields = request("https://www.cloudflare.com/cdn-cgi/trace")
@@ -113,7 +98,6 @@ object Ip {
         }
     }
 
-    /** Final IP-only fallback keeps the live exit address visible even if every geo service is blocked. */
     private fun fetchIpOnly(): IpInfo? {
         return try {
             val json = JSONObject(request("https://api.ipify.org?format=json") ?: return null)
@@ -134,7 +118,6 @@ object Ip {
             connection.instanceFollowRedirects = true
             connection.setRequestProperty("User-Agent", "Gozar")
             connection.setRequestProperty("Accept", "application/json, text/plain;q=0.9, */*;q=0.8")
-            // A direct pre-tunnel request must never be held open and reused after the VPN comes up.
             connection.setRequestProperty("Connection", "close")
             if (connection.responseCode !in 200..299) return null
             connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
@@ -145,7 +128,7 @@ object Ip {
         }
     }
 
-    private fun carrierCountry(context: Context): String? {
+    fun carrierCountry(context: Context): String? {
         return try {
             val telephony = context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
             sequenceOf(telephony?.networkCountryIso, telephony?.simCountryIso)

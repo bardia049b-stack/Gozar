@@ -62,9 +62,9 @@ object FoxLink {
                 FoxRoute.applyChain(Store.chain(app))
                 val access = Fox.validAccess(app)
                 if (!current(attempt)) return@thread
-                var pass = FoxApi.pass(access)
+                var pass = FoxApi.pass(access.token)
                 if (!current(attempt)) return@thread
-                FoxStore.saveUsage(app, pass)
+                if (!FoxStore.saveUsage(app, pass, access.id, access.revision)) return@thread
                 if (Fox.servers.isEmpty()) {
                     val servers = FoxApi.servers()
                     if (!current(attempt)) return@thread
@@ -89,9 +89,10 @@ object FoxLink {
                     val reason = e.message ?: ""
                     if (reason.contains("rejected the pass") || reason.contains("pass was refused") || reason.contains("no status")) {
                         if (!current(attempt)) return@thread
-                        pass = FoxApi.pass(Fox.validAccess(app))
+                        val renewed = Fox.validAccess(app)
+                        pass = FoxApi.pass(renewed.token)
                         if (!current(attempt)) return@thread
-                        FoxStore.saveUsage(app, pass)
+                        if (!FoxStore.saveUsage(app, pass, renewed.id, renewed.revision)) return@thread
                         FoxTunnel.probe(chosen, pass.token)
                     } else if (reason.contains("allowance") || reason.contains("region") || reason.contains("access") || reason.contains("rejected") || reason.contains("closed the connection")) {
                         throw FoxError(reason)
@@ -108,6 +109,7 @@ object FoxLink {
                     down = 0L
                     up = 0L
                     error = ""
+                    if (Store.recents(app)) Store.setLastServer(app, chosen.host)
                     startTicker()
                 }
                 tick()

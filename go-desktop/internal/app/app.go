@@ -3,6 +3,9 @@ package app
 import (
 	"errors"
 	"io"
+	"net"
+	"net/netip"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -16,62 +19,85 @@ import (
 	"github.com/bardia049b-stack/gozar/go-desktop/internal/wintun"
 )
 
+type AccountSummary struct {
+	ID     string `json:"id"`
+	Email  string `json:"email"`
+	Active bool   `json:"active"`
+}
+
 type State struct {
-	SignedIn   bool           `json:"signed_in"`
-	Email      string         `json:"email"`
-	Language   string         `json:"language"`
-	Stage      string         `json:"stage"`
-	Live       bool           `json:"live"`
-	Connecting bool           `json:"connecting"`
-	Mode       string         `json:"mode"`
-	Exit       string         `json:"exit"`
-	Server     fxa.Location   `json:"server"`
-	Servers    []fxa.Location `json:"servers"`
-	Down       int64          `json:"down"`
-	Up         int64          `json:"up"`
-	RateDown   int64          `json:"rate_down"`
-	RateUp     int64          `json:"rate_up"`
-	Since      int64          `json:"since"`
-	Fault      string         `json:"fault"`
-	NeedsAdmin bool           `json:"needs_admin"`
-	Limit      int64          `json:"limit"`
-	Remaining  int64          `json:"remaining"`
-	Reset      string         `json:"reset"`
-	Port       int            `json:"port"`
-	Device     string         `json:"device"`
-	Version    string         `json:"version"`
-	Admin      bool           `json:"admin"`
+	Accounts   []AccountSummary `json:"accounts"`
+	SignedIn   bool             `json:"signed_in"`
+	Email      string           `json:"email"`
+	Language   string           `json:"language"`
+	Theme      string           `json:"theme"`
+	Recents    bool             `json:"recents"`
+	LastServer string           `json:"last_server"`
+	Chain      []string         `json:"chain"`
+	Stage      string           `json:"stage"`
+	Live       bool             `json:"live"`
+	Connecting bool             `json:"connecting"`
+	Mode       string           `json:"mode"`
+	Exit       string           `json:"exit"`
+	Server     fxa.Location     `json:"server"`
+	Servers    []fxa.Location   `json:"servers"`
+	Down       int64            `json:"down"`
+	Up         int64            `json:"up"`
+	RateDown   int64            `json:"rate_down"`
+	RateUp     int64            `json:"rate_up"`
+	Since      int64            `json:"since"`
+	Fault      string           `json:"fault"`
+	NeedsAdmin bool             `json:"needs_admin"`
+	Limit      int64            `json:"limit"`
+	Remaining  int64            `json:"remaining"`
+	Reset      string           `json:"reset"`
+	Port       int              `json:"port"`
+	Device     string           `json:"device"`
+	Version    string           `json:"version"`
+	Admin      bool             `json:"admin"`
 }
 
 type App struct {
-	mu          sync.Mutex
-	cfg         config.Config
-	servers     []fxa.Location
-	pass        *fxa.Pass
-	pending     *fxa.Session
-	pendingFor  string
-	pendingKind string
-	unblockFor  string
-	engine      *engine.Engine
-	stage       string
-	fault       string
-	live        bool
-	connecting  bool
-	needAdmin   bool
-	exit        string
-	since       int64
-	rateDown    atomic.Int64
-	rateUp      atomic.Int64
-	lastDown    int64
-	lastUp      int64
-	version     string
-	admin       bool
+	mu              sync.Mutex
+	connectionMu    sync.Mutex
+	authMu          sync.Mutex
+	refreshMu       sync.Mutex
+	sessionRevision uint64
+	authRevision    uint64
+	refreshToken    func(string) (*fxa.Tokens, error)
+	requestPass     func(string) (*fxa.Pass, error)
+	cfg             config.Config
+	servers         []fxa.Location
+	pass            *fxa.Pass
+	pending         *fxa.Session
+	pendingFor      string
+	pendingKind     string
+	unblockFor      string
+	engine          *engine.Engine
+	stage           string
+	fault           string
+	live            bool
+	connecting      bool
+	needAdmin       bool
+	exit            string
+	since           int64
+	rateDown        atomic.Int64
+	rateUp          atomic.Int64
+	lastDown        int64
+	lastUp          int64
+	version         string
+	admin           bool
 }
 
 func New(version string) *App {
 	cfg := config.Load()
 	cfg.FullTunnel = true
-	created := &App{cfg: cfg, version: version, admin: tundev.Privileged()}
+	if cfg.Recents && cfg.LastServer != "" {
+		cfg.Server = cfg.LastServer
+	} else {
+		cfg.Server = ""
+	}
+	created := &App{cfg: cfg, version: version, admin: tundev.Privileged(), refreshToken: fxa.Refresh, requestPass: fxa.PassToken}
 	go created.sampler()
 	return created
 }
@@ -83,6 +109,10 @@ func (a *App) State() State {
 		SignedIn:   a.cfg.SignedIn(),
 		Email:      a.cfg.Email,
 		Language:   a.cfg.Language,
+		Theme:      a.cfg.Theme,
+		Recents:    a.cfg.Recents,
+		LastServer: a.cfg.LastServer,
+		Chain:      append([]string(nil), a.cfg.Chain...),
 		Stage:      a.stage,
 		Live:       a.live,
 		Connecting: a.connecting,
@@ -96,6 +126,14 @@ func (a *App) State() State {
 		Admin:      a.admin,
 		RateDown:   a.rateDown.Load(),
 		RateUp:     a.rateUp.Load(),
+	}
+	active := a.cfg.ActiveAccount()
+	state.Limit, state.Remaining, state.Reset = active.Limit, active.Remaining, active.Reset
+	state.Accounts = make([]AccountSummary, 0, len(a.cfg.Accounts))
+	for _, account := range a.cfg.WithCurrentAccount().Accounts {
+		if account.ID() != "" && account.Email != "" && (account.Access != "" || account.Refresh != "") {
+			state.Accounts = append(state.Accounts, AccountSummary{ID: account.ID(), Email: account.Email, Active: account.ID() == active.ID()})
+		}
 	}
 	if a.pass != nil {
 		state.Limit = a.pass.Limit
@@ -171,8 +209,13 @@ func (a *App) SetServer(key string) error {
 	}
 	for _, place := range a.servers {
 		if strings.EqualFold(place.Host, key) || strings.EqualFold(place.Code, key) {
-			a.cfg.Server = place.Host
-			return config.Save(a.cfg)
+			next := a.cfg
+			next.Server = place.Host
+			if err := config.Save(next); err != nil {
+				return err
+			}
+			a.cfg = next
+			return nil
 		}
 	}
 	return errors.New("server not found")
@@ -184,8 +227,13 @@ func (a *App) SetMode(tunMode bool) error {
 	}
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	a.cfg.FullTunnel = true
-	return config.Save(a.cfg)
+	next := a.cfg
+	next.FullTunnel = true
+	if err := config.Save(next); err != nil {
+		return err
+	}
+	a.cfg = next
+	return nil
 }
 
 func (a *App) SetLanguage(language string) error {
@@ -197,8 +245,67 @@ func (a *App) SetLanguage(language string) error {
 	}
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	a.cfg.Language = language
-	return config.Save(a.cfg)
+	next := a.cfg
+	next.Language = language
+	if err := config.Save(next); err != nil {
+		return err
+	}
+	a.cfg = next
+	return nil
+}
+
+func (a *App) SetTheme(theme string) error {
+	if theme != "system" && theme != "light" && theme != "dark" {
+		return errors.New("unsupported theme")
+	}
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	next := a.cfg
+	next.Theme = theme
+	if err := config.Save(next); err != nil {
+		return err
+	}
+	a.cfg = next
+	return nil
+}
+
+func (a *App) SetRecents(enabled bool) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	next := a.cfg
+	next.Recents = enabled
+	if !enabled {
+		next.LastServer = ""
+	}
+	if err := config.Save(next); err != nil {
+		return err
+	}
+	a.cfg = next
+	return nil
+}
+
+func (a *App) SetChain(values []string) error {
+	hops, err := tunnel.ParseChain(values)
+	if err != nil {
+		return err
+	}
+	chain := make([]string, 0, len(hops))
+	for _, hop := range hops {
+		chain = append(chain, hop.Scheme+"://"+net.JoinHostPort(hop.Host, strconv.Itoa(hop.Port)))
+	}
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if a.live || a.connecting {
+		return errors.New("disconnect before changing the proxy chain")
+	}
+	next := a.cfg
+	next.Chain = chain
+	next.SettingsVersion = 1
+	if err := config.Save(next); err != nil {
+		return err
+	}
+	a.cfg = next
+	return nil
 }
 
 func (a *App) SignIn(email, password, code string) error {
@@ -206,6 +313,15 @@ func (a *App) SignIn(email, password, code string) error {
 }
 
 func (a *App) Authenticate(email, password, code, captcha string, create bool) error {
+	a.authMu.Lock()
+	defer a.authMu.Unlock()
+	a.mu.Lock()
+	if a.live || a.connecting {
+		a.mu.Unlock()
+		return errors.New("disconnect before adding an account")
+	}
+	authRevision, sessionRevision := a.authRevision, a.sessionRevision
+	a.mu.Unlock()
 	email = strings.TrimSpace(email)
 	code = strings.TrimSpace(code)
 	if email == "" || password == "" {
@@ -254,6 +370,10 @@ func (a *App) Authenticate(email, password, code, captcha string, create bool) e
 					return sendErr
 				}
 				a.mu.Lock()
+				if a.authRevision != authRevision || a.sessionRevision != sessionRevision {
+					a.mu.Unlock()
+					return errors.New("authentication cancelled")
+				}
 				a.unblockFor = email
 				a.mu.Unlock()
 				a.setStage("")
@@ -263,6 +383,10 @@ func (a *App) Authenticate(email, password, code, captcha string, create bool) e
 			return err
 		}
 		a.mu.Lock()
+		if a.authRevision != authRevision || a.sessionRevision != sessionRevision {
+			a.mu.Unlock()
+			return errors.New("authentication cancelled")
+		}
 		a.pending = session
 		a.pendingFor = email
 		a.pendingKind = kind
@@ -303,34 +427,31 @@ func (a *App) Authenticate(email, password, code, captcha string, create bool) e
 		a.setStage("")
 		return err
 	}
-	a.mu.Lock()
-	a.cfg.Email = session.Email
-	if a.cfg.Email == "" {
-		a.cfg.Email = email
-	}
-	a.cfg.UID = session.UID
-	a.cfg.Access = tokens.Access
-	a.cfg.Refresh = tokens.Refresh
-	a.cfg.ExpiresAt = time.Now().Add(time.Duration(tokens.ExpiresIn-60) * time.Second).Unix()
-	saveErr := config.Save(a.cfg)
-	if saveErr == nil {
-		a.pending = nil
-		a.pendingFor = ""
-		a.pendingKind = ""
-		a.unblockFor = ""
-	}
-	a.mu.Unlock()
-	if saveErr != nil {
+	pass, err := a.requestPass(tokens.Access)
+	if err != nil {
 		a.setStage("")
-		return saveErr
+		return err
+	}
+	accountEmail := session.Email
+	if accountEmail == "" {
+		accountEmail = email
+	}
+	account := config.Account{
+		Email: accountEmail, UID: session.UID, Access: tokens.Access, Refresh: tokens.Refresh,
+		ExpiresAt: time.Now().Add(time.Duration(tokens.ExpiresIn-60) * time.Second).Unix(),
+		Limit:     pass.Limit, Remaining: pass.Remaining, Reset: pass.Reset,
+	}
+	if err := a.commitAccount(account, pass, authRevision, sessionRevision); err != nil {
+		a.setStage("")
+		return err
 	}
 	a.setStage("")
-	go a.RefreshUsage()
 	return nil
 }
 
 func (a *App) CancelAuthentication() {
 	a.mu.Lock()
+	a.authRevision++
 	a.pending = nil
 	a.pendingFor = ""
 	a.pendingKind = ""
@@ -344,61 +465,160 @@ var errLink = errors.New("verification link required")
 
 func NeedsCode(err error) bool { return errors.Is(err, errCode) }
 
-func (a *App) SignOut() {
-	a.Disconnect()
+func (a *App) commitAccount(account config.Account, pass *fxa.Pass, authRevision, sessionRevision uint64) error {
 	a.mu.Lock()
-	a.cfg.Email = ""
-	a.cfg.UID = ""
-	a.cfg.Access = ""
-	a.cfg.Refresh = ""
-	a.cfg.ExpiresAt = 0
-	a.pass = nil
+	defer a.mu.Unlock()
+	if a.authRevision != authRevision || a.sessionRevision != sessionRevision || a.live || a.connecting {
+		return errors.New("authentication cancelled or account changed")
+	}
+	if account.ID() == "" || account.Email == "" || (account.Access == "" && account.Refresh == "") {
+		return errors.New("invalid account")
+	}
+	next := a.cfg.PutAccount(account)
+	if err := config.Save(next); err != nil {
+		return err
+	}
+	a.cfg = next
+	a.pass = pass
+	a.sessionRevision++
+	a.authRevision++
 	a.pending = nil
 	a.pendingFor = ""
 	a.pendingKind = ""
 	a.unblockFor = ""
-	config.Save(a.cfg)
-	a.mu.Unlock()
+	return nil
 }
 
-func (a *App) access() (string, error) {
+func (a *App) SwitchAccount(id string) error {
+	a.connectionMu.Lock()
+	defer a.connectionMu.Unlock()
 	a.mu.Lock()
-	access, refresh, expiry := a.cfg.Access, a.cfg.Refresh, a.cfg.ExpiresAt
+	next, found := a.cfg.SwitchAccount(id)
 	a.mu.Unlock()
-	if access == "" && refresh == "" {
-		return "", errors.New("not signed in")
+	if !found {
+		return errors.New("account not found")
 	}
-	if expiry > 0 && time.Now().Unix() > expiry && refresh != "" {
-		tokens, err := fxa.Refresh(refresh)
+	a.teardown()
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	next, found = a.cfg.SwitchAccount(id)
+	if !found {
+		return errors.New("account not found")
+	}
+	if err := config.Save(next); err != nil {
+		return err
+	}
+	a.cfg = next
+	a.pass = nil
+	a.sessionRevision++
+	a.authRevision++
+	a.pending = nil
+	a.pendingFor = ""
+	a.pendingKind = ""
+	a.unblockFor = ""
+	a.fault = ""
+	a.needAdmin = false
+	return nil
+}
+
+func (a *App) SignOut() error {
+	a.connectionMu.Lock()
+	defer a.connectionMu.Unlock()
+	a.teardown()
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	next := a.cfg.RemoveActive()
+	if err := config.Save(next); err != nil {
+		return err
+	}
+	a.cfg = next
+	a.pass = nil
+	a.sessionRevision++
+	a.authRevision++
+	a.pending = nil
+	a.pendingFor = ""
+	a.pendingKind = ""
+	a.unblockFor = ""
+	a.fault = ""
+	a.needAdmin = false
+	return nil
+}
+
+type accountAccess struct {
+	token    string
+	id       string
+	revision uint64
+}
+
+func (a *App) access() (accountAccess, error) {
+	a.refreshMu.Lock()
+	defer a.refreshMu.Unlock()
+	a.mu.Lock()
+	current := a.cfg.ActiveAccount()
+	revision := a.sessionRevision
+	a.mu.Unlock()
+	if current.ID() == "" || (current.Access == "" && current.Refresh == "") {
+		return accountAccess{}, errors.New("not signed in")
+	}
+	if (current.Access == "" || (current.ExpiresAt > 0 && time.Now().Unix() >= current.ExpiresAt)) && current.Refresh != "" {
+		tokens, err := a.refreshToken(current.Refresh)
 		if err != nil {
-			return "", err
+			return accountAccess{}, err
 		}
 		a.mu.Lock()
-		a.cfg.Access = tokens.Access
-		a.cfg.Refresh = tokens.Refresh
-		a.cfg.ExpiresAt = time.Now().Add(time.Duration(tokens.ExpiresIn-60) * time.Second).Unix()
-		config.Save(a.cfg)
-		a.mu.Unlock()
-		return tokens.Access, nil
+		defer a.mu.Unlock()
+		if a.sessionRevision != revision || a.cfg.ActiveAccount().ID() != current.ID() || a.cfg.Refresh != current.Refresh {
+			return accountAccess{}, errors.New("account changed")
+		}
+		next := a.cfg
+		next.Access = tokens.Access
+		next.Refresh = tokens.Refresh
+		next.ExpiresAt = time.Now().Add(time.Duration(tokens.ExpiresIn-60) * time.Second).Unix()
+		next = next.WithCurrentAccount()
+		if err := config.Save(next); err != nil {
+			return accountAccess{}, err
+		}
+		a.cfg = next
+		return accountAccess{token: tokens.Access, id: current.ID(), revision: revision}, nil
 	}
-	return access, nil
+	if current.Access == "" {
+		return accountAccess{}, errors.New("sign in again")
+	}
+	return accountAccess{token: current.Access, id: current.ID(), revision: revision}, nil
 }
 
-func (a *App) RefreshUsage() {
+func (a *App) saveUsage(pass *fxa.Pass, access accountAccess) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if a.sessionRevision != access.revision || a.cfg.ActiveAccount().ID() != access.id {
+		return errors.New("account changed")
+	}
+	current := a.cfg.ActiveAccount()
+	current.Limit, current.Remaining, current.Reset = pass.Limit, pass.Remaining, pass.Reset
+	next := a.cfg.PutAccount(current)
+	if err := config.Save(next); err != nil {
+		return err
+	}
+	a.cfg = next
+	a.pass = pass
+	return nil
+}
+
+func (a *App) RefreshUsage() error {
 	access, err := a.access()
 	if err != nil {
-		return
+		return err
 	}
-	pass, err := fxa.PassToken(access)
+	pass, err := a.requestPass(access.token)
 	if err != nil {
-		return
+		return err
 	}
-	a.mu.Lock()
-	a.pass = pass
-	a.mu.Unlock()
+	return a.saveUsage(pass, access)
 }
 
 func (a *App) Connect() error {
+	a.connectionMu.Lock()
+	defer a.connectionMu.Unlock()
 	a.mu.Lock()
 	if a.live || a.connecting {
 		a.mu.Unlock()
@@ -435,34 +655,55 @@ func (a *App) connect() error {
 	a.mu.Lock()
 	a.stage = "دریافت پاس پروکسی…"
 	a.mu.Unlock()
-	pass, err := fxa.PassToken(access)
+	pass, err := a.requestPass(access.token)
 	if err != nil {
 		return err
 	}
-	a.mu.Lock()
-	a.pass = pass
-	a.mu.Unlock()
+	if err := a.saveUsage(pass, access); err != nil {
+		return err
+	}
 
-	if len(a.servers) == 0 {
+	a.mu.Lock()
+	needsServers := len(a.servers) == 0
+	a.mu.Unlock()
+	if needsServers {
 		if _, err := a.LoadServers(); err != nil {
 			return err
 		}
 	}
 	a.mu.Lock()
 	code := a.cfg.Server
-	servers := a.servers
+	servers := append([]fxa.Location(nil), a.servers...)
+	chain := append([]string(nil), a.cfg.Chain...)
 	a.mu.Unlock()
 	target, err := pick(servers, code)
 	if err != nil {
 		return err
 	}
 
-	keep := tundev.Neighbours(target.Host)
-	if len(keep) == 0 {
-		return errors.New("could not resolve the proxy server before starting the tunnel")
+	hops, err := tunnel.ParseChain(chain)
+	if err != nil {
+		return err
 	}
-	target.DialHost = keep[0].String()
-	keep = keep[:1]
+	target.Chain = hops
+	firstHost := target.Host
+	if len(hops) > 0 {
+		firstHost = hops[0].Host
+	}
+	addresses := tundev.Neighbours(firstHost)
+	var keep []netip.Addr
+	for _, address := range addresses {
+		if address.Is4() {
+			target.DialHost = address.String()
+			if !address.IsLoopback() {
+				keep = append(keep, address)
+			}
+			break
+		}
+	}
+	if target.DialHost == "" {
+		return errors.New("could not resolve the first proxy to IPv4 before starting the tunnel")
+	}
 	dial := func(host string, remotePort int) (io.ReadWriteCloser, error) {
 		return tunnel.Open(target, host, remotePort, pass.Token, 15*time.Second)
 	}
@@ -482,6 +723,10 @@ func (a *App) connect() error {
 	a.engine = created
 	a.live = true
 	a.since = time.Now().Unix()
+	if a.cfg.Recents {
+		a.cfg.LastServer = target.Host
+		_ = config.Save(a.cfg)
+	}
 	a.mu.Unlock()
 	a.mu.Lock()
 	a.stage = ""
@@ -508,6 +753,8 @@ func (a *App) teardown() {
 }
 
 func (a *App) Disconnect() {
+	a.connectionMu.Lock()
+	defer a.connectionMu.Unlock()
 	a.teardown()
 	a.mu.Lock()
 	a.fault = ""
@@ -516,6 +763,8 @@ func (a *App) Disconnect() {
 }
 
 func (a *App) Close() {
+	a.connectionMu.Lock()
+	defer a.connectionMu.Unlock()
 	a.teardown()
 }
 
@@ -542,4 +791,8 @@ func pick(servers []fxa.Location, code string) (tunnel.Target, error) {
 	return tunnel.Target{Host: servers[0].Host, Port: servers[0].Port}, nil
 }
 
-func (a *App) Config() config.Config { return a.cfg }
+func (a *App) Config() config.Config {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.cfg.WithCurrentAccount()
+}

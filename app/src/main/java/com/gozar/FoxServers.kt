@@ -20,7 +20,9 @@ object FoxServers {
 
         fun paint() {
             list.removeAllViews()
-            val servers = Fox.servers
+            val recent = if (Store.recents(host)) Store.lastServer(host) else ""
+            val servers = if (recent.isEmpty()) Fox.servers else
+                Fox.servers.sortedBy { if (it.host.equals(recent, true)) 0 else 1 }
             empty.visibility = if (servers.isEmpty()) View.VISIBLE else View.GONE
             val ready = servers.count { Fox.delayOf(it) > 0 }
             count.text = if (servers.isEmpty()) "" else if (ready == 0) "" else "$ready / ${servers.size}"

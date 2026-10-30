@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream
 import java.io.Closeable
 import java.io.InputStream
 import java.io.OutputStream
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -32,6 +33,7 @@ class FoxStackTest {
             assertEquals("203.0.113.7:443", tunnel.dialed.get())
             assertArrayEquals(body, tunnel.pipe.upload.toByteArray())
             assertTrue(tunnel.uploaded.get() >= body.size)
+            assertTrue(tunnel.downloadedReady.await(2, TimeUnit.SECONDS))
             assertTrue(tunnel.downloaded.get() >= body.size)
         }
     }
@@ -69,6 +71,43 @@ class FoxStackTest {
         }
     }
 
+    @Test
+    fun dnsLearningRecordsEveryIpv4AnswerForDirectHostDecisions() {
+        val query = byteArrayOf(
+            0x12, 0x34, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x04, 0x74, 0x65, 0x73, 0x74, 0x07, 0x65, 0x78, 0x61, 0x6d, 0x70, 0x6c, 0x65,
+            0x00, 0x00, 0x01, 0x00, 0x01
+        )
+        val header = query.copyOfRange(0, 12)
+        header[2] = 0x81.toByte()
+        header[3] = 0x80.toByte()
+        header[7] = 2
+        fun record(a: Int, b: Int, c: Int, d: Int) = byteArrayOf(
+            0xc0.toByte(), 0x0c, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x3c,
+            0x00, 0x04, a.toByte(), b.toByte(), c.toByte(), d.toByte()
+        )
+        val answer = header + query.copyOfRange(12, query.size) + record(1, 2, 3, 4) + record(5, 6, 7, 8)
+        val stack = FoxStack(PacketInput(), PacketOutput(), 0x0a6f0002, FoxResolver(0), { _, _ -> EchoPipe() }, { _, _ -> })
+        val learn = FoxStack::class.java.getDeclaredMethod("learn", ByteArray::class.java, ByteArray::class.java)
+        learn.isAccessible = true
+        learn.invoke(stack, query, answer)
+        assertEquals("test.example", stack.nameOf(0x01020304))
+        assertEquals("test.example", stack.nameOf(0x05060708))
+    }
+
+    @Test
+    fun directHostRulesMatchDomainsAndOptionalLanWithoutMatchingUnrelatedHosts() {
+        FoxRoute.apply(false, "example.test\napi.other.test")
+        assertTrue(FoxRoute.direct("sub.example.test"))
+        assertTrue(FoxRoute.direct("api.other.test"))
+        assertTrue(!FoxRoute.direct("badexample.test"))
+        assertTrue(!FoxRoute.direct("192.168.1.2"))
+        FoxRoute.apply(true, "")
+        assertTrue(FoxRoute.direct("192.168.1.2"))
+        assertTrue(!FoxRoute.direct("203.0.113.7"))
+        FoxRoute.apply(false, "")
+    }
+
     private class MemoryTunnel : Closeable {
         val input = PacketInput()
         val output = PacketOutput()
@@ -76,11 +115,15 @@ class FoxStackTest {
         val dialed = AtomicReference<String?>()
         val uploaded = AtomicInteger()
         val downloaded = AtomicInteger()
+        val downloadedReady = CountDownLatch(1)
         private val stack = FoxStack(input, output, 0x0a6f0002, FoxResolver(0), { host, port ->
             dialed.set("$host:$port")
             pipe
         }, { inbound, bytes ->
-            if (inbound) downloaded.addAndGet(bytes.toInt()) else uploaded.addAndGet(bytes.toInt())
+            if (inbound) {
+                downloaded.addAndGet(bytes.toInt())
+                downloadedReady.countDown()
+            } else uploaded.addAndGet(bytes.toInt())
         })
 
         init {

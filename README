@@ -7,14 +7,26 @@ private standard-input/output pipe. The interface supports Persian, English, and
 language, and keeps the selected language between launches. Android also offers the language
 picker on the sign-in screen and in Settings. Desktop registration and email verification
 use native forms; supported Mozilla security checks and image challenges appear in the app. The
-account password is not saved; access and refresh tokens are kept in a local configuration file
-rather than an OS keychain.
+account password is not saved. Separate Firefox sessions can be added and switched inside the app;
+switching, adding an account while connected, or signing out disconnects the VPN first. Signing out
+removes the active session while leaving other saved sessions available from the sign-in screen.
+Android stores session tokens in app-private preferences; desktop stores them in a local configuration
+file rather than the OS keychain. These tokens are sensitive and are not encrypted by Gozar.
 
 Android adds the GlobalSign E46 and R46 roots only for fastly-masque.net and its subdomains,
 while continuing to verify certificate chains and server hostnames. Its HTTP/2 and HTTP/1.1
-CONNECT paths and packet handling have loopback and in-memory tests. The trust-store change has
-not yet been verified on a physical Android 13 device or with a real Firefox account. The app
-does not keep its previous in-memory diagnostics or crash file.
+CONNECT paths and packet handling have loopback and in-memory tests. The user reports that a friend
+successfully connected on the previously affected physical Android 13 phone after the certificate
+fix. Device certificate stores and server chains vary, so this is not a guarantee for all devices.
+The app does not keep its previous in-memory diagnostics or crash file.
+
+On Android, the sign-in email button opens Android's system account chooser. It accepts only
+selected account names that are valid email addresses; manual entry remains available. It does
+not perform Google Sign-In or use Gozar's saved sessions as system accounts. On Linux the equivalent
+button reads email-like identities from GNOME Online Accounts on explicit request, when that
+service is available. Windows and macOS do not provide a verified universal, provider-independent
+system email picker in this build, so manual entry is used there. The saved Gozar account switcher
+is a separate feature on all platforms.
 
 For a separate local Android test installation, build with `-PgozarDiagnostic`. This uses the
 `com.gozar.diagnostic` package and a separate app data directory. Without the official signing
@@ -36,9 +48,18 @@ account. The non-interactive security check was also probed without account cred
 may present an unsupported security challenge or refuse a request. IPv6 is not routed through
 the tunnel and may bypass it. UDP other than DNS is not supported. Mozilla's proxy supports only
 certain destination ports, including 80, 443, 8080, and 8443. Do not rely on this build for privacy
-or as a complete device-wide VPN. Routing,
-per-application rules, proxy chains, tunnel-in-tunnel, update checking, and the route map are not
-implemented in the new desktop interface.
+or as a complete device-wide VPN. The desktop interface provides language, appearance, account
+switching, recent-server preference, a manual release check, donation, and an ordered SOCKS5/HTTP
+proxy-chain editor. Proxy chains are used by the Go core when connecting; proxy authentication is
+not supported. Desktop per-application and per-domain routing, a dedicated LAN-bypass control,
+and the route map are not implemented. Existing OS LAN routes may still bypass the tunnel.
+
+Planned desktop work, subject to feasibility and testing, includes application-based routing
+on Windows and Linux first; domain rules, an explicit LAN-bypass option and a route view;
+provider-supported system-email selection; investigation of OS-backed token storage; and
+better recovery and connectivity diagnostics. These are not implemented today. macOS per-app
+routing and any additional IPv6 or UDP coverage require separate investigation, and arbitrary
+UDP or leak-free VPN coverage is not promised. See the release notes for details.
 
 Linux build, from the repository root:
 
@@ -54,3 +75,6 @@ multiple files: keep the Go core, the executable, and the bundled data and libra
 macOS downloads use .tar.xz; extract them in Terminal with `tar -xJf ARCHIVE.tar.xz`.
 
 Source code is licensed under GNU AGPL-3.0-or-later. See LICENSE, NOTICE, and WINTUN-LICENSE.txt.
+
+If Gozar helps you and you would like to support its development, you can donate TON to
+`UQDxiU-jPFK_TgB0wOzZndhf3IKJLTLm8Vg_Uaif7_C2eCL3`. Donations are optional and appreciated.

@@ -80,7 +80,9 @@
                             android:id="@+id/tvAccountEmail"
                             style="@style/Gozar.Row.Title"
                             android:ellipsize="end"
-                            android:maxLines="1" />
+                            android:maxLines="1"
+                            android:textAlignment="viewStart"
+                            android:textDirection="ltr" />
 
                         <TextView
                             android:id="@+id/tvAccountPlan"
@@ -129,50 +131,51 @@
                     android:layout_height="26dp"
                     android:layout_marginTop="10dp" />
 
-                <LinearLayout
+                <TextView
+                    android:id="@+id/tvUsageUsed"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:textAlignment="viewStart"
+                    android:textAppearance="@style/TextAppearance.Gozar.BodySmall"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
+
+                <TextView
+                    android:id="@+id/tvUsageLeft"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:id="@+id/tvUsageUsed"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:textAppearance="@style/TextAppearance.Gozar.BodySmall"
-                        android:textColor="?attr/colorOnSurfaceVariant" />
-
-                    <TextView
-                        android:id="@+id/tvUsageLeft"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:textAppearance="@style/TextAppearance.Gozar.BodySmall"
-                        android:textColor="?attr/colorPrimary" />
-                </LinearLayout>
+                    android:textAlignment="viewStart"
+                    android:textAppearance="@style/TextAppearance.Gozar.BodySmall"
+                    android:textColor="?attr/colorPrimary" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="16dp"
-                    android:orientation="horizontal">
+                    android:layout_marginTop="12dp"
+                    android:orientation="vertical">
 
                     <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnSignOut"
-                        style="@style/Widget.Material3.Button.TonalButton"
-                        android:layout_width="0dp"
+                        android:id="@+id/btnAccounts"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/fox_sign_out" />
+                        android:text="@string/manage_accounts" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnAccountRefresh"
                         style="@style/Widget.Material3.Button.OutlinedButton"
-                        android:layout_width="0dp"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginStart="@dimen/sp_m"
-                        android:layout_weight="1"
                         android:text="@string/account_refresh" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnSignOut"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="@string/fox_sign_out" />
                 </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -426,6 +429,33 @@
                 <TextView
                     android:id="@+id/tvApps"
                     style="@style/Gozar.Row.Subtitle" />
+            </LinearLayout>
+            <ImageView style="@style/Gozar.Row.Chevron" />
+        </LinearLayout>
+
+        <TextView
+            style="@style/Gozar.Section"
+            android:text="@string/donate_section" />
+
+        <LinearLayout
+            android:id="@+id/rowDonate"
+            style="@style/Gozar.Row">
+
+            <ImageView
+                style="@style/Gozar.Tile"
+                android:background="@drawable/frame_flower"
+                android:backgroundTint="@color/tile_container"
+                android:contentDescription="@string/donate_section"
+                android:src="@drawable/ic_heart"
+                app:tint="@color/tile_on_container" />
+
+            <LinearLayout style="@style/Gozar.Row.Text">
+                <TextView
+                    style="@style/Gozar.Row.Title"
+                    android:text="@string/donate_section" />
+                <TextView
+                    style="@style/Gozar.Row.Subtitle"
+                    android:text="@string/donate_desc" />
             </LinearLayout>
             <ImageView style="@style/Gozar.Row.Chevron" />
         </LinearLayout>

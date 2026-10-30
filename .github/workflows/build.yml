@@ -302,12 +302,3 @@ jobs:
             test -s "$RUNNER_TEMP/published/$name"
             cmp "$f" "$RUNNER_TEMP/published/$name"
           done
-      - name: Keep one release
-        if: github.ref_name != 'v1.8.7-desktop'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -e
-          gh release list --limit 100 --json tagName --jq '.[].tagName' | while read -r tag; do
-            if [ "$tag" != "$GITHUB_REF_NAME" ]; then gh release delete "$tag" --yes; fi
-          done

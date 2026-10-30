@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Gozar</string>
+    <string name="app_name">گذر</string>
     <string name="status_off">قطع است</string>
     <string name="status_on">متصل است</string>
     <string name="status_connecting">در حال اتصال…</string>
@@ -24,7 +24,7 @@
     <string name="select_first">اول یک کانفیگ اضافه یا انتخاب کن</string>
     <string name="menu_edit">ویرایش</string>
     <string name="menu_qr">کد QR</string>
-    <string name="menu_share">اشتراک‌گذاری</string>
+    <string name="menu_share">اشتراک‌گذری</string>
     <string name="menu_export">خروجی ‎.conf</string>
     <string name="menu_delete">حذف</string>
     <string name="delete_failed">حذف کانفیگ انجام نشد</string>
@@ -107,7 +107,7 @@
     <string name="save">ذخیره</string>
     <string name="saved">ذخیره شد</string>
     <string name="invalid_config">کانفیگ نامعتبر است: %s</string>
-    <string name="share_warn">این کانفیگ شامل کلید خصوصی است؛ فقط با خودتان به اشتراک بگذارید.</string>
+    <string name="share_warn">این کانفیگ شامل کلید خصوصی است؛ فقط با خودتان به اشتراک بگذرید.</string>
     <string name="export_done">خروجی گرفته شد</string>
     <string name="qr_save">ذخیره در گالری</string>
     <string name="qr_saved">در گالری ذخیره شد</string>
@@ -123,7 +123,7 @@
     <string name="connection_failed">اتصال ناموفق بود</string>
     <string name="vpn_perm">اجازه VPN لازم است</string>
     <string name="endpoint_unknown">بدون اندپوینت</string>
-    <string name="share_title">اشتراک‌گذاری کانفیگ</string>
+    <string name="share_title">اشتراک‌گذری کانفیگ</string>
     <string name="import_title">وارد کردن کانفیگ</string>
     <string name="import_msg">«%s» به کانفیگ‌ها اضافه شود؟</string>
     <string name="gallery_failed">در این تصویر کد QR پیدا نشد</string>
@@ -212,10 +212,10 @@
     <string name="update_available">نسخهٔ %s آماده است</string>
     <string name="update_failed">بررسی به‌روزرسانی انجام نشد</string>
     <string name="update_title">به‌روزرسانی آماده است</string>
-    <string name="update_message">Gozar %s آمادهٔ دریافت است.</string>
+    <string name="update_message">گذر %s آمادهٔ دریافت است.</string>
     <string name="update_open">باز کردن ریلیز</string>
     <string name="update_notification_channel">به‌روزرسانی برنامه</string>
-    <string name="update_notification_title">به‌روزرسانی Gozar آماده است</string>
+    <string name="update_notification_title">به‌روزرسانی گذر آماده است</string>
     <string name="update_notification_text">نسخهٔ %s آمادهٔ دریافت است</string>
     <string name="legal_notice">Gozar
 AGPL-3.0-or-later</string>
@@ -314,7 +314,7 @@ AGPL-3.0-or-later</string>
     <string name="account_usage">%1$s از %2$s این ماه مصرف شده</string>
     <string name="sign_out_confirm">از حساب خود در این دستگاه خارج می‌شوید؟</string>
     <string name="geolocation">موقعیت مکانی</string>
-    <string name="geolocation_desc">استفاده از موقعیت شبکه برای نقشه</string>
+    <string name="geolocation_desc">استفاده از کشور شبکهٔ تلفن برای نقشه، بدون GPS</string>
     <string name="recents">سرورهای اخیر</string>
     <string name="recents_desc">پیشنهاد آخرین سرور استفاده‌شده در ابتدا</string>
     <string name="project">پروژه</string>
@@ -326,12 +326,12 @@ AGPL-3.0-or-later</string>
     <string name="login_signin_title">ورود</string>
     <string name="login_signin_sub">با حساب فایرفاکس خود هر ماه ۵۰ گیگابایت دریافت کنید.</string>
     <string name="login_forgot">رمز عبور را فراموش کرده‌اید؟</string>
-    <string name="login_terms">گز‌ار رمز شما را نمی‌بیند. ورود روی سرورهای موزیلا انجام می‌شود.</string>
+    <string name="login_terms">گذر رمز عبور شما را ذخیره نمی‌کند. ورود از طریق سرورهای موزیلا انجام می‌شود.</string>
     <string name="usage_month">مصرف ماهانه</string>
     <string name="usage_left">%1$s باقی‌مانده</string>
     <string name="login_social_hint">ورود با گوگل و اپل در accounts.firefox.com ادامه پیدا می‌کند.</string>
     <string name="login_browser_title">ورود در mozilla.org</string>
-    <string name="login_browser_body">ورود با گوگل و اپل فقط در مرورگر و روی accounts.firefox.com انجام می‌شود. حسابی که این‌طور ساخته شود رمز عبور ندارد، پس گز‌ار تا زمانی که رمز تعیین نکنید نمی‌تواند با آن وارد شود.</string>
+    <string name="login_browser_body">ورود با گوگل و اپل فقط در مرورگر و روی accounts.firefox.com انجام می‌شود. حسابی که این‌طور ساخته شود رمز عبور ندارد، پس گذر تا زمانی که رمز تعیین نکنید نمی‌تواند با آن وارد شود.</string>
     <string name="login_browser_open">باز کردن صفحه ورود</string>
     <string name="login_browser_password">تعیین رمز عبور</string>
     <string name="advanced_section">مسیریابی و موتورها</string>
@@ -355,4 +355,19 @@ AGPL-3.0-or-later</string>
     <string name="chain_hint_short">socks5://host:port</string>
     <string name="apps_all_hint">همه برنامه‌ها از تونل می‌روند</string>
     <string name="apps_picked">%1$d انتخاب شده</string>
+    <string name="donate_section">حمایت مالی</string>
+    <string name="donate_desc">حمایت از توسعهٔ گذر با TON</string>
+    <string name="donate_message">برای حمایت، TON را به این نشانی در شبکهٔ TON بفرستید.</string>
+    <string name="donate_copy">کپی نشانی</string>
+    <string name="donate_copied">نشانی کیف پول کپی شد</string>
+    <string name="apps_no_valid">هیچ‌یک از برنامه‌های انتخاب‌شده نصب نیست. پیش از اتصال، دوباره برنامه‌ها را انتخاب کنید.</string>
+    <string name="manage_accounts">مدیریت حساب‌ها</string>
+    <string name="saved_accounts">حساب‌های ذخیره‌شده در گذر</string>
+    <string name="add_account">افزودن حساب</string>
+    <string name="system_accounts">انتخاب ایمیل از حساب‌های دستگاه</string>
+    <string name="system_account_not_email">این حساب دستگاه نشانی ایمیل ندارد. ایمیل را دستی وارد کنید.</string>
+    <string name="system_account_unavailable">انتخاب حساب دستگاه در دسترس نیست. ایمیل را دستی وارد کنید.</string>
+    <string name="switch_account_disconnect">با تغییر یا افزودن حساب، اتصال وی‌پی‌ان قطع می‌شود.</string>
+    <string name="account_wait">لطفاً تا پایان عملیات فعلی صبر کنید.</string>
+    <string name="account_active">فعال</string>
 </resources>

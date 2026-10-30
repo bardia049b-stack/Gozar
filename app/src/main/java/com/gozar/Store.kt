@@ -13,7 +13,13 @@ object Store {
     fun theme(c: Context) = p(c).getString("theme", "auto") ?: "auto"
     fun setTheme(c: Context, v: String) = p(c).edit().putString("theme", v).apply()
     fun recents(c: Context) = p(c).getBoolean("recents", false)
-    fun setRecents(c: Context, v: Boolean) = p(c).edit().putBoolean("recents", v).apply()
+    fun setRecents(c: Context, v: Boolean) {
+        val edit = p(c).edit().putBoolean("recents", v)
+        if (!v) edit.remove("last_server")
+        edit.apply()
+    }
+    fun lastServer(c: Context) = p(c).getString("last_server", "") ?: ""
+    fun setLastServer(c: Context, host: String) = p(c).edit().putString("last_server", host).apply()
     fun geolocation(c: Context) = p(c).getBoolean("geolocation", true)
     fun setGeolocation(c: Context, v: Boolean) = p(c).edit().putBoolean("geolocation", v).apply()
     fun bypassLan(c: Context) = p(c).getBoolean("bypass_lan", false)

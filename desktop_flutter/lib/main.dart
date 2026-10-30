@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'core.dart';
@@ -26,6 +27,7 @@ class GozarApp extends StatefulWidget {
 
 class _GozarAppState extends State<GozarApp> with WidgetsBindingObserver {
   String _language = '';
+  String _theme = 'system';
 
   bool get _persian => _language.isEmpty
       ? WidgetsBinding.instance.platformDispatcher.locale.languageCode == 'fa'
@@ -53,11 +55,21 @@ class _GozarAppState extends State<GozarApp> with WidgetsBindingObserver {
     if (_language != normalized) setState(() => _language = normalized);
   }
 
+  void _changeTheme(String value) {
+    if (_theme != value) setState(() => _theme = value);
+  }
+
   @override
   Widget build(BuildContext context) => MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'Gozar',
-        theme: buildTheme(),
+        theme: buildTheme(lightMode: true),
+        darkTheme: buildTheme(),
+        themeMode: _theme == 'light'
+            ? ThemeMode.light
+            : _theme == 'dark'
+                ? ThemeMode.dark
+                : ThemeMode.system,
         locale: Locale(_persian ? 'fa' : 'en'),
         supportedLocales: const [Locale('fa'), Locale('en')],
         localizationsDelegates: const [
@@ -70,6 +82,7 @@ class _GozarAppState extends State<GozarApp> with WidgetsBindingObserver {
           persian: _persian,
           language: _language,
           onLanguageChanged: _changeLanguage,
+          onThemeChanged: _changeTheme,
         ),
       );
 }
@@ -81,12 +94,14 @@ class GozarScreen extends StatefulWidget {
     required this.persian,
     required this.language,
     required this.onLanguageChanged,
+    required this.onThemeChanged,
   });
 
   final Core? core;
   final bool persian;
   final String language;
   final ValueChanged<String> onLanguageChanged;
+  final ValueChanged<String> onThemeChanged;
 
   @override
   State<GozarScreen> createState() => _GozarScreenState();
@@ -108,6 +123,7 @@ class _GozarScreenState extends State<GozarScreen> {
   bool _loadingServers = false;
   bool _needsCode = false;
   bool _creating = false;
+  bool _adding = false;
   bool _showPassword = false;
   String? _captchaImage;
   String? _error;
@@ -151,6 +167,7 @@ class _GozarScreenState extends State<GozarScreen> {
         _starting = false;
       });
       widget.onLanguageChanged(_state.language);
+      widget.onThemeChanged(_state.theme);
       _timer = Timer.periodic(const Duration(seconds: 2), (_) => _refresh());
       if (_state.signedIn) {
         unawaited(_loadServers());
@@ -173,6 +190,7 @@ class _GozarScreenState extends State<GozarScreen> {
     if (state.language != widget.language) {
       widget.onLanguageChanged(state.language);
     }
+    widget.onThemeChanged(state.theme);
   }
 
   Future<void> _refresh() async {
@@ -263,6 +281,7 @@ class _GozarScreenState extends State<GozarScreen> {
           _code.clear();
           _needsCode = false;
           _creating = false;
+          _adding = false;
           unawaited(_loadServers());
           unawaited(_usage());
         }
@@ -356,6 +375,8 @@ class _GozarScreenState extends State<GozarScreen> {
         _captchaImage = null;
         _needsCode = false;
         _creating = false;
+        _adding = false;
+        _email.clear();
       }
     } on Object catch (error) {
       if (mounted) setState(() => _error = error.toString());
@@ -467,65 +488,526 @@ class _GozarScreenState extends State<GozarScreen> {
     );
   }
 
+  Future<bool> _requestSetting(
+      String method, Map<String, dynamic> params) async {
+    try {
+      final reply = await _core.call(method, params);
+      _apply(reply);
+      if (reply.error != null) {
+        if (mounted) setState(() => _error = reply.error);
+        return false;
+      }
+      return true;
+    } on Object catch (error) {
+      if (mounted) setState(() => _error = error.toString());
+      return false;
+    }
+  }
+
+  Future<void> _chooseTheme() async {
+    final choice = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(words.appearance),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final option in [
+              ('system', words.system),
+              ('light', words.lightTheme),
+              ('dark', words.darkTheme),
+            ])
+              RadioListTile<String>(
+                title: Text(option.$2),
+                value: option.$1,
+                groupValue: _state.theme,
+                onChanged: (value) => Navigator.pop(dialogContext, value),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (choice != null) await _requestSetting('theme', {'theme': choice});
+  }
+
+  Future<void> _editChain() async {
+    if (_state.live || _state.connecting) {
+      await _info(words.proxyChain, words.switchDisconnect);
+      return;
+    }
+    final value = await showDialog<String>(
+      context: context,
+      builder: (context) =>
+          ProxyChainDialog(words: words, initial: _state.chain.join('\n')),
+    );
+    if (value != null) {
+      final hops = value
+          .split(RegExp(r'[\n,]'))
+          .map((item) => item.trim())
+          .where((item) => item.isNotEmpty)
+          .toList();
+      await _requestSetting('chain', {'hops': hops});
+    }
+  }
+
+  Future<void> _info(String title, String message) async {
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(words.close))
+        ],
+      ),
+    );
+  }
+
+  Future<bool> _confirmDisconnect() async {
+    if (!_state.live && !_state.connecting) return true;
+    return await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: Text(words.manageAccounts),
+            content: Text(words.switchDisconnect),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(dialogContext, false),
+                  child: Text(words.cancel)),
+              TextButton(
+                  onPressed: () => Navigator.pop(dialogContext, true),
+                  child: Text(words.disconnect)),
+            ],
+          ),
+        ) ??
+        false;
+  }
+
+  Future<void> _showAccounts({bool fromLogin = false}) async {
+    if (_busy) return;
+    final choice = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(words.savedAccounts),
+        content: SizedBox(
+          width: 380,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final account in _state.accounts)
+                  ListTile(
+                    leading:
+                        const Icon(Icons.account_circle_outlined, color: soft),
+                    title:
+                        Text(account.email, textDirection: TextDirection.ltr),
+                    subtitle: account.active ? Text(words.activeAccount) : null,
+                    trailing: account.active
+                        ? const Icon(Icons.check, color: soft)
+                        : null,
+                    onTap: account.active
+                        ? null
+                        : () => Navigator.pop(dialogContext, account.id),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(words.close)),
+          if (!fromLogin)
+            TextButton.icon(
+              onPressed: () => Navigator.pop(dialogContext, '__add__'),
+              icon: const Icon(Icons.person_add_alt_1, color: soft),
+              label: Text(words.addAccount),
+            ),
+        ],
+      ),
+    );
+    if (choice == null || !mounted) return;
+    if (choice == '__add__') {
+      await _beginAddAccount();
+    } else {
+      await _switchAccount(choice);
+    }
+  }
+
+  Future<void> _beginAddAccount() async {
+    if (_busy || !await _confirmDisconnect() || !mounted) return;
+    if (_state.live || _state.connecting) {
+      setState(() => _busy = true);
+      try {
+        final reply = await _core.call('disconnect');
+        _apply(reply);
+        if (reply.error != null ||
+            reply.state?.live == true ||
+            reply.state?.connecting == true) {
+          if (mounted) {
+            setState(() => _error = reply.error ?? words.connectionError);
+          }
+          return;
+        }
+      } on Object catch (error) {
+        if (mounted) setState(() => _error = error.toString());
+        return;
+      } finally {
+        if (mounted) setState(() => _busy = false);
+      }
+    }
+    if (!mounted) return;
+    _email.clear();
+    _password.clear();
+    _confirm.clear();
+    _code.clear();
+    _captcha.clear();
+    setState(() {
+      _adding = true;
+      _creating = false;
+      _needsCode = false;
+      _captchaImage = null;
+      _error = null;
+    });
+  }
+
+  Future<void> _cancelAdd() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await _core.call('cancel_auth');
+    } on Object {
+      return;
+    } finally {
+      _password.clear();
+      _confirm.clear();
+      _code.clear();
+      _captcha.clear();
+      if (mounted) {
+        setState(() {
+          _adding = false;
+          _creating = false;
+          _needsCode = false;
+          _captchaImage = null;
+          _error = null;
+          _busy = false;
+          _email.text = _state.email;
+        });
+      }
+    }
+  }
+
+  Future<void> _switchAccount(String id) async {
+    if (_busy || !await _confirmDisconnect() || !mounted) return;
+    setState(() => _busy = true);
+    try {
+      final reply = await _core.call('switch_account', {'id': id});
+      _apply(reply);
+      if (reply.error != null) {
+        if (mounted) setState(() => _error = reply.error);
+        return;
+      }
+      _email.text = _state.email;
+      _password.clear();
+      _confirm.clear();
+      _code.clear();
+      if (mounted) setState(() => _adding = false);
+      unawaited(_usage());
+    } on Object catch (error) {
+      if (mounted) setState(() => _error = error.toString());
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _chooseSystemEmail() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    CoreReply? reply;
+    try {
+      reply = await _core.call('system_accounts');
+      _apply(reply);
+    } on Object {
+      reply = null;
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+    if (!mounted) return;
+    if (reply == null || reply.error != null) {
+      await _info(words.systemAccounts, words.systemPickerUnavailable);
+      return;
+    }
+    if (reply.systemEmails.isEmpty) {
+      await _info(words.systemAccounts, words.noSystemAccounts);
+      return;
+    }
+    final selected = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(words.systemAccounts),
+        content: SizedBox(
+          width: 380,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final email in reply!.systemEmails)
+                  ListTile(
+                    leading:
+                        const Icon(Icons.account_circle_outlined, color: soft),
+                    title: Text(email, textDirection: TextDirection.ltr),
+                    onTap: () => Navigator.pop(dialogContext, email),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(words.cancel))
+        ],
+      ),
+    );
+    if (selected != null && mounted) _email.text = selected;
+  }
+
+  Future<void> _showDonation() async {
+    const address = 'UQDxiU-jPFK_TgB0wOzZndhf3IKJLTLm8Vg_Uaif7_C2eCL3';
+    final copy = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(words.donate),
+        content: SizedBox(
+          width: 380,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(words.donateMessage),
+              const SizedBox(height: 16),
+              const SelectableText(address, textDirection: TextDirection.ltr),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(words.close)),
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(words.copyAddress)),
+        ],
+      ),
+    );
+    if (copy == true) {
+      await Clipboard.setData(const ClipboardData(text: address));
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(words.addressCopied)));
+      }
+    }
+  }
+
+  Future<void> _checkUpdates() async {
+    final client = HttpClient()
+      ..connectionTimeout = const Duration(seconds: 10);
+    try {
+      final request = await client.getUrl(Uri.parse(
+          'https://api.github.com/repos/bardia049b-stack/Gozar/releases/latest'));
+      request.headers.set(HttpHeaders.userAgentHeader, 'Gozar desktop');
+      final response =
+          await request.close().timeout(const Duration(seconds: 15));
+      if (response.statusCode != 200) throw const FormatException();
+      final data = jsonDecode(await utf8.decoder.bind(response).join())
+          as Map<String, dynamic>;
+      final tag = data['tag_name'] as String? ?? '';
+      final url = data['html_url'] as String? ?? '';
+      const current = '1.8.8';
+      List<int> version(String value) => RegExp(r'\d+')
+          .allMatches(value)
+          .take(3)
+          .map((match) => int.parse(match.group(0)!))
+          .toList();
+      final available = version(tag);
+      final installed = version(current);
+      bool newer = false;
+      if (available.length == 3 && installed.length == 3) {
+        for (var i = 0; i < 3; i++) {
+          if (available[i] != installed[i]) {
+            newer = available[i] > installed[i];
+            break;
+          }
+        }
+      }
+      if (!mounted) return;
+      final open = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(words.updates),
+          content: Text(
+              newer ? '${words.updateAvailable} $tag' : words.updateCurrent),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: Text(words.close)),
+            if (newer &&
+                url.startsWith(
+                    'https://github.com/bardia049b-stack/Gozar/releases/'))
+              TextButton(
+                  onPressed: () => Navigator.pop(dialogContext, true),
+                  child: Text(words.openRelease)),
+          ],
+        ),
+      );
+      if (open == true) await _openPage(url);
+    } on Object {
+      if (mounted) await _info(words.updates, words.updateFailed);
+    } finally {
+      client.close(force: true);
+    }
+  }
+
   void _showSettings() {
     showDialog<void>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(words.settings),
-        content: SizedBox(
-          width: 360,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.account_circle_outlined, color: soft),
-                title: Text(words.account),
-                subtitle: Text(
-                  _state.email,
-                  textDirection: TextDirection.ltr,
-                  style: const TextStyle(color: dim),
-                ),
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, updateDialog) => AlertDialog(
+          title: Text(words.settings),
+          content: SizedBox(
+            width: 400,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading:
+                        const Icon(Icons.account_circle_outlined, color: soft),
+                    title: Text(words.account),
+                    subtitle:
+                        Text(_state.email, textDirection: TextDirection.ltr),
+                    onTap: () {
+                      Navigator.pop(dialogContext);
+                      unawaited(_showAccounts());
+                    },
+                  ),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.language, color: soft),
+                    title: Text(words.language),
+                    subtitle: Text(widget.language == 'fa'
+                        ? 'پارسی'
+                        : widget.language == 'en'
+                            ? 'English'
+                            : words.system),
+                    onTap: () {
+                      Navigator.pop(dialogContext);
+                      unawaited(_chooseLanguage());
+                    },
+                  ),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.palette_outlined, color: soft),
+                    title: Text(words.appearance),
+                    subtitle: Text(_state.theme == 'light'
+                        ? words.lightTheme
+                        : _state.theme == 'dark'
+                            ? words.darkTheme
+                            : words.system),
+                    onTap: () {
+                      Navigator.pop(dialogContext);
+                      unawaited(_chooseTheme());
+                    },
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    secondary: const Icon(Icons.history, color: soft),
+                    title: Text(words.rememberServer),
+                    value: _state.recents,
+                    onChanged: _busy
+                        ? null
+                        : (value) async {
+                            await _requestSetting(
+                                'recents', {'enabled': value});
+                            if (context.mounted) updateDialog(() {});
+                          },
+                  ),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.alt_route, color: soft),
+                    title: Text(words.proxyChain),
+                    subtitle: Text(
+                        _state.chain.isEmpty
+                            ? words.noProxyChain
+                            : _state.chain.join(' → '),
+                        textDirection:
+                            _state.chain.isEmpty ? null : TextDirection.ltr),
+                    onTap: () {
+                      Navigator.pop(dialogContext);
+                      unawaited(_editChain());
+                    },
+                  ),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.route_outlined, color: soft),
+                    title: Text(words.routing),
+                    subtitle: Text(words.desktopRoutingLimits),
+                  ),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.system_update_alt, color: soft),
+                    title: Text(words.updates),
+                    onTap: () {
+                      Navigator.pop(dialogContext);
+                      unawaited(_checkUpdates());
+                    },
+                  ),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.info_outline, color: soft),
+                    title: Text(words.about),
+                    subtitle: Text('Gozar ${_state.version} · AGPL-3.0'),
+                    onTap: () {
+                      Navigator.pop(dialogContext);
+                      unawaited(_openPage(
+                          'https://github.com/bardia049b-stack/Gozar'));
+                    },
+                  ),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.favorite_outline, color: soft),
+                    title: Text(words.donate),
+                    subtitle: const Text('TON'),
+                    onTap: () {
+                      Navigator.pop(dialogContext);
+                      unawaited(_showDonation());
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    onPressed: _busy
+                        ? null
+                        : () {
+                            Navigator.pop(dialogContext);
+                            unawaited(_signOut());
+                          },
+                    icon: const Icon(Icons.logout, color: soft),
+                    label: Text(words.signOut),
+                  ),
+                ],
               ),
-              const Divider(),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.language, color: soft),
-                title: Text(words.language),
-                subtitle: Text(
-                  widget.language == 'fa'
-                      ? 'پارسی'
-                      : widget.language == 'en'
-                          ? 'English'
-                          : words.system,
-                  style: const TextStyle(color: dim),
-                ),
-                onTap: () {
-                  Navigator.pop(dialogContext);
-                  unawaited(_chooseLanguage());
-                },
-              ),
-              const SizedBox(height: 16),
-              OutlinedButton.icon(
-                onPressed: _busy
-                    ? null
-                    : () {
-                        Navigator.pop(dialogContext);
-                        unawaited(_signOut());
-                      },
-                icon: const Icon(Icons.logout, color: soft),
-                label: Text(words.signOut),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Gozar ${_state.version}',
-                textAlign: TextAlign.center,
-                style:
-                    Theme.of(context).textTheme.bodySmall?.copyWith(color: dim),
-              ),
-            ],
+            ),
           ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: Text(words.close))
+          ],
         ),
       ),
     );
@@ -544,7 +1026,7 @@ class _GozarScreenState extends State<GozarScreen> {
                             textAlign: TextAlign.center),
                       ),
                     )
-                  : _state.signedIn
+                  : _state.signedIn && !_adding
                       ? _home()
                       : _loginScreen(),
         ),
@@ -571,9 +1053,10 @@ class _GozarScreenState extends State<GozarScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF14161B),
+                    color: Theme.of(context).colorScheme.surface,
                     borderRadius: BorderRadius.circular(28),
-                    border: Border.all(color: const Color(0xFF35363C)),
+                    border: Border.all(
+                        color: Theme.of(context).colorScheme.outlineVariant),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -592,7 +1075,7 @@ class _GozarScreenState extends State<GozarScreen> {
                         _creating
                             ? words.createDescription
                             : words.signInDescription,
-                        style: const TextStyle(color: dim),
+                        style: TextStyle(color: muted(context)),
                       ),
                       const SizedBox(height: 28),
                       TextField(
@@ -604,7 +1087,13 @@ class _GozarScreenState extends State<GozarScreen> {
                         decoration: InputDecoration(
                           labelText: words.email,
                           prefixIcon:
-                              const Icon(Icons.email_outlined, color: dim),
+                              Icon(Icons.email_outlined, color: muted(context)),
+                          suffixIcon: IconButton(
+                            tooltip: words.systemAccounts,
+                            onPressed: _busy ? null : _chooseSystemEmail,
+                            icon: const Icon(Icons.account_circle_outlined,
+                                color: soft),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 14),
@@ -618,7 +1107,7 @@ class _GozarScreenState extends State<GozarScreen> {
                         decoration: InputDecoration(
                           labelText: words.password,
                           prefixIcon:
-                              const Icon(Icons.lock_outline, color: dim),
+                              Icon(Icons.lock_outline, color: muted(context)),
                           suffixIcon: IconButton(
                             onPressed: () =>
                                 setState(() => _showPassword = !_showPassword),
@@ -626,7 +1115,7 @@ class _GozarScreenState extends State<GozarScreen> {
                               _showPassword
                                   ? Icons.visibility_off_outlined
                                   : Icons.visibility_outlined,
-                              color: dim,
+                              color: muted(context),
                             ),
                           ),
                         ),
@@ -643,14 +1132,14 @@ class _GozarScreenState extends State<GozarScreen> {
                           decoration: InputDecoration(
                             labelText: words.repeatPassword,
                             prefixIcon:
-                                const Icon(Icons.lock_outline, color: dim),
+                                Icon(Icons.lock_outline, color: muted(context)),
                           ),
                         ),
                       ],
                       if (_needsCode) ...[
                         const SizedBox(height: 14),
                         Text(words.checkEmail,
-                            style: const TextStyle(color: dim)),
+                            style: TextStyle(color: muted(context))),
                         const SizedBox(height: 8),
                         TextField(
                           controller: _code,
@@ -662,7 +1151,7 @@ class _GozarScreenState extends State<GozarScreen> {
                           decoration: InputDecoration(
                             labelText: words.verificationCode,
                             prefixIcon:
-                                const Icon(Icons.pin_outlined, color: dim),
+                                Icon(Icons.pin_outlined, color: muted(context)),
                           ),
                         ),
                       ],
@@ -672,7 +1161,7 @@ class _GozarScreenState extends State<GozarScreen> {
                             style: Theme.of(context).textTheme.titleSmall),
                         const SizedBox(height: 6),
                         Text(words.securityInstruction,
-                            style: const TextStyle(color: dim)),
+                            style: TextStyle(color: muted(context))),
                         const SizedBox(height: 8),
                         Semantics(
                           label: words.securityCheck,
@@ -691,8 +1180,8 @@ class _GozarScreenState extends State<GozarScreen> {
                           onSubmitted: (_) => _login(),
                           decoration: InputDecoration(
                             labelText: words.securityAnswer,
-                            prefixIcon:
-                                const Icon(Icons.shield_outlined, color: dim),
+                            prefixIcon: Icon(Icons.shield_outlined,
+                                color: muted(context)),
                           ),
                         ),
                       ],
@@ -735,6 +1224,20 @@ class _GozarScreenState extends State<GozarScreen> {
                           ),
                         ),
                       ),
+                      if (!_adding && _state.accounts.isNotEmpty)
+                        TextButton.icon(
+                          onPressed: _busy
+                              ? null
+                              : () => _showAccounts(fromLogin: true),
+                          icon: const Icon(Icons.switch_account_outlined,
+                              color: soft),
+                          label: Text(words.savedAccounts),
+                        ),
+                      if (_adding)
+                        TextButton(
+                          onPressed: _busy ? null : _cancelAdd,
+                          child: Text(words.cancel),
+                        ),
                       const SizedBox(height: 12),
                       Text(
                         words.passwordNote,
@@ -742,7 +1245,7 @@ class _GozarScreenState extends State<GozarScreen> {
                         style: Theme.of(context)
                             .textTheme
                             .bodySmall
-                            ?.copyWith(color: dim),
+                            ?.copyWith(color: muted(context)),
                       ),
                     ],
                   ),
@@ -786,7 +1289,7 @@ class _GozarScreenState extends State<GozarScreen> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             textDirection: TextDirection.ltr,
-                            style: const TextStyle(color: dim),
+                            style: TextStyle(color: muted(context)),
                           ),
                         ],
                       ),
@@ -904,7 +1407,7 @@ class _GozarScreenState extends State<GozarScreen> {
                               : words.chooseServer,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: dim),
+                      style: TextStyle(color: muted(context)),
                     ),
                     trailing: Icon(
                       widget.persian ? Icons.chevron_left : Icons.chevron_right,
@@ -941,7 +1444,7 @@ class _GozarScreenState extends State<GozarScreen> {
                         style: Theme.of(context)
                             .textTheme
                             .bodySmall
-                            ?.copyWith(color: dim),
+                            ?.copyWith(color: muted(context)),
                       ),
                     ),
                   ],
@@ -1004,7 +1507,7 @@ class RateCard extends StatelessWidget {
                 children: [
                   Icon(icon, color: soft, size: 19),
                   const SizedBox(width: 5),
-                  Text(label, style: const TextStyle(color: dim)),
+                  Text(label, style: TextStyle(color: muted(context))),
                 ],
               ),
               const SizedBox(height: 5),
@@ -1012,6 +1515,64 @@ class RateCard extends StatelessWidget {
             ],
           ),
         ),
+      );
+}
+
+class ProxyChainDialog extends StatefulWidget {
+  const ProxyChainDialog(
+      {super.key, required this.words, required this.initial});
+
+  final Words words;
+  final String initial;
+
+  @override
+  State<ProxyChainDialog> createState() => _ProxyChainDialogState();
+}
+
+class _ProxyChainDialogState extends State<ProxyChainDialog> {
+  late final TextEditingController field;
+
+  @override
+  void initState() {
+    super.initState();
+    field = TextEditingController(text: widget.initial);
+  }
+
+  @override
+  void dispose() {
+    field.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+        title: Text(widget.words.proxyChain),
+        content: SizedBox(
+          width: 380,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(widget.words.proxyChainDetail),
+              const SizedBox(height: 12),
+              TextField(
+                controller: field,
+                textDirection: TextDirection.ltr,
+                minLines: 3,
+                maxLines: 6,
+                decoration:
+                    InputDecoration(hintText: widget.words.proxyChainHint),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(widget.words.cancel)),
+          TextButton(
+              onPressed: () => Navigator.pop(context, field.text),
+              child: Text(widget.words.save)),
+        ],
       );
 }
 

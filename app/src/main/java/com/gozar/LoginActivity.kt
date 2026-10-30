@@ -1,15 +1,20 @@
 package com.gozar
 
+import android.accounts.AccountManager
+import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.util.Patterns
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.widget.TextView
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.WindowCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.progressindicator.CircularProgressIndicator
 import android.text.InputType
 import android.widget.EditText
@@ -17,9 +22,15 @@ import android.widget.ImageView
 
 class LoginActivity : BaseActivity() {
 
-    private companion object {
-        const val ACCOUNT_PAGE = "https://accounts.firefox.com/signin"
-        const val RESET_PAGE = "https://accounts.firefox.com/reset_password"
+    companion object {
+        const val ADD_ACCOUNT = "com.gozar.ADD_ACCOUNT"
+        private const val ACCOUNT_PAGE = "https://accounts.firefox.com/signin"
+        private const val RESET_PAGE = "https://accounts.firefox.com/reset_password"
+
+        internal fun systemEmail(data: Intent?): String? {
+            val value = data?.getStringExtra(AccountManager.KEY_ACCOUNT_NAME)?.trim().orEmpty()
+            return value.takeIf { Patterns.EMAIL_ADDRESS.matcher(it).matches() }
+        }
     }
 
     private lateinit var title: TextView
@@ -40,7 +51,23 @@ class LoginActivity : BaseActivity() {
     private lateinit var languageButton: MaterialButton
     private lateinit var progress: CircularProgressIndicator
     private lateinit var error: TextView
+    private lateinit var systemAccounts: View
+    private lateinit var savedAccounts: MaterialButton
+    private lateinit var cancelAdd: MaterialButton
 
+    private var adding = false
+    private var initialRevision = 0L
+    private val accountPicker = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val value = systemEmail(result.data)
+            if (value != null) {
+                mail.setText(value)
+                mail.setSelection(value.length)
+            } else {
+                show(getString(R.string.system_account_not_email))
+            }
+        }
+    }
     private var create = false
     private val listener: () -> Unit = { render() }
 
@@ -53,6 +80,8 @@ class LoginActivity : BaseActivity() {
         }
         setContentView(R.layout.activity_login)
         create = savedInstanceState?.getBoolean("create", false) ?: false
+        adding = savedInstanceState?.getBoolean("adding") ?: intent.getBooleanExtra(ADD_ACCOUNT, false)
+        initialRevision = savedInstanceState?.getLong("initial_revision") ?: FoxStore.authRevision(this)
         languageButton = findViewById(R.id.loginLanguage)
         languageButton.setOnClickListener { if (!Fox.busy) showLanguagePicker(this) }
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.loginRoot)) { _, insets ->
@@ -77,11 +106,18 @@ class LoginActivity : BaseActivity() {
         progress = findViewById(R.id.loginProgress)
         error = findViewById(R.id.loginError)
         reveal = findViewById(R.id.loginReveal)
+        systemAccounts = findViewById(R.id.loginSystemAccounts)
+        savedAccounts = findViewById(R.id.loginSavedAccounts)
+        cancelAdd = findViewById(R.id.loginCancelAdd)
+        systemAccounts.setOnClickListener { chooseSystemAccount() }
+        savedAccounts.setOnClickListener { chooseSavedAccount() }
+        cancelAdd.setOnClickListener { onBackPressed() }
         reveal.setOnClickListener {
             shown = !shown
-            val mode = if (shown) InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD else
+            val mode = if (shown) InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD else
                 InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
             secret.inputType = mode
+            secret.textAlignment = View.TEXT_ALIGNMENT_VIEW_START
             secret.setSelection(secret.text.length)
         }
 
@@ -123,12 +159,47 @@ class LoginActivity : BaseActivity() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putBoolean("create", create)
+        outState.putBoolean("adding", adding)
+        outState.putLong("initial_revision", initialRevision)
         super.onSaveInstanceState(outState)
     }
 
     override fun onDestroy() {
         Fox.unwatch(listener)
         super.onDestroy()
+    }
+
+    @Suppress("DEPRECATION")
+    override fun onBackPressed() {
+        if (Fox.busy) {
+            toast(R.string.account_wait)
+            return
+        }
+        Fox.cancelLogin()
+        super.onBackPressed()
+    }
+
+    private fun chooseSystemAccount() {
+        if (Fox.busy) return
+        try {
+            val intent = AccountManager.newChooseAccountIntent(null, null, null, null, null, null, null)
+            accountPicker.launch(intent)
+        } catch (e: Exception) {
+            show(getString(R.string.system_account_unavailable))
+        }
+    }
+
+    private fun chooseSavedAccount() {
+        val accounts = FoxStore.accounts(this)
+        if (accounts.isEmpty()) return
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.saved_accounts)
+            .setItems(accounts.map { it.email }.toTypedArray()) { _, which ->
+                if (Fox.switchAccount(this, accounts[which].id)) render()
+                else toast(R.string.account_wait)
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
     }
 
     private fun web(url: String) {
@@ -168,10 +239,11 @@ class LoginActivity : BaseActivity() {
 
     private fun render() {
         val signed = Fox.signedIn(this)
-        if (signed && !Fox.busy) {
+        val completed = !adding || FoxStore.authRevision(this) != initialRevision
+        if (signed && !Fox.busy && completed) {
             secret.text?.clear()
             confirm.text?.clear()
-            startActivity(Intent(this, MainActivity::class.java))
+            if (!adding) startActivity(Intent(this, MainActivity::class.java))
             finish()
             return
         }
@@ -183,6 +255,8 @@ class LoginActivity : BaseActivity() {
         codeBox.visibility = if (step && !link) View.VISIBLE else View.GONE
         forgot.visibility = if (step || create) View.GONE else View.VISIBLE
         switchButton.visibility = if (step) View.GONE else View.VISIBLE
+        savedAccounts.visibility = if (!adding && !step && FoxStore.accounts(this).isNotEmpty()) View.VISIBLE else View.GONE
+        cancelAdd.visibility = if (adding) View.VISIBLE else View.GONE
 
         title.text = when {
             step -> getString(R.string.login_check_title)
@@ -214,6 +288,9 @@ class LoginActivity : BaseActivity() {
         reveal.isEnabled = !busy
         forgot.isEnabled = !busy
         switchButton.isEnabled = !busy
+        systemAccounts.isEnabled = !busy
+        savedAccounts.isEnabled = !busy
+        cancelAdd.isEnabled = !busy
 
         val trouble = !busy && Fox.message.isNotEmpty() &&
             Fox.message != "code" && Fox.message != "link" &&

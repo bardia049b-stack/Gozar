@@ -33,11 +33,30 @@ class Place {
   }
 }
 
+class SavedAccount {
+  const SavedAccount(
+      {required this.id, required this.email, required this.active});
+
+  final String id;
+  final String email;
+  final bool active;
+
+  factory SavedAccount.fromJson(Map<String, dynamic> json) => SavedAccount(
+        id: json['id'] as String? ?? '',
+        email: json['email'] as String? ?? '',
+        active: json['active'] as bool? ?? false,
+      );
+}
+
 class CoreState {
   const CoreState({
     this.signedIn = false,
     this.email = '',
     this.language = '',
+    this.theme = 'system',
+    this.recents = false,
+    this.chain = const [],
+    this.accounts = const [],
     this.stage = '',
     this.live = false,
     this.connecting = false,
@@ -56,6 +75,10 @@ class CoreState {
   final bool signedIn;
   final String email;
   final String language;
+  final String theme;
+  final bool recents;
+  final List<String> chain;
+  final List<SavedAccount> accounts;
   final String stage;
   final bool live;
   final bool connecting;
@@ -73,10 +96,19 @@ class CoreState {
   factory CoreState.fromJson(Map<String, dynamic> json) {
     final rawServers = json['servers'] as List<dynamic>? ?? const [];
     final rawServer = json['server'];
+    final rawAccounts = json['accounts'] as List<dynamic>? ?? const [];
+    final rawChain = json['chain'] as List<dynamic>? ?? const [];
     return CoreState(
       signedIn: json['signed_in'] as bool? ?? false,
       email: json['email'] as String? ?? '',
       language: json['language'] as String? ?? '',
+      theme: json['theme'] as String? ?? 'system',
+      recents: json['recents'] as bool? ?? false,
+      chain: rawChain.whereType<String>().toList(growable: false),
+      accounts: rawAccounts
+          .whereType<Map<String, dynamic>>()
+          .map(SavedAccount.fromJson)
+          .toList(growable: false),
       stage: json['stage'] as String? ?? '',
       live: json['live'] as bool? ?? false,
       connecting: json['connecting'] as bool? ?? false,
@@ -104,12 +136,14 @@ class CoreReply {
     this.error,
     this.needsCode = false,
     this.captchaImage,
+    this.systemEmails = const [],
   });
 
   final CoreState? state;
   final String? error;
   final bool needsCode;
   final String? captchaImage;
+  final List<String> systemEmails;
 
   factory CoreReply.fromJson(Map<String, dynamic> json) {
     final state = json['state'];
@@ -119,6 +153,11 @@ class CoreReply {
       state: state is Map<String, dynamic> ? CoreState.fromJson(state) : null,
       error: error is String && error.isNotEmpty ? error : null,
       needsCode: result is Map && result['needs_code'] == true,
+      systemEmails: result is Map && result['emails'] is List
+          ? (result['emails'] as List)
+              .whereType<String>()
+              .toList(growable: false)
+          : const [],
       captchaImage: result is Map && result['captcha_image'] is String
           ? result['captcha_image'] as String
           : null,

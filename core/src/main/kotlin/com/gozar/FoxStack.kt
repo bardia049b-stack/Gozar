@@ -176,15 +176,16 @@ class FoxStack(
             } catch (e: Exception) {
                 null
             } ?: return@thread
-            replyUdp(target, appPort, serverPort, answer)
             learn(query, answer)
+            replyUdp(target, appPort, serverPort, answer)
         }
     }
 
     private fun learn(query: ByteArray, answer: ByteArray) {
         val name = questionName(query) ?: return
-        val address = firstAddress(answer)
-        if (address != 0) names[address] = name
+        for (address in addresses(answer)) {
+            if (address != 0) names[address] = name
+        }
     }
 
     private fun questionName(query: ByteArray): String? {
@@ -202,8 +203,9 @@ class FoxStack(
         return if (out.isEmpty()) null else out.toString()
     }
 
-    private fun firstAddress(answer: ByteArray): Int {
-        if (answer.size < 12) return 0
+    private fun addresses(answer: ByteArray): List<Int> {
+        if (answer.size < 12) return emptyList()
+        val found = mutableListOf<Int>()
         var questions = u16(answer, 4)
         var count = u16(answer, 6)
         var index = 12
@@ -214,16 +216,16 @@ class FoxStack(
         }
         while (count > 0 && index + 12 <= answer.size) {
             index = skipName(answer, index)
-            if (index + 10 > answer.size) return 0
+            if (index + 10 > answer.size) return found
             val type = u16(answer, index)
             val size = u16(answer, index + 8)
             index += 10
-            if (index + size > answer.size) return 0
-            if (type == 1 && size == 4) return i32(answer, index)
+            if (index + size > answer.size) return found
+            if (type == 1 && size == 4) found.add(i32(answer, index))
             index += size
             count--
         }
-        return 0
+        return found
     }
 
     private fun skipName(bytes: ByteArray, from: Int): Int {

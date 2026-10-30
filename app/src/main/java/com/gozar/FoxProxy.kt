@@ -172,10 +172,7 @@ class FoxProxy(
     }
 
     private fun open(host: String, port: Int): FoxPipe? {
-        if (FoxRoute.direct(host)) {
-            val direct = FoxSocketPipe.connect(host, port)
-            if (direct != null) return direct
-        }
+        if (FoxRoute.direct(host)) return FoxSocketPipe.connect(host, port)
         val access = pass() ?: return null
         val location = FoxLink.location ?: return null
         return try {

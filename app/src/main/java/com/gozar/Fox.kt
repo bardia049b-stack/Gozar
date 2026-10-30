@@ -7,7 +7,10 @@ import java.net.InetSocketAddress
 import java.net.Socket
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
+
+data class FoxAccess(val token: String, val id: String, val revision: Long)
 
 object Fox {
 
@@ -17,6 +20,8 @@ object Fox {
 
     private val main = Handler(Looper.getMainLooper())
     private val delays = ConcurrentHashMap<String, Int>()
+    private val refreshLock = Any()
+    private val operations = AtomicInteger()
 
     @Volatile var email: String = ""
     @Volatile var limit: Long = 0L
@@ -77,6 +82,7 @@ object Fox {
     }
 
     private fun work(c: Context, first: Int = 0, body: () -> Unit) {
+        operations.incrementAndGet()
         busy = true
         message = ""
         if (first != 0) stage = c.getString(first)
@@ -91,8 +97,8 @@ object Fox {
             } catch (e: Exception) {
                 failure = e.message ?: "Network error"
             }
-            busy = false
-            stage = ""
+            busy = operations.decrementAndGet() > 0
+            if (!busy) stage = ""
             if (failure != null) message = failure
             load(app)
             notifyUi()
@@ -234,12 +240,12 @@ object Fox {
     private fun finish(c: Context, sessionToken: String, uid: String, mail: String, password: String) {
         say(c, R.string.fox_stage_pass)
         val tokens = FoxApi.tokens(sessionToken)
-        FoxStore.saveAccount(c, mail, uid, tokens)
+        val pass = FoxApi.pass(tokens.access)
+        FoxStore.saveAccount(c, mail, uid, tokens, pass)
         step = STEP_NONE
         byLink = false
         pendingPassword = ""
-        val pass = FoxApi.pass(tokens.access)
-        FoxStore.saveUsage(c, pass)
+        pendingToken = ""
         message = ""
     }
 
@@ -247,9 +253,8 @@ object Fox {
         if (!signedIn(c)) return
         work(c, R.string.fox_stage_usage) {
             val access = validAccess(c)
-            val pass = FoxApi.pass(access)
-            FoxStore.saveUsage(c, pass)
-            message = "quota"
+            val pass = FoxApi.pass(access.token)
+            if (FoxStore.saveUsage(c, pass, access.id, access.revision)) message = "quota"
         }
     }
 
@@ -264,6 +269,8 @@ object Fox {
     fun measure(c: Context) {
         if (servers.isEmpty()) return
         val app = c.applicationContext
+        val session = FoxStore.credentials(app)
+        operations.incrementAndGet()
         busy = true
         stage = c.getString(R.string.fox_stage_measure)
         notifyUi()
@@ -276,10 +283,13 @@ object Fox {
             val chosen = FoxStore.selected(app)
             if (chosen == "REC" || chosen.isEmpty() || servers.none { it.code == chosen }) {
                 val best = servers.filter { delayOf(it) > 0 }.minByOrNull { delayOf(it) }
-                if (best != null) FoxStore.setSelected(app, best.code)
+                val current = FoxStore.credentials(app)
+                if (best != null && current.id == session.id && current.revision == session.revision) {
+                    FoxStore.setSelected(app, best.code)
+                }
             }
-            busy = false
-            stage = ""
+            busy = operations.decrementAndGet() > 0
+            if (!busy) stage = ""
             message = "ping"
             notifyUi()
         }
@@ -305,14 +315,15 @@ object Fox {
         }
     }
 
-    fun validAccess(c: Context): String {
-        val token = FoxStore.access(c)
-        if (token.isNotEmpty() && FoxStore.expiresAt(c) - 120_000L > System.currentTimeMillis()) return token
-        val refresh = FoxStore.refreshToken(c)
-        if (refresh.isEmpty()) throw FoxError("Sign in again")
-        val fresh = FoxApi.refresh(refresh)
-        FoxStore.saveAccess(c, fresh)
-        return fresh.access
+    fun validAccess(c: Context): FoxAccess = synchronized(refreshLock) {
+        val current = FoxStore.credentials(c)
+        if (current.id.isEmpty() || current.refresh.isEmpty()) throw FoxError("Sign in again")
+        if (current.access.isNotEmpty() && current.expiresAt - 120_000L > System.currentTimeMillis()) {
+            return@synchronized FoxAccess(current.access, current.id, current.revision)
+        }
+        val fresh = FoxApi.refresh(current.refresh)
+        if (!FoxStore.saveAccess(c, fresh, current.id, current.revision)) throw FoxError("Account changed")
+        FoxAccess(fresh.access, current.id, current.revision)
     }
 
     fun selectedLocation(c: Context): FoxLocation? {
@@ -326,15 +337,33 @@ object Fox {
         FoxStore.setSelected(c, location.code)
     }
 
-    fun signOut(c: Context) {
-        FoxStore.clear(c)
+    fun cancelLogin() {
+        if (busy) return
         step = STEP_NONE
         byLink = false
-        email = ""
-        limit = 0L
-        remaining = 0L
-        reset = ""
+        pendingEmail = ""
+        pendingPassword = ""
+        pendingUid = ""
+        pendingToken = ""
         message = ""
+        notifyUi()
+    }
+
+    fun switchAccount(c: Context, id: String): Boolean {
+        if (busy) return false
+        FoxVpnService.stop(c)
+        if (!FoxStore.switchAccount(c, id)) return false
+        cancelLogin()
+        load(c)
+        notifyUi()
+        return true
+    }
+
+    fun signOut(c: Context) {
+        FoxVpnService.stop(c)
+        FoxStore.clear(c)
+        cancelLogin()
+        load(c)
         delays.clear()
         notifyUi()
     }

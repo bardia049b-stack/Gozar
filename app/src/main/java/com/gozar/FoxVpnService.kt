@@ -20,6 +20,7 @@ class FoxVpnService : VpnService() {
     private var descriptor: ParcelFileDescriptor? = null
 
     private var stack: FoxStack? = null
+    private var startFailure = ""
 
     override fun onCreate() {
         super.onCreate()
@@ -39,6 +40,8 @@ class FoxVpnService : VpnService() {
 
     private fun open() {
         if (descriptor != null) return
+        FoxRoute.apply(Store.bypassLan(this), Store.bypassList(this))
+        FoxRoute.applyChain(Store.chain(this))
         val builder = Builder()
             .setSession(getString(R.string.fox_title))
             .addAddress(LOCAL_ADDRESS, 32)
@@ -49,18 +52,15 @@ class FoxVpnService : VpnService() {
             builder.setMetered(false)
             builder.setHttpProxy(ProxyInfo.buildDirectProxy("127.0.0.1", FoxLink.WEB_PORT))
         }
-        try {
-            builder.addDisallowedApplication(packageName)
-        } catch (e: Exception) {
-        }
-        val only = Store.apps(this)
-        if (only.isNotEmpty()) {
-            for (target in only) {
-                try {
-                    builder.addAllowedApplication(target)
-                } catch (e: Exception) {
-                }
-            }
+        val appsReady = applyAppSelection(
+            Store.apps(this),
+            packageName,
+            { builder.addAllowedApplication(it) },
+            { builder.addDisallowedApplication(it) }
+        )
+        if (!appsReady) {
+            abortStart(getString(R.string.apps_no_valid))
+            return
         }
         if (Store.bypassLan(this) && Build.VERSION.SDK_INT >= 33) {
             for (range in LAN_RANGES) {
@@ -76,7 +76,7 @@ class FoxVpnService : VpnService() {
             null
         }
         if (fd == null) {
-            FoxLink.fault(getString(R.string.fox_no_device))
+            abortStart(getString(R.string.fox_no_device))
             return
         }
         descriptor = fd
@@ -87,10 +87,14 @@ class FoxVpnService : VpnService() {
             addressOf(LOCAL_ADDRESS),
             FoxResolver(FoxLink.WEB_PORT),
             { host, port ->
-                val location = FoxLink.location ?: throw IOException("not connected yet")
-                val token = FoxStore.pass(app)
-                if (token.isEmpty()) throw IOException("no pass")
-                FoxTunnel.open(location, host, port, token)
+                if (FoxRoute.direct(host)) {
+                    FoxSocketPipe.connect(host, port) ?: throw IOException("direct connection failed")
+                } else {
+                    val location = FoxLink.location ?: throw IOException("not connected yet")
+                    val token = FoxStore.pass(app)
+                    if (token.isEmpty()) throw IOException("no pass")
+                    FoxTunnel.open(location, host, port, token)
+                }
             },
             { inbound, size -> FoxLink.count(inbound, size) }
         )
@@ -108,7 +112,14 @@ class FoxVpnService : VpnService() {
         alive = false
         if (instance === this) instance = null
         release()
+        if (startFailure.isNotEmpty()) FoxLink.fault(startFailure)
         super.onDestroy()
+    }
+
+    private fun abortStart(message: String) {
+        startFailure = message
+        close()
+        FoxLink.fault(message)
     }
 
     private fun close() {
@@ -183,6 +194,32 @@ class FoxVpnService : VpnService() {
 
         @Volatile private var alive = false
         @Volatile private var instance: FoxVpnService? = null
+
+        internal fun applyAppSelection(
+            only: Set<String>,
+            self: String,
+            allow: (String) -> Unit,
+            disallow: (String) -> Unit
+        ): Boolean {
+            if (only.isEmpty()) {
+                return try {
+                    disallow(self)
+                    true
+                } catch (e: Exception) {
+                    false
+                }
+            }
+            var applied = 0
+            for (target in only) {
+                if (target == self) continue
+                try {
+                    allow(target)
+                    applied++
+                } catch (e: Exception) {
+                }
+            }
+            return applied > 0
+        }
 
         fun isAlive(): Boolean = alive
 

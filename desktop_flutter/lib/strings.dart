@@ -111,4 +111,55 @@ class Words {
         'برای اتصال، برنامه را با دسترسی Administrator اجرا کنید.',
         'Run the app as Administrator to connect.',
       );
+  String get appearance => pick('ظاهر', 'Appearance');
+  String get lightTheme => pick('روشن', 'Light');
+  String get darkTheme => pick('تیره', 'Dark');
+  String get rememberServer =>
+      pick('به‌خاطر سپردن سرور آخر', 'Remember last server');
+  String get proxyChain => pick('زنجیرهٔ پراکسی', 'Proxy chain');
+  String get proxyChainHint => pick(
+      'هر خط یک پراکسی؛ برای نمونه socks5://127.0.0.1:1080',
+      'One proxy per line, for example socks5://127.0.0.1:1080');
+  String get proxyChainDetail => pick(
+      'پراکسی‌های SOCKS5 یا HTTP به ترتیب استفاده می‌شوند.',
+      'SOCKS5 or HTTP proxies are used in order.');
+  String get noProxyChain => pick('بدون پراکسی میانی', 'No upstream proxies');
+  String get save => pick('ذخیره', 'Save');
+  String get cancel => pick('انصراف', 'Cancel');
+  String get manageAccounts => pick('مدیریت حساب‌ها', 'Manage accounts');
+  String get savedAccounts =>
+      pick('حساب‌های ذخیره‌شده در گذر', 'Saved Gozar accounts');
+  String get addAccount => pick('افزودن حساب', 'Add account');
+  String get activeAccount => pick('فعال', 'Active');
+  String get switchDisconnect => pick(
+      'برای تغییر یا افزودن حساب، اتصال قطع می‌شود.',
+      'The VPN will disconnect before you switch or add an account.');
+  String get systemAccounts => pick(
+      'انتخاب ایمیل از حساب‌های سیستم', 'Choose an email from system accounts');
+  String get noSystemAccounts => pick(
+      'حساب ایمیلی در حساب‌های سیستم در دسترس نیست؛ می‌توانید ایمیل را دستی وارد کنید.',
+      'No system email accounts are available. You can enter your email manually.');
+  String get systemPickerUnavailable => pick(
+      'انتخاب حساب سیستم روی این دستگاه در دسترس نیست؛ ایمیل را دستی وارد کنید.',
+      'The system account picker is unavailable on this device. Enter your email manually.');
+  String get desktopRoutingLimits => pick(
+      'مسیریابی بر اساس برنامه و دامنه در نسخهٔ دسکتاپ هنوز پشتیبانی نمی‌شود.',
+      'Per-app and per-domain routing are not yet supported on desktop.');
+  String get routing => pick('مسیریابی', 'Routing');
+  String get updates => pick('بررسی به‌روزرسانی', 'Check for updates');
+  String get about => pick('درباره و مجوز', 'About and license');
+  String get updateAvailable =>
+      pick('نسخهٔ تازه در دسترس است:', 'A new release is available:');
+  String get updateCurrent =>
+      pick('نسخهٔ شما به‌روز است.', 'You are up to date.');
+  String get updateFailed =>
+      pick('بررسی به‌روزرسانی انجام نشد.', 'Could not check for updates.');
+  String get openRelease => pick('دیدن نسخه', 'View release');
+  String get donate => pick('حمایت از گذر', 'Support Gozar');
+  String get donateMessage => pick(
+      'اگر گذر برایتان مفید بوده، می‌توانید با رمزارز TON از توسعهٔ آن حمایت کنید.',
+      'If Gozar is useful to you, you can support its development with TON.');
+  String get copyAddress => pick('کپی نشانی', 'Copy address');
+  String get addressCopied => pick('نشانی کپی شد.', 'Address copied.');
+  String get sourceCode => pick('کد منبع', 'Source code');
 }

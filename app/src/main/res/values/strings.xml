@@ -314,7 +314,7 @@ AGPL-3.0-or-later</string>
     <string name="account_usage">%1$s of %2$s used this month</string>
     <string name="sign_out_confirm">Sign out of Gozar on this device?</string>
     <string name="geolocation">Geolocation</string>
-    <string name="geolocation_desc">Use the network location for the map</string>
+    <string name="geolocation_desc">Use the mobile network country for the map; no GPS lookup</string>
     <string name="recents">Recent servers</string>
     <string name="recents_desc">Suggest the last used server first</string>
     <string name="project">Project</string>
@@ -326,7 +326,7 @@ AGPL-3.0-or-later</string>
     <string name="login_signin_title">Sign in</string>
     <string name="login_signin_sub">Use your Firefox account to unlock 50 GB every month.</string>
     <string name="login_forgot">Forgot password?</string>
-    <string name="login_terms">Gozar never sees your password. Sign-in happens on Mozilla servers.</string>
+    <string name="login_terms">Gozar does not store your password. Sign-in happens through Mozilla servers.</string>
     <string name="usage_month">Monthly usage</string>
     <string name="usage_left">%1$s left</string>
     <string name="login_social_hint">Google and Apple sign-in continues on accounts.firefox.com.</string>
@@ -355,4 +355,19 @@ AGPL-3.0-or-later</string>
     <string name="chain_hint_short">socks5://host:port</string>
     <string name="apps_all_hint">All apps go through the tunnel</string>
     <string name="apps_picked">%1$d selected</string>
+    <string name="donate_section">Support Gozar</string>
+    <string name="donate_desc">Support development with TON</string>
+    <string name="donate_message">To support the project, send TON to this address on the TON network.</string>
+    <string name="donate_copy">Copy address</string>
+    <string name="donate_copied">Wallet address copied</string>
+    <string name="apps_no_valid">None of the selected apps is installed. Choose apps again before connecting.</string>
+    <string name="manage_accounts">Manage accounts</string>
+    <string name="saved_accounts">Saved Gozar accounts</string>
+    <string name="add_account">Add account</string>
+    <string name="system_accounts">Choose an email from system accounts</string>
+    <string name="system_account_not_email">That system account does not have an email address. Enter your email manually.</string>
+    <string name="system_account_unavailable">The system account picker is unavailable. Enter your email manually.</string>
+    <string name="switch_account_disconnect">Switching or adding an account disconnects the VPN.</string>
+    <string name="account_wait">Please wait for the current operation to finish.</string>
+    <string name="account_active">Active</string>
 </resources>

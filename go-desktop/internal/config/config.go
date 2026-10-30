@@ -4,21 +4,48 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
+type Account struct {
+	Email     string `json:"email"`
+	UID       string `json:"uid"`
+	Access    string `json:"access"`
+	Refresh   string `json:"refresh"`
+	ExpiresAt int64  `json:"expires_at"`
+	Limit     int64  `json:"limit,omitempty"`
+	Remaining int64  `json:"remaining,omitempty"`
+	Reset     string `json:"reset,omitempty"`
+}
+
+func (a Account) ID() string {
+	if a.UID != "" {
+		return "uid:" + a.UID
+	}
+	if a.Email != "" {
+		return "email:" + strings.ToLower(a.Email)
+	}
+	return ""
+}
+
 type Config struct {
-	Email      string   `json:"email"`
-	UID        string   `json:"uid"`
-	Access     string   `json:"access"`
-	Refresh    string   `json:"refresh"`
-	ExpiresAt  int64    `json:"expires_at"`
-	Server     string   `json:"server"`
-	Language   string   `json:"language"`
-	FullTunnel bool     `json:"full_tunnel"`
-	BypassLAN  bool     `json:"bypass_lan"`
-	Bypass     []string `json:"bypass"`
-	Chain      []string `json:"chain"`
-	Port       int      `json:"port"`
+	Email           string    `json:"email"`
+	UID             string    `json:"uid"`
+	Access          string    `json:"access"`
+	Refresh         string    `json:"refresh"`
+	ExpiresAt       int64     `json:"expires_at"`
+	Accounts        []Account `json:"accounts,omitempty"`
+	Server          string    `json:"server"`
+	Language        string    `json:"language"`
+	Theme           string    `json:"theme"`
+	Recents         bool      `json:"recents"`
+	LastServer      string    `json:"last_server"`
+	SettingsVersion int       `json:"settings_version"`
+	FullTunnel      bool      `json:"full_tunnel"`
+	BypassLAN       bool      `json:"bypass_lan"`
+	Bypass          []string  `json:"bypass"`
+	Chain           []string  `json:"chain"`
+	Port            int       `json:"port"`
 }
 
 func Dir() string {
@@ -27,13 +54,89 @@ func Dir() string {
 		base = os.Getenv("HOME")
 	}
 	dir := filepath.Join(base, "Gozar")
-	os.MkdirAll(dir, 0o755)
+	os.MkdirAll(dir, 0o700)
 	return dir
 }
 
 func path() string { return filepath.Join(Dir(), "config.json") }
 
-func defaults() Config { return Config{FullTunnel: true, BypassLAN: true, Port: 10810} }
+func defaults() Config {
+	return Config{FullTunnel: true, Theme: "system", SettingsVersion: 1, Port: 10810}
+}
+
+func (c Config) ActiveAccount() Account {
+	a := Account{Email: c.Email, UID: c.UID, Access: c.Access, Refresh: c.Refresh, ExpiresAt: c.ExpiresAt}
+	for _, saved := range c.Accounts {
+		if saved.ID() == a.ID() && a.ID() != "" {
+			a.Limit, a.Remaining, a.Reset = saved.Limit, saved.Remaining, saved.Reset
+			break
+		}
+	}
+	return a
+}
+
+func (c Config) WithCurrentAccount() Config {
+	c.Accounts = append([]Account(nil), c.Accounts...)
+	current := c.ActiveAccount()
+	if current.ID() == "" || (current.Refresh == "" && current.Access == "") {
+		return c
+	}
+	found := false
+	filtered := make([]Account, 0, len(c.Accounts)+1)
+	for _, saved := range c.Accounts {
+		if saved.ID() == current.ID() || strings.EqualFold(saved.Email, current.Email) {
+			if !found {
+				filtered = append(filtered, current)
+				found = true
+			}
+		} else {
+			filtered = append(filtered, saved)
+		}
+	}
+	if !found {
+		filtered = append(filtered, current)
+	}
+	c.Accounts = filtered
+	return c
+}
+
+func (c Config) PutAccount(account Account) Config {
+	c = c.WithCurrentAccount()
+	filtered := make([]Account, 0, len(c.Accounts)+1)
+	for _, saved := range c.Accounts {
+		if saved.ID() != account.ID() && !strings.EqualFold(saved.Email, account.Email) {
+			filtered = append(filtered, saved)
+		}
+	}
+	c.Accounts = append(filtered, account)
+	c.Email, c.UID, c.Access, c.Refresh, c.ExpiresAt = account.Email, account.UID, account.Access, account.Refresh, account.ExpiresAt
+	return c
+}
+
+func (c Config) SwitchAccount(id string) (Config, bool) {
+	c = c.WithCurrentAccount()
+	for _, account := range c.Accounts {
+		if account.ID() == id && (account.Refresh != "" || account.Access != "") {
+			c.Email, c.UID, c.Access, c.Refresh, c.ExpiresAt = account.Email, account.UID, account.Access, account.Refresh, account.ExpiresAt
+			return c, true
+		}
+	}
+	return c, false
+}
+
+func (c Config) RemoveActive() Config {
+	c = c.WithCurrentAccount()
+	id := c.ActiveAccount().ID()
+	filtered := make([]Account, 0, len(c.Accounts))
+	for _, account := range c.Accounts {
+		if account.ID() != id {
+			filtered = append(filtered, account)
+		}
+	}
+	c.Accounts = filtered
+	c.Email, c.UID, c.Access, c.Refresh, c.ExpiresAt = "", "", "", "", 0
+	return c
+}
 
 func Load() Config {
 	fresh := defaults()
@@ -48,15 +151,45 @@ func Load() Config {
 	if loaded.Port == 0 {
 		loaded.Port = fresh.Port
 	}
-	return loaded
+	if loaded.SettingsVersion < 1 {
+		loaded.Chain = nil
+		loaded.Bypass = nil
+		loaded.BypassLAN = false
+		loaded.SettingsVersion = 1
+	}
+	if loaded.Theme != "light" && loaded.Theme != "dark" {
+		loaded.Theme = "system"
+	}
+	return loaded.WithCurrentAccount()
 }
 
 func Save(current Config) error {
-	data, err := json.MarshalIndent(current, "", "  ")
+	data, err := json.MarshalIndent(current.WithCurrentAccount(), "", "  ")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path(), data, 0o600)
+	file, err := os.CreateTemp(Dir(), ".config-*")
+	if err != nil {
+		return err
+	}
+	name := file.Name()
+	defer os.Remove(name)
+	if err := file.Chmod(0o600); err != nil {
+		file.Close()
+		return err
+	}
+	if _, err := file.Write(data); err != nil {
+		file.Close()
+		return err
+	}
+	if err := file.Sync(); err != nil {
+		file.Close()
+		return err
+	}
+	if err := file.Close(); err != nil {
+		return err
+	}
+	return os.Rename(name, path())
 }
 
-func (c Config) SignedIn() bool { return c.Refresh != "" || c.Access != "" }
+func (c Config) SignedIn() bool { return c.Email != "" && (c.Refresh != "" || c.Access != "") }

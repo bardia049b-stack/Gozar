@@ -84,6 +84,16 @@
                         android:imeOptions="actionNext"
                         android:inputType="textEmailAddress"
                         android:maxLines="1" />
+
+                    <ImageButton
+                        android:id="@+id/loginSystemAccounts"
+                        android:layout_width="44dp"
+                        android:layout_height="48dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="@string/system_accounts"
+                        android:padding="10dp"
+                        android:src="@drawable/ic_account"
+                        android:tint="@color/login_accent" />
                 </LinearLayout>
 
                 <LinearLayout
@@ -198,6 +208,18 @@
                     style="@style/Gozar.Login.Switch"
                     android:layout_marginTop="14dp"
                     android:text="@string/login_no_account" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/loginSavedAccounts"
+                    style="@style/Gozar.Login.Switch"
+                    android:text="@string/saved_accounts"
+                    android:visibility="gone" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/loginCancelAdd"
+                    style="@style/Gozar.Login.Switch"
+                    android:text="@string/cancel"
+                    android:visibility="gone" />
 
                 <TextView
                     android:layout_width="match_parent"

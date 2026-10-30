@@ -23,6 +23,7 @@ type Target struct {
 	Host     string
 	Port     int
 	DialHost string
+	Chain    []Hop
 }
 
 type Dup interface {
@@ -67,11 +68,7 @@ func markH2Broken() {
 }
 
 func dialTLS(target Target, protocols []string, timeout time.Duration) (*tls.Conn, error) {
-	host := target.Host
-	if target.DialHost != "" {
-		host = target.DialHost
-	}
-	raw, err := net.DialTimeout("tcp", net.JoinHostPort(host, strconv.Itoa(target.Port)), timeout)
+	raw, err := dialChain(target, timeout)
 	if err != nil {
 		return nil, err
 	}
