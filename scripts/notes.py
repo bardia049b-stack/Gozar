@@ -107,9 +107,13 @@ print('- The Android 13 certificate-chain fix from the preceding release remains
 print()
 print('## Desktop and platform limits')
 print()
-print('The Windows installer installs per user and offers an optional desktop shortcut. The VPN app requests administrator approval '
-      'for its TUN device. The EXE is not Authenticode-signed. macOS builds are ad-hoc signed and not notarized. '
-      'Linux TUN setup needs suitable privileges. Real Linux TUN, Windows Wintun and macOS utun devices were exercised with local mock upstream and DNS services. The tests covered TCP uploads, half-close, UDP/TCP DNS and shutdown. They do not verify connectivity to a real Firefox server or production account.')
+print('The Windows installer installs per user and offers an optional desktop shortcut. Windows requests administrator approval when the app starts. '
+      'The EXE is not Authenticode-signed. macOS builds are ad-hoc signed and not notarized. '
+      '**Linux and macOS do not yet have an automatic privilege helper:** a normal unprivileged launch can sign in but cannot start the TUN; '
+      'the app must already have suitable administrator privileges. The Linux desktop shortcut starts without them. '
+      'Graphical execution with elevated privileges depends on the desktop environment; a safer privilege helper remains future work. '
+      'Real Linux TUN, Windows Wintun and macOS utun devices were exercised with local mock upstream and DNS services. '
+      'The tests covered TCP uploads, half-close, UDP/TCP DNS and shutdown. They do not verify connectivity to a real Firefox server or production account.')
 print()
 print('Desktop per-app and per-domain routing, a dedicated LAN-bypass control and a route map are not implemented. '
       'The existing proxy-chain editor accepts unauthenticated SOCKS5 and HTTP CONNECT hops; changes require disconnection. '
