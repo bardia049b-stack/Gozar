@@ -88,6 +88,8 @@ class FoxStack(
 
     fun nameOf(address: Int): String? = names[address]
 
+    internal fun dnsPipe(): FoxPipe = FoxDnsPipe(resolver, ::learn)
+
     private fun pump() {
         val buffer = ByteArray(65535)
         while (running) {
@@ -458,7 +460,7 @@ class FoxStack(
             thread(isDaemon = true, name = "fox-flow") {
                 val host = names[remote] ?: address(remote)
                 val link = try {
-                    dial(host, remotePort)
+                    if (remotePort == 53) dnsPipe() else dial(host, remotePort)
                 } catch (e: Exception) {
                     if (!closed) send(remote, remotePort, appPort, sent, expected, RST or ACK, 0, null, 0, 0)
                     flows.remove(key, this)

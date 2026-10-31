@@ -20,6 +20,7 @@ func TestStartupUsesTunWithoutChangingSystemProxy(t *testing.T) {
 	root := t.TempDir()
 	t.Setenv("HOME", root)
 	t.Setenv("XDG_CONFIG_HOME", root)
+	t.Setenv("APPDATA", root)
 	t.Setenv("PATH", root)
 	marker := filepath.Join(root, "proxy-command-called")
 	t.Setenv("GOZAR_PROXY_MARKER", marker)
@@ -56,6 +57,7 @@ func TestVerificationKeepsTheOriginalSession(t *testing.T) {
 	root := t.TempDir()
 	t.Setenv("HOME", root)
 	t.Setenv("XDG_CONFIG_HOME", root)
+	t.Setenv("APPDATA", root)
 	previous := http.DefaultTransport
 	defer func() { http.DefaultTransport = previous }()
 	loginCount, verificationCount, tokenCount := 0, 0, 0
@@ -104,6 +106,7 @@ func TestBlockedSignInRequestsNewCodesWithoutStartingNewSessions(t *testing.T) {
 	root := t.TempDir()
 	t.Setenv("HOME", root)
 	t.Setenv("XDG_CONFIG_HOME", root)
+	t.Setenv("APPDATA", root)
 	previous := http.DefaultTransport
 	defer func() { http.DefaultTransport = previous }()
 	loginCount, sentCount, verifyCount := 0, 0, 0
@@ -161,6 +164,7 @@ func TestRegistrationRetainsSessionForEmailAndTokenRetries(t *testing.T) {
 	root := t.TempDir()
 	t.Setenv("HOME", root)
 	t.Setenv("XDG_CONFIG_HOME", root)
+	t.Setenv("APPDATA", root)
 	previous := http.DefaultTransport
 	defer func() { http.DefaultTransport = previous }()
 	createCount, verificationCount, tokenCount := 0, 0, 0

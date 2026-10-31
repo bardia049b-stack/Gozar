@@ -18,6 +18,7 @@ func accountApp(t *testing.T) *App {
 	root := t.TempDir()
 	t.Setenv("HOME", root)
 	t.Setenv("XDG_CONFIG_HOME", root)
+	t.Setenv("APPDATA", root)
 	a := New("test")
 	t.Cleanup(a.Close)
 	return a
@@ -175,6 +176,7 @@ func TestLegacySingleAccountMigratesAndRecentServerHasEffect(t *testing.T) {
 	root := t.TempDir()
 	t.Setenv("HOME", root)
 	t.Setenv("XDG_CONFIG_HOME", root)
+	t.Setenv("APPDATA", root)
 	old := config.Config{
 		Email: "legacy@example.test", UID: "legacy", Access: "old-access", Refresh: "old-refresh",
 		Server: "selected.example", Recents: true, LastServer: "last-connected.example",
@@ -212,6 +214,8 @@ func TestSettingsDoNotApplyWhenSavingFails(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Setenv("XDG_CONFIG_HOME", blocked)
+	t.Setenv("APPDATA", blocked)
+	t.Setenv("HOME", blocked)
 	attempts := []func() error{
 		func() error { return a.SetLanguage("fa") },
 		func() error { return a.SetTheme("dark") },

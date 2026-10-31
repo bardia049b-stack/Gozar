@@ -63,6 +63,28 @@ VIAddVersionKey "LegalCopyright" "Gozar contributors; see bundled licenses"
 !insertmacro MUI_UNPAGE_FINISH
 !insertmacro MUI_LANGUAGE "English"
 
+Function .onInit
+    FindWindow $0 "FLUTTER_RUNNER_WIN32_WINDOW" "Gozar"
+    StrCmp $0 0 ready
+    IfSilent abort
+    MessageBox MB_OK|MB_ICONEXCLAMATION "Close Gozar before installing or updating it."
+  abort:
+    SetErrorLevel 2
+    Abort
+  ready:
+FunctionEnd
+
+Function un.onInit
+    FindWindow $0 "FLUTTER_RUNNER_WIN32_WINDOW" "Gozar"
+    StrCmp $0 0 ready
+    IfSilent abort
+    MessageBox MB_OK|MB_ICONEXCLAMATION "Close Gozar before uninstalling it."
+  abort:
+    SetErrorLevel 2
+    Abort
+  ready:
+FunctionEnd
+
 Section "Gozar application and core" Main
     SectionIn RO
     SetShellVarContext current

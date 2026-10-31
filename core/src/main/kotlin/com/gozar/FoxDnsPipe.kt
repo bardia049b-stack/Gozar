@@ -3,7 +3,10 @@ package com.gozar
 import java.io.IOException
 import java.util.ArrayDeque
 
-class FoxDnsPipe(private val resolver: FoxResolver) : FoxPipe {
+class FoxDnsPipe(
+    private val resolver: FoxResolver,
+    private val onAnswer: (ByteArray, ByteArray) -> Unit = { _, _ -> }
+) : FoxPipe {
     private val lock = Object()
     private var incoming = ByteArray(0)
     private val outgoing = ArrayDeque<ByteArray>()
@@ -28,6 +31,7 @@ class FoxDnsPipe(private val resolver: FoxResolver) : FoxPipe {
         }
         for (query in messages) {
             val answer = resolver.answer(query) ?: throw IOException("invalid DNS query")
+            onAnswer(query, answer)
             if (answer.size > 65535) throw IOException("DNS reply is too large")
             val framed = ByteArray(answer.size + 2)
             framed[0] = (answer.size ushr 8).toByte()

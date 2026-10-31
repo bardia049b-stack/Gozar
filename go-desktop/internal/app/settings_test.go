@@ -13,6 +13,7 @@ func TestSettingsPersistAndRejectInvalidChangesWithoutConnecting(t *testing.T) {
 	root := t.TempDir()
 	t.Setenv("HOME", root)
 	t.Setenv("XDG_CONFIG_HOME", root)
+	t.Setenv("APPDATA", root)
 	current := New("test")
 	defer current.Close()
 	if err := current.SetTheme("light"); err != nil {
@@ -63,11 +64,9 @@ func TestOldInactiveNetworkFieldsDoNotTurnOnDuringMigration(t *testing.T) {
 	root := t.TempDir()
 	t.Setenv("HOME", root)
 	t.Setenv("XDG_CONFIG_HOME", root)
-	if err := os.MkdirAll(filepath.Join(root, "Gozar"), 0o755); err != nil {
-		t.Fatal(err)
-	}
+	t.Setenv("APPDATA", root)
 	old := []byte(`{"language":"fa","full_tunnel":true,"bypass_lan":true,"chain":["socks5://127.0.0.1:1080"]}`)
-	if err := os.WriteFile(filepath.Join(root, "Gozar", "config.json"), old, 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(config.Dir(), "config.json"), old, 0o600); err != nil {
 		t.Fatal(err)
 	}
 	loaded := config.Load()

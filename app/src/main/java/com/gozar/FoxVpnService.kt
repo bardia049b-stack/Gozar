@@ -90,9 +90,7 @@ class FoxVpnService : VpnService() {
             addressOf(LOCAL_ADDRESS),
             resolver,
             { host, port ->
-                if (port == 53) {
-                    FoxDnsPipe(resolver)
-                } else if (FoxRoute.direct(host)) {
+                if (FoxRoute.direct(host)) {
                     FoxSocketPipe.connect(host, port) ?: throw IOException("direct connection failed")
                 } else {
                     val location = FoxLink.location ?: throw IOException("not connected yet")

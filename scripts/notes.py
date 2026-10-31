@@ -74,7 +74,7 @@ print()
 print('- Fixed an Android TCP upload path that could acknowledge data without retaining it under backpressure. '
       'The tunnel now bounds its queue, reopens the receive window as space becomes available, and closes a connection that completes after its flow was cancelled.')
 print('- Updated Android DNS handling to allow concurrent lookups, honor bounded response TTLs, avoid caching failed answers as successful results, '
-      'and recover after failures instead of remaining latched. Large UDP answers are marked truncated so clients can retry over TCP; TCP DNS requests are resolved through the same DNS-over-HTTPS path. A specific route for the in-tunnel DNS address also takes precedence over an optional LAN exclusion.')
+      'and recover after failures instead of remaining latched. Large UDP answers are marked truncated so clients can retry over TCP; TCP DNS requests use the same DNS-over-HTTPS path and teach the tunnel domain routing from the answer. A specific route for the in-tunnel DNS address also takes precedence over an optional LAN exclusion.')
 print('- Improved HTTP/2 handling of padded frames, data frames larger than the caller’s read buffer, long authorization headers, flow-control windows, write errors, and TCP half-close. '
       'Fallback does not disable TLS verification.')
 print('- Fixed native TUN packet headroom for modern Linux TUN offload and macOS utun, released incoming packet buffers correctly, '
