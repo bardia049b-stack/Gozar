@@ -115,7 +115,8 @@ print('The Windows installer installs per user and offers an optional desktop sh
       'Normal disconnect restores Gozar-managed routes and DNS, but forced termination or a crash can leave changes behind, '
       'especially on Linux and macOS; network settings may need manual recovery. '
       'Real Linux TUN, Windows Wintun and macOS utun devices were exercised with local mock upstream and DNS services. '
-      'The tests covered TCP uploads, half-close, UDP/TCP DNS and shutdown. They do not verify connectivity to a real Firefox server or production account.')
+      'The tests covered TCP uploads, half-close, UDP/TCP DNS and shutdown. An additional real-TUN test sends concurrent TCP traffic through a locally simulated, TLS-verified HTTP/2 CONNECT proxy. '
+      'These tests do not verify connectivity to a real Firefox server or production account.')
 print()
 print('Desktop per-app and per-domain routing, a dedicated LAN-bypass control and a route map are not implemented. '
       'The existing proxy-chain editor accepts unauthenticated SOCKS5 and HTTP CONNECT hops; changes require disconnection. '

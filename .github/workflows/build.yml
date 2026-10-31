@@ -163,6 +163,30 @@ jobs:
         if: matrix.platform == 'darwin'
         shell: bash
         run: sudo env GOZAR_LIVE_TUN_TEST=1 GOZAR_LIVE_DNS_CHANGE_TEST=1 GOZAR_PROTECT_TEST_IP=203.0.113.42 "$RUNNER_TEMP/gozar-live-tun.test" -test.v '-test.run=^TestLiveKernelTunnel$' -test.timeout=75s
+      - name: Compile live tunnel-to-proxy test
+        working-directory: go-desktop
+        shell: bash
+        run: |
+          set -e
+          suffix=''
+          if [ "${{ matrix.platform }}" = windows ]; then suffix='.exe'; fi
+          go test -c -o "$RUNNER_TEMP/gozar-pipeline.test$suffix" ./internal/tunnel
+      - name: Test Linux packets through a simulated HTTP2 proxy
+        if: matrix.platform == 'linux'
+        shell: bash
+        run: scripts/test_live_tun_linux.sh "$RUNNER_TEMP/gozar-pipeline.test"
+      - name: Test Windows packets through a simulated HTTP2 proxy
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          $env:GOZAR_LIVE_TUN_TEST = '1'
+          $env:GOZAR_PROTECT_TEST_IP = '203.0.113.42'
+          & "$env:RUNNER_TEMP/gozar-pipeline.test.exe" '-test.v' '-test.run=^TestLiveKernelTunnel$' '-test.timeout=90s'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Test macOS packets through a simulated HTTP2 proxy
+        if: matrix.platform == 'darwin'
+        shell: bash
+        run: sudo env GOZAR_LIVE_TUN_TEST=1 GOZAR_PROTECT_TEST_IP=203.0.113.42 "$RUNNER_TEMP/gozar-pipeline.test" -test.v '-test.run=^TestLiveKernelTunnel$' -test.timeout=90s
       - name: Inspect Flutter code
         working-directory: desktop_flutter
         shell: bash
