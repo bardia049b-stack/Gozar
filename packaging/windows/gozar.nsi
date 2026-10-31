@@ -89,7 +89,11 @@ Section "Gozar application and core" Main
     SectionIn RO
     SetShellVarContext current
     SetOutPath "$INSTDIR"
+!ifdef NSIS_WIN32_MAKENSIS
+    File /r "${SOURCE}\*"
+!else
     File /r "${SOURCE}/*"
+!endif
     WriteUninstaller "$INSTDIR\Uninstall.exe"
     CreateShortCut "$SMPROGRAMS\Gozar.lnk" "$INSTDIR\gozar.exe"
     WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Gozar" "DisplayName" "Gozar"

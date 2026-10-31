@@ -210,6 +210,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/gozar-ipc"
           printf '%s\n' '{"id":1,"method":"state"}' '{"id":2,"method":"language","params":{"language":"en"}}' '{"id":3,"method":"quit"}' | APPDATA="$RUNNER_TEMP/gozar-ipc" "$FOLDER/gozar-core.exe" --rpc > "$RUNNER_TEMP/gozar-ipc.jsonl"
           python -c "import json,os; r=[json.loads(x) for x in open(os.path.join(os.environ['RUNNER_TEMP'],'gozar-ipc.jsonl'))]; assert [x['id'] for x in r]==[1,2,3] and r[1]['state']['language']=='en'"
+          python -c "import pathlib,struct; p=pathlib.Path('$FOLDER/gozar-core.exe').read_bytes(); pe=struct.unpack_from('<I',p,60)[0]; assert p[pe:pe+4]==b'PE\0\0' and struct.unpack_from('<H',p,pe+24+68)[0]==2, 'The core must use the Windows GUI subsystem'"
           cp ../LICENSE ../NOTICE ../WINTUN-LICENSE.txt ../QUIC-GO-LICENSE.txt ../QPACK-LICENSE.txt ../GO-DEPS-LICENSES.txt "$FOLDER/"
           mkdir -p out
           python ../scripts/archive_windows.py "$FOLDER" out/Gozar-Windows-x64.zip
@@ -225,6 +226,11 @@ jobs:
             "-DHEADER_FILE=$(cygpath -w "$PWD/../packaging/windows/header.bmp")" \
             "$(cygpath -w "$PWD/../packaging/windows/gozar.nsi")"
           ls -lh out/*
+      - name: Verify Windows installer and uninstaller
+        if: matrix.platform == 'windows'
+        working-directory: desktop_flutter
+        shell: pwsh
+        run: ../scripts/test_windows_installer.ps1 -Installer out/Gozar-Windows-x64-Setup.exe -InstallDir "$env:RUNNER_TEMP/gozar-install-smoke"
       - name: Build macOS
         if: matrix.platform == 'darwin'
         working-directory: desktop_flutter
