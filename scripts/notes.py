@@ -112,6 +112,8 @@ print('The Windows installer installs per user and offers an optional desktop sh
       '**Linux and macOS do not yet have an automatic privilege helper:** a normal unprivileged launch can sign in but cannot start the TUN; '
       'the app must already have suitable administrator privileges. The Linux desktop shortcut starts without them. '
       'Graphical execution with elevated privileges depends on the desktop environment; a safer privilege helper remains future work. '
+      'Normal disconnect restores Gozar-managed routes and DNS, but forced termination or a crash can leave changes behind, '
+      'especially on Linux and macOS; network settings may need manual recovery. '
       'Real Linux TUN, Windows Wintun and macOS utun devices were exercised with local mock upstream and DNS services. '
       'The tests covered TCP uploads, half-close, UDP/TCP DNS and shutdown. They do not verify connectivity to a real Firefox server or production account.')
 print()
@@ -124,6 +126,6 @@ print()
 print('## Verification and signing')
 print()
 print('Automated unit tests and local simulations cover the changed tunnel, resolver, selector, root command planning and interface paths; '
-      'they do not replace testing with real accounts and networks. Each published file is accompanied by a detached OpenPGP signature and '
-      '`gozar-public-key.asc`. The Android release APKs must be signed with the existing official Android key to upgrade an existing install. '
+      'they do not replace testing with real accounts and networks. Each application and core download is accompanied by a detached OpenPGP signature; '
+      '`gozar-public-key.asc` is provided for verification. The Android release APKs must be signed with the existing official Android key to upgrade an existing install. '
       'Do not substitute a debug or newly generated key as an official upgrade.')
