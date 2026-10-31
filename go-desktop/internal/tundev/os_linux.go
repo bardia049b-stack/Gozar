@@ -1,6 +1,7 @@
 package tundev
 
 import (
+	"bytes"
 	"errors"
 	"net/netip"
 	"os"
@@ -41,7 +42,9 @@ func configure(cfg *Config) error {
 		if err := mustRun("ip", args...); err != nil {
 			return err
 		}
-		cfg.AddedKeep = append(cfg.AddedKeep, keep)
+		remove := append([]string(nil), args...)
+		remove[2] = "del"
+		cfg.linuxKeepRoutes = append(cfg.linuxKeepRoutes, remove)
 	}
 	if err := mustRun("ip", "route", "add", "0.0.0.0/1", "dev", cfg.Interface); err != nil {
 		return err
@@ -56,10 +59,11 @@ func configure(cfg *Config) error {
 		return err
 	}
 	cfg.DNSBefore = before
-	cfg.DNSChanged = true
 	if err := os.WriteFile(resolvConf, []byte("nameserver "+cfg.DNS+"\n"), 0o644); err != nil {
+		_ = os.WriteFile(resolvConf, before, 0o644)
 		return err
 	}
+	cfg.DNSChanged = true
 	return nil
 }
 
@@ -95,7 +99,10 @@ func routeForKeep(address netip.Addr, output string) ([]string, bool, error) {
 
 func restore(cfg *Config) {
 	if cfg.DNSChanged {
-		os.WriteFile(resolvConf, cfg.DNSBefore, 0o644)
+		current, err := os.ReadFile(resolvConf)
+		if err == nil && bytes.Equal(current, []byte("nameserver "+cfg.DNS+"\n")) {
+			_ = os.WriteFile(resolvConf, cfg.DNSBefore, 0o644)
+		}
 		cfg.DNSChanged = false
 	}
 	if cfg.Routes[0] {
@@ -106,10 +113,10 @@ func restore(cfg *Config) {
 		mustRun("ip", "route", "delete", "128.0.0.0/1", "dev", cfg.Interface)
 		cfg.Routes[1] = false
 	}
-	for _, keep := range cfg.AddedKeep {
-		mustRun("ip", "route", "delete", keep.String()+"/32")
+	for _, route := range cfg.linuxKeepRoutes {
+		_ = mustRun("ip", route...)
 	}
-	cfg.AddedKeep = nil
+	cfg.linuxKeepRoutes = nil
 }
 
 func privileged() bool { return isRoot() }

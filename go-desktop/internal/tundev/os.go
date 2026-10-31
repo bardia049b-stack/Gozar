@@ -22,6 +22,10 @@ type Config struct {
 	DNSChanged      bool
 	ServiceDNS      map[string][]string
 	ChangedServices []string
+	windowsGateway  string
+	windowsIndex    string
+	linuxKeepRoutes [][]string
+	darwinGateway   string
 }
 
 func Configure(cfg *Config) error {

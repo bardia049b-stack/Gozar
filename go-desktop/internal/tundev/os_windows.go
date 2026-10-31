@@ -3,6 +3,8 @@ package tundev
 import (
 	"errors"
 	"net"
+	"time"
+	"unsafe"
 
 	"golang.org/x/sys/windows"
 )
@@ -46,12 +48,39 @@ func gateway() (string, string) {
 	return windowsDefaultRoute(out, indexes)
 }
 
+func waitWindowsReady(name string) error {
+	deadline := time.Now().Add(12 * time.Second)
+	for time.Now().Before(deadline) {
+		iface, err := net.InterfaceByName(name)
+		if err == nil {
+			link := windows.MibIfRow2{InterfaceIndex: uint32(iface.Index)}
+			address := windows.MibUnicastIpAddressRow{InterfaceIndex: uint32(iface.Index)}
+			ipv4 := (*windows.RawSockaddrInet4)(unsafe.Pointer(&address.Address))
+			ipv4.Family = windows.AF_INET
+			ipv4.Addr = [4]byte{10, 111, 0, 2}
+			linkErr := windows.GetIfEntry2Ex(windows.MibIfEntryNormalWithoutStatistics, &link)
+			addrErr := windows.GetUnicastIpAddressEntry(&address)
+			if addrErr == nil && address.DadState == windows.IpDadStateDuplicate {
+				return errors.New("the tunnel address conflicts with another network interface")
+			}
+			if linkErr == nil && link.OperStatus == windows.IfOperStatusUp && addrErr == nil && address.DadState == windows.IpDadStatePreferred {
+				return nil
+			}
+		}
+		time.Sleep(150 * time.Millisecond)
+	}
+	return errors.New("the Windows tunnel interface did not become ready")
+}
+
 func configure(cfg *Config) error {
 	if !isWindowsAdmin() {
 		return errors.New("the tunnel needs administrator rights")
 	}
 	if err := mustRun("netsh", "interface", "ipv4", "set", "address", "name="+cfg.Interface,
 		"static", Address.String(), "255.255.255.255"); err != nil {
+		return err
+	}
+	if err := waitWindowsReady(cfg.Interface); err != nil {
 		return err
 	}
 	if err := mustRun("netsh", "interface", "ipv4", "set", "dnsservers", "name="+cfg.Interface,
@@ -62,6 +91,7 @@ func configure(cfg *Config) error {
 	if gate == "" || index == "" {
 		return errors.New("no usable default gateway")
 	}
+	cfg.windowsGateway, cfg.windowsIndex = gate, index
 	for _, keep := range cfg.Keep {
 		if err := mustRun("route", "add", keep.String(), "mask", "255.255.255.255", gate, "metric", "1", "if", index); err != nil {
 			return err
@@ -92,9 +122,10 @@ func restore(cfg *Config) {
 		cfg.Routes[1] = false
 	}
 	for _, keep := range cfg.AddedKeep {
-		mustRun("route", "delete", keep.String())
+		mustRun("route", "delete", keep.String(), "mask", "255.255.255.255", cfg.windowsGateway, "if", cfg.windowsIndex)
 	}
 	cfg.AddedKeep = nil
+	cfg.windowsGateway, cfg.windowsIndex = "", ""
 }
 
 func privileged() bool { return isWindowsAdmin() }

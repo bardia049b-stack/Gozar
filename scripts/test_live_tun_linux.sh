@@ -5,7 +5,7 @@ resolver=$(mktemp)
 printf 'nameserver 192.0.2.53\noptions timeout:1\n' > "$resolver"
 trap 'rm -f "$resolver"' EXIT HUP INT TERM
 run_case() {
- sudo unshare --mount --net --fork -- env GOZAR_TEST_BINARY="$binary" GOZAR_TEST_RESOLV="$resolver" GOZAR_LIVE_TUN_TEST=1 GOZAR_DEFAULT_MODE="$1" GOZAR_PROTECT_TEST_IP="$2" GOZAR_EXPECT_PROTECT_IF="$3" sh -eu -c '
+ sudo unshare --mount --net --fork -- env GOZAR_TEST_BINARY="$binary" GOZAR_TEST_RESOLV="$resolver" GOZAR_LIVE_TUN_TEST=1 GOZAR_DEFAULT_MODE="$1" GOZAR_PROTECT_TEST_IP="$2" GOZAR_EXPECT_PROTECT_IF="$3" GOZAR_SPECIAL_CASE="${4:-normal}" sh -eu -c '
   mount --make-rprivate /
   mount --bind "$GOZAR_TEST_RESOLV" /etc/resolv.conf
   ip link set lo up
@@ -20,12 +20,26 @@ run_case() {
   else
     ip route add default via 192.0.2.1 dev gozartest0
   fi
+  if [ "$GOZAR_SPECIAL_CASE" = existing ]; then
+    ip route add "$GOZAR_PROTECT_TEST_IP"/32 dev "$GOZAR_EXPECT_PROTECT_IF"
+  fi
+  if [ "$GOZAR_SPECIAL_CASE" = dnschange ]; then export GOZAR_LIVE_DNS_CHANGE_TEST=1; fi
   "$GOZAR_TEST_BINARY" -test.v -test.run "^TestLiveKernelTunnel$" -test.timeout 75s
-  test "$(cat /etc/resolv.conf)" = "$(printf "nameserver 192.0.2.53\noptions timeout:1")"
-  if ip route show | grep -Eq "^(0\.0\.0\.0/1|128\.0\.0\.0/1|$GOZAR_PROTECT_TEST_IP)"; then exit 1; fi
-  echo "Resolver and routes restored for $GOZAR_DEFAULT_MODE via $GOZAR_EXPECT_PROTECT_IF"
+  if [ "$GOZAR_SPECIAL_CASE" = dnschange ]; then
+    test "$(cat /etc/resolv.conf)" = "nameserver 192.0.2.99"
+    printf "nameserver 192.0.2.53\noptions timeout:1\n" > /etc/resolv.conf
+  else
+    test "$(cat /etc/resolv.conf)" = "$(printf "nameserver 192.0.2.53\noptions timeout:1")"
+  fi
+  if ip route show | grep -Eq "^(0\.0\.0\.0/1|128\.0\.0\.0/1)"; then exit 1; fi
+  if [ "$GOZAR_SPECIAL_CASE" = existing ]; then
+    ip route show exact "$GOZAR_PROTECT_TEST_IP"/32 | grep -q "dev $GOZAR_EXPECT_PROTECT_IF"
+  elif ip route show exact "$GOZAR_PROTECT_TEST_IP"/32 | grep -q .; then exit 1; fi
+  echo "Resolver and routes verified for $GOZAR_DEFAULT_MODE / $GOZAR_SPECIAL_CASE via $GOZAR_EXPECT_PROTECT_IF"
  '
 }
 run_case gateway 192.0.2.42 gozartest0
 run_case direct 192.0.2.42 gozartest0
 run_case gateway 203.0.113.42 gozaralt0
+run_case gateway 203.0.113.42 gozaralt0 existing
+run_case gateway 192.0.2.42 gozartest0 dnschange

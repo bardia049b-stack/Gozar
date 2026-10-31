@@ -78,7 +78,7 @@ print('- Updated Android DNS handling to allow concurrent lookups, honor bounded
 print('- Improved HTTP/2 handling of padded frames, data frames larger than the caller’s read buffer, long authorization headers, flow-control windows, write errors, and TCP half-close. '
       'Fallback does not disable TLS verification.')
 print('- Fixed native TUN packet headroom for modern Linux TUN offload and macOS utun, released incoming packet buffers correctly, '
-      'and made device read/write failures stop the tunnel rather than silently dropping packets. Linux proxy bypass now preserves the actual route selected for the upstream, including direct and non-default-interface routes; Windows default-route selection uses the lowest available metric.')
+      'and made device read/write failures stop the tunnel rather than silently dropping packets. Linux proxy bypass follows the actual route selected for the upstream, including direct and non-default-interface routes; cleanup removes only Gozar-created bypass routes and leaves newer DNS changes intact. On Windows, tunnel startup waits until the adapter is up and its address is preferred before directing traffic to it; default-route selection uses the lowest available metric.')
 print('- Android and desktop now schedule proxy-pass renewal before the advertised expiry, retry temporary failures, '
       'and stop the renewal task on disconnect. New desktop connections read the current pass instead of a token captured at connection time. '
       'Account and connection generation checks prevent a cancelled renewal from replacing a newer session.')
@@ -109,7 +109,7 @@ print('## Desktop and platform limits')
 print()
 print('The Windows installer installs per user and offers an optional desktop shortcut. The VPN app requests administrator approval '
       'for its TUN device. The EXE is not Authenticode-signed. macOS builds are ad-hoc signed and not notarized. '
-      'Linux TUN setup needs suitable privileges. A real Linux TUN was exercised in isolated network namespaces with a local mock upstream and DNS; this did not verify a real Firefox server or production account.')
+      'Linux TUN setup needs suitable privileges. Real Linux TUN, Windows Wintun and macOS utun devices were exercised with local mock upstream and DNS services. The tests covered TCP uploads, half-close, UDP/TCP DNS and shutdown. They do not verify connectivity to a real Firefox server or production account.')
 print()
 print('Desktop per-app and per-domain routing, a dedicated LAN-bypass control and a route map are not implemented. '
       'The existing proxy-chain editor accepts unauthenticated SOCKS5 and HTTP CONNECT hops; changes require disconnection. '

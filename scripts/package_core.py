@@ -22,7 +22,7 @@ HTTP/3 is opportunistic and depends on the selected proxy endpoint and network.
 The Firefox proxy capabilities and destination protocols can be more limited.
 '''.encode()
 files = [(binary, name)]
-for license_name in ('LICENSE', 'NOTICE', 'WINTUN-LICENSE.txt', 'QUIC-GO-LICENSE.txt', 'QPACK-LICENSE.txt'):
+for license_name in ('LICENSE', 'NOTICE', 'WINTUN-LICENSE.txt', 'QUIC-GO-LICENSE.txt', 'QPACK-LICENSE.txt', 'GO-DEPS-LICENSES.txt'):
     files.append((root / license_name, license_name))
 destination.parent.mkdir(parents=True, exist_ok=True)
 if destination.name.endswith('.zip'):

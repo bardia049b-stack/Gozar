@@ -156,12 +156,13 @@ jobs:
         shell: pwsh
         run: |
           $env:GOZAR_LIVE_TUN_TEST = '1'
+          $env:GOZAR_PROTECT_TEST_IP = '203.0.113.42'
           & "$env:RUNNER_TEMP/gozar-live-tun.test.exe" '-test.v' '-test.run=^TestLiveKernelTunnel$' '-test.timeout=75s'
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Test the real macOS utun device
         if: matrix.platform == 'darwin'
         shell: bash
-        run: sudo env GOZAR_LIVE_TUN_TEST=1 "$RUNNER_TEMP/gozar-live-tun.test" -test.v '-test.run=^TestLiveKernelTunnel$' -test.timeout=75s
+        run: sudo env GOZAR_LIVE_TUN_TEST=1 GOZAR_LIVE_DNS_CHANGE_TEST=1 GOZAR_PROTECT_TEST_IP=203.0.113.42 "$RUNNER_TEMP/gozar-live-tun.test" -test.v '-test.run=^TestLiveKernelTunnel$' -test.timeout=75s
       - name: Inspect Flutter code
         working-directory: desktop_flutter
         shell: bash
@@ -181,7 +182,7 @@ jobs:
           set -e
           flutter build linux --release
           (cd ../go-desktop && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags='-s -w' -o ../desktop_flutter/build/linux/x64/release/bundle/gozar-core ./cmd/gozar)
-          cp ../LICENSE ../NOTICE ../WINTUN-LICENSE.txt ../QUIC-GO-LICENSE.txt ../QPACK-LICENSE.txt build/linux/x64/release/bundle/
+          cp ../LICENSE ../NOTICE ../WINTUN-LICENSE.txt ../QUIC-GO-LICENSE.txt ../QPACK-LICENSE.txt ../GO-DEPS-LICENSES.txt build/linux/x64/release/bundle/
           mkdir -p out
           XZ_OPT=-9 tar -C build/linux/x64/release -cJf out/Gozar-Linux-amd64.tar.xz bundle
           VERSION=$(awk '/^version:/ {print $2}' pubspec.yaml | cut -d+ -f1)
@@ -209,7 +210,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/gozar-ipc"
           printf '%s\n' '{"id":1,"method":"state"}' '{"id":2,"method":"language","params":{"language":"en"}}' '{"id":3,"method":"quit"}' | APPDATA="$RUNNER_TEMP/gozar-ipc" "$FOLDER/gozar-core.exe" --rpc > "$RUNNER_TEMP/gozar-ipc.jsonl"
           python -c "import json,os; r=[json.loads(x) for x in open(os.path.join(os.environ['RUNNER_TEMP'],'gozar-ipc.jsonl'))]; assert [x['id'] for x in r]==[1,2,3] and r[1]['state']['language']=='en'"
-          cp ../LICENSE ../NOTICE ../WINTUN-LICENSE.txt ../QUIC-GO-LICENSE.txt ../QPACK-LICENSE.txt "$FOLDER/"
+          cp ../LICENSE ../NOTICE ../WINTUN-LICENSE.txt ../QUIC-GO-LICENSE.txt ../QPACK-LICENSE.txt ../GO-DEPS-LICENSES.txt "$FOLDER/"
           mkdir -p out
           python ../scripts/archive_windows.py "$FOLDER" out/Gozar-Windows-x64.zip
           VERSION=$(awk '/^version:/ {print $2}' pubspec.yaml | cut -d+ -f1)
@@ -255,7 +256,7 @@ jobs:
           done
           (cd ../go-desktop && CGO_ENABLED=0 GOOS=darwin GOARCH="$GOARCH" go build -trimpath -ldflags='-s -w' -o "../desktop_flutter/$APP/Contents/MacOS/gozar-core" ./cmd/gozar)
           test "$(lipo -archs "$APP/Contents/MacOS/gozar-core")" = "$ARCH"
-          cp ../LICENSE ../NOTICE ../WINTUN-LICENSE.txt ../QUIC-GO-LICENSE.txt ../QPACK-LICENSE.txt "$APP/Contents/Resources/"
+          cp ../LICENSE ../NOTICE ../WINTUN-LICENSE.txt ../QUIC-GO-LICENSE.txt ../QPACK-LICENSE.txt ../GO-DEPS-LICENSES.txt "$APP/Contents/Resources/"
           codesign --force --deep --sign - "$APP"
           mkdir -p out "$RUNNER_TEMP/gozar-extracted"
           python3 ../scripts/archive_macos.py "$APP" "out/Gozar-$ARTIFACT_NAME.tar.xz"

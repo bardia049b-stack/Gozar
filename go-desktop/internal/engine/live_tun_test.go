@@ -103,12 +103,77 @@ func checkLiveDNS(t *testing.T, network string, query []byte) {
 	}
 }
 
+func windowsHostRoute(address netip.Addr) (bool, error) {
+	output, err := exec.Command("route", "print", "-4", address.String()).CombinedOutput()
+	if err != nil {
+		return false, err
+	}
+	for _, line := range strings.Split(string(output), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) >= 2 && fields[0] == address.String() && fields[1] == "255.255.255.255" {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func darwinHostRoute(address netip.Addr) (bool, error) {
+	output, err := exec.Command("netstat", "-rn", "-f", "inet").CombinedOutput()
+	if err != nil {
+		return false, err
+	}
+	for _, line := range strings.Split(string(output), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) >= 2 && (fields[0] == address.String() || fields[0] == address.String()+"/32") {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func windowsProxyState() string {
+	var state strings.Builder
+	for _, value := range []string{"ProxyEnable", "ProxyServer", "AutoConfigURL"} {
+		out, err := exec.Command("reg", "query", `HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings`, "/v", value).CombinedOutput()
+		fmt.Fprintf(&state, "%s\n%v\n", out, err)
+	}
+	out, err := exec.Command("netsh", "winhttp", "show", "proxy").CombinedOutput()
+	fmt.Fprintf(&state, "%s\n%v", out, err)
+	return state.String()
+}
+
+func liveNetworkDiagnostics(t *testing.T, name string) {
+	t.Helper()
+	switch runtime.GOOS {
+	case "linux":
+		for _, args := range [][]string{{"-d", "address", "show", "dev", name}, {"-s", "link", "show", "dev", name}, {"route", "get", "198.18.0.80"}} {
+			out, _ := exec.Command("ip", args...).CombinedOutput()
+			t.Logf("%s", out)
+		}
+	case "windows":
+		commands := []string{
+			"Get-NetIPInterface -InterfaceAlias '" + name + "' | Format-List InterfaceAlias,AddressFamily,InterfaceIndex,ConnectionState,InterfaceMetric",
+			"Get-NetIPAddress -InterfaceAlias '" + name + "' -AddressFamily IPv4 | Format-List IPAddress,PrefixLength,AddressState",
+			"Get-NetRoute -AddressFamily IPv4 | Where-Object { $_.DestinationPrefix -in @('0.0.0.0/0','0.0.0.0/1','128.0.0.0/1') } | Format-Table -AutoSize DestinationPrefix,InterfaceAlias,NextHop,RouteMetric,State",
+			"Find-NetRoute -RemoteIPAddress '198.18.0.80' | Format-List",
+		}
+		for _, script := range commands {
+			out, _ := exec.Command("powershell.exe", "-NoProfile", "-NonInteractive", "-Command", script).CombinedOutput()
+			t.Logf("%s", out)
+		}
+	}
+}
+
 func TestLiveKernelTunnel(t *testing.T) {
 	if os.Getenv("GOZAR_LIVE_TUN_TEST") != "1" {
 		t.Skip("requires an isolated, privileged kernel tunnel test environment")
 	}
 	if err := wintun.Ensure(); err != nil {
 		t.Fatal(err)
+	}
+	var beforeProxy string
+	if runtime.GOOS == "windows" {
+		beforeProxy = windowsProxyState()
 	}
 	listener, err := net.Listen("tcp4", "127.0.0.1:0")
 	if err != nil {
@@ -154,6 +219,17 @@ func TestLiveKernelTunnel(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(e.Stop)
+	if len(keep) > 0 && (runtime.GOOS == "windows" || runtime.GOOS == "darwin") {
+		present, err := false, error(nil)
+		if runtime.GOOS == "windows" {
+			present, err = windowsHostRoute(keep[0])
+		} else {
+			present, err = darwinHostRoute(keep[0])
+		}
+		if err != nil || !present {
+			t.Fatalf("protected proxy route was not installed: %v", err)
+		}
+	}
 	if runtime.GOOS == "linux" && len(keep) > 0 && os.Getenv("GOZAR_EXPECT_PROTECT_IF") != "" {
 		output, err := exec.Command("ip", "-4", "route", "get", keep[0].String()).CombinedOutput()
 		if err != nil || !strings.Contains(string(output), "dev "+os.Getenv("GOZAR_EXPECT_PROTECT_IF")) {
@@ -204,12 +280,7 @@ func TestLiveKernelTunnel(t *testing.T) {
 	ready.Wait()
 	for i := 0; i < count; i++ {
 		if err := <-results; err != nil {
-			if runtime.GOOS == "linux" {
-				for _, args := range [][]string{{"-d", "address", "show", "dev", e.Device()}, {"-s", "link", "show", "dev", e.Device()}, {"route", "get", "198.18.0.80"}} {
-					out, _ := exec.Command("ip", args...).CombinedOutput()
-					t.Logf("%s", out)
-				}
-			}
+			liveNetworkDiagnostics(t, e.Device())
 			t.Fatal(err)
 		}
 	}
@@ -221,6 +292,56 @@ func TestLiveKernelTunnel(t *testing.T) {
 		t.Fatalf("unexpected byte counters: down=%d up=%d", down, up)
 	}
 	name := e.Device()
+	var changedService string
+	if os.Getenv("GOZAR_LIVE_DNS_CHANGE_TEST") == "1" {
+		if runtime.GOOS == "linux" {
+			if err := os.WriteFile("/etc/resolv.conf", []byte("nameserver 192.0.2.99\n"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+		} else if runtime.GOOS == "darwin" {
+			if len(e.config.ChangedServices) == 0 {
+				t.Fatal("no macOS DNS service to test")
+			}
+			changedService = e.config.ChangedServices[0]
+			original := append([]string(nil), e.config.ServiceDNS[changedService]...)
+			t.Cleanup(func() {
+				if len(original) == 0 {
+					original = []string{"Empty"}
+				}
+				args := append([]string{"-setdnsservers", changedService}, original...)
+				_ = exec.Command("networksetup", args...).Run()
+			})
+			if out, err := exec.Command("networksetup", "-setdnsservers", changedService, "1.1.1.1").CombinedOutput(); err != nil {
+				t.Fatalf("change macOS DNS: %v: %s", err, out)
+			}
+		}
+	}
 	e.Stop()
+	if runtime.GOOS == "windows" && beforeProxy != windowsProxyState() {
+		t.Fatal("system proxy settings changed")
+	}
+	if len(keep) > 0 && (runtime.GOOS == "windows" || runtime.GOOS == "darwin") {
+		present, err := false, error(nil)
+		if runtime.GOOS == "windows" {
+			present, err = windowsHostRoute(keep[0])
+		} else {
+			present, err = darwinHostRoute(keep[0])
+		}
+		if err != nil || present {
+			t.Fatalf("protected proxy route was not removed: %v", err)
+		}
+	}
+	if changedService != "" {
+		out, err := exec.Command("networksetup", "-getdnsservers", changedService).CombinedOutput()
+		if err != nil || strings.TrimSpace(string(out)) != "1.1.1.1" {
+			t.Fatalf("newer macOS DNS was overwritten: %v: %s", err, out)
+		}
+	}
+	if runtime.GOOS == "linux" && os.Getenv("GOZAR_LIVE_DNS_CHANGE_TEST") == "1" {
+		current, err := os.ReadFile("/etc/resolv.conf")
+		if err != nil || string(current) != "nameserver 192.0.2.99\n" {
+			t.Fatalf("newer DNS settings were overwritten: %q %v", current, err)
+		}
+	}
 	t.Logf("real TUN %s passed concurrent TCP upload, half-close, UDP DNS, TCP DNS and shutdown", name)
 }
