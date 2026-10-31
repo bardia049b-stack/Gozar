@@ -311,7 +311,7 @@ func TestLiveKernelTunnel(t *testing.T) {
 				args := append([]string{"-setdnsservers", changedService}, original...)
 				_ = exec.Command("networksetup", args...).Run()
 			})
-			if out, err := exec.Command("networksetup", "-setdnsservers", changedService, "1.1.1.1").CombinedOutput(); err != nil {
+			if out, err := exec.Command("networksetup", "-setdnsservers", changedService, "9.9.9.9").CombinedOutput(); err != nil {
 				t.Fatalf("change macOS DNS: %v: %s", err, out)
 			}
 		}
@@ -333,7 +333,7 @@ func TestLiveKernelTunnel(t *testing.T) {
 	}
 	if changedService != "" {
 		out, err := exec.Command("networksetup", "-getdnsservers", changedService).CombinedOutput()
-		if err != nil || strings.TrimSpace(string(out)) != "1.1.1.1" {
+		if err != nil || strings.TrimSpace(string(out)) != "9.9.9.9" {
 			t.Fatalf("newer macOS DNS was overwritten: %v: %s", err, out)
 		}
 	}
