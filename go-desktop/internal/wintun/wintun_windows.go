@@ -4,15 +4,11 @@ package wintun
 
 import (
 	"bytes"
-	_ "embed"
 	"os"
 	"path/filepath"
 
 	"golang.org/x/sys/windows"
 )
-
-//go:embed bin/wintun_amd64.dll
-var library []byte
 
 func Ensure() error {
 	executable, err := os.Executable()

@@ -1,11 +1,17 @@
 package com.gozar
 
+import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.io.OutputStream
 import java.net.InetSocketAddress
 import java.net.Proxy
 import java.net.URL
+import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.RejectedExecutionException
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.Semaphore
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import javax.net.ssl.HttpsURLConnection
 import kotlin.concurrent.thread
@@ -13,6 +19,7 @@ import kotlin.concurrent.thread
 interface FoxPipe {
     fun read(buffer: ByteArray, offset: Int, length: Int): Int
     fun write(buffer: ByteArray, offset: Int, length: Int)
+    fun finishWrite() = Unit
     fun close()
 }
 
@@ -44,6 +51,9 @@ class FoxStack(
     private val flows = ConcurrentHashMap<Long, Flow>()
     private val names = ConcurrentHashMap<Int, String>()
     private val stamp = AtomicInteger(1)
+    private val dnsWorkers = ThreadPoolExecutor(8, 8, 0, TimeUnit.SECONDS, ArrayBlockingQueue(128), { task ->
+        Thread(task, "fox-dns").apply { isDaemon = true }
+    })
     @Volatile private var running = false
 
     fun start() {
@@ -71,6 +81,7 @@ class FoxStack(
             }
         }
         flows.clear()
+        dnsWorkers.shutdownNow()
     }
 
     fun active(): Int = flows.size
@@ -91,11 +102,12 @@ class FoxStack(
             if (header < 20 || size < header + 8) continue
             val total = u16(buffer, 2)
             if (total < header + 8 || total > size) continue
+            if (u16(buffer, 6) and 0x3fff != 0) continue
             val source = i32(buffer, 12)
             if (source != local) continue
             val target = i32(buffer, 16)
             when (buffer[9].toInt() and 0xFF) {
-                TCP -> segment(buffer, header, total, target)
+                TCP -> if (total >= header + 20) segment(buffer, header, total, target)
                 UDP -> datagram(buffer, header, total, target)
             }
         }
@@ -120,8 +132,6 @@ class FoxStack(
             return
         }
 
-        if (length > 0) meter(false, length.toLong())
-
         var known = flows[key]
         if (known != null && flags and SYN != 0 && flags and ACK == 0) {
             known.shutdown()
@@ -141,19 +151,11 @@ class FoxStack(
         }
 
         known.idleAt = System.currentTimeMillis()
-        known.confirm(ack, window)
+        if (flags and ACK != 0) known.confirm(ack, window)
 
-        if (flags and FIN != 0) {
-            known.expected = (seq + length + 1) and MASK
-            send(target, remotePort, appPort, known.sent, known.expected, ACK, known.window(), null, 0, 0)
-            known.appClosed()
-            return
-        }
-
-        if (length > 0) {
-            val fresh = seq == known.expected
-            if (fresh) known.expected = (seq + length) and MASK
-            if (fresh) known.push(packet, body, length)
+        if (length > 0 && known.push(packet, body, length, seq)) meter(false, length.toLong())
+        if (flags and FIN != 0) known.finish((seq + length) and MASK)
+        if (length > 0 || flags and FIN != 0) {
             send(target, remotePort, appPort, known.sent, known.expected, ACK, known.window(), null, 0, 0)
         }
     }
@@ -170,14 +172,20 @@ class FoxStack(
         }
         meter(false, length.toLong())
         val query = packet.copyOfRange(start, start + length - 8)
-        thread(isDaemon = true, name = "fox-dns") {
-            val answer = try {
-                resolver.answer(query)
-            } catch (e: Exception) {
-                null
-            } ?: return@thread
-            learn(query, answer)
-            replyUdp(target, appPort, serverPort, answer)
+        try {
+            dnsWorkers.execute {
+                val answer = try {
+                    resolver.answer(query)
+                } catch (_: Exception) {
+                    null
+                } ?: return@execute
+                learn(query, answer)
+                val limited = resolver.truncate(query, answer, MTU - 28)
+                if (limited.isNotEmpty()) replyUdp(target, appPort, serverPort, limited)
+            }
+        } catch (_: RejectedExecutionException) {
+            val failure = resolver.unavailable(query)
+            if (failure != null) replyUdp(target, appPort, serverPort, failure)
         }
     }
 
@@ -408,35 +416,42 @@ class FoxStack(
         private val lock = Object()
         private var queued = 0
         private var appClosed = false
+        private var readFinished = false
+        private var writeFinished = false
 
-        fun window(): Int = synchronized(lock) {
-            if (queued > UPLOAD_CAP) 0 else WINDOW
+        private fun available(): Int {
+            val remaining = (UPLOAD_CAP - queued).coerceAtLeast(0)
+            return if (remaining < MSS) 0 else minOf(remaining, WINDOW)
         }
 
-        fun push(packet: ByteArray, offset: Int, length: Int) {
-            synchronized(lock) {
-                if (closed || queued > UPLOAD_CAP) return
-                queue.addLast(packet.copyOfRange(offset, offset + length))
-                queued += length
-                lock.notifyAll()
-            }
+        fun window(): Int = synchronized(lock) { available() }
+
+        fun push(packet: ByteArray, offset: Int, length: Int, sequence: Long): Boolean = synchronized(lock) {
+            if (closed || appClosed || sequence != expected || length > UPLOAD_CAP - queued) return@synchronized false
+            queue.addLast(packet.copyOfRange(offset, offset + length))
+            queued += length
+            expected = (expected + length) and MASK
+            lock.notifyAll()
+            true
         }
 
         fun confirm(ack: Long, window: Int) {
             synchronized(lock) {
-                if (gap(ack, acknowledged) < 0x80000000L) acknowledged = ack
+                val advance = gap(ack, acknowledged)
+                val outstanding = gap(sent, acknowledged)
+                if (advance < 0x80000000L && advance <= outstanding) acknowledged = ack
                 peer = window
                 lock.notifyAll()
             }
         }
 
-        fun appClosed() {
-            val done = synchronized(lock) {
+        fun finish(sequence: Long) {
+            synchronized(lock) {
+                if (closed || appClosed || sequence != expected) return
+                expected = (expected + 1) and MASK
                 appClosed = true
                 lock.notifyAll()
-                queue.isEmpty() && (closed || pipe == null)
             }
-            if (done) flowDone()
         }
 
         fun begin() {
@@ -445,11 +460,20 @@ class FoxStack(
                 val link = try {
                     dial(host, remotePort)
                 } catch (e: Exception) {
-                    send(remote, remotePort, appPort, sent, expected, RST or ACK, 0, null, 0, 0)
+                    if (!closed) send(remote, remotePort, appPort, sent, expected, RST or ACK, 0, null, 0, 0)
                     flows.remove(key, this)
                     return@thread
                 }
-                pipe = link
+                val accepted = synchronized(lock) {
+                    if (closed) false else {
+                        pipe = link
+                        true
+                    }
+                }
+                if (!accepted) {
+                    try { link.close() } catch (_: Exception) { }
+                    return@thread
+                }
                 thread(isDaemon = true, name = "fox-flow-up") { drain(link) }
                 receive(link)
             }
@@ -457,16 +481,21 @@ class FoxStack(
 
         private fun drain(link: FoxPipe) {
             while (true) {
+                var reopened = false
                 val chunk = synchronized(lock) {
                     while (queue.isEmpty() && !closed && !appClosed) lock.wait(180000)
                     when {
+                        closed -> null
                         queue.isNotEmpty() -> queue.removeFirst().also {
+                            val before = available()
                             queued -= it.size
+                            reopened = before == 0 && available() > 0
                             lock.notifyAll()
                         }
                         else -> null
                     }
                 } ?: break
+                if (reopened) send(remote, remotePort, appPort, sent, expected, ACK, window(), null, 0, 0)
                 var offset = 0
                 while (offset < chunk.size) {
                     val size = minOf(MSS, chunk.size - offset)
@@ -479,7 +508,18 @@ class FoxStack(
                     offset += size
                 }
             }
-            if (appClosed) flowDone()
+            if (appClosed && !closed) {
+                try {
+                    link.finishWrite()
+                    val done = synchronized(lock) {
+                        writeFinished = true
+                        readFinished
+                    }
+                    if (done) flowDone()
+                } catch (_: Exception) {
+                    terminate()
+                }
+            }
         }
 
         private fun receive(link: FoxPipe) {
@@ -506,8 +546,12 @@ class FoxStack(
             }
             if (synchronized(lock) { closed }) return
             send(remote, remotePort, appPort, sent, expected, FIN or ACK, window(), null, 0, 0)
-            synchronized(lock) { sent = (sent + 1) and MASK }
-            if (synchronized(lock) { appClosed }) flowDone() else synchronized(lock) { closed = true }
+            val done = synchronized(lock) {
+                sent = (sent + 1) and MASK
+                readFinished = true
+                writeFinished
+            }
+            if (done) flowDone()
         }
 
         private fun await(extra: Long): Boolean {
@@ -516,7 +560,7 @@ class FoxStack(
                 while (true) {
                     val flight = gap(sent + extra, acknowledged)
                     val allowed = minOf(peer.toLong(), FLIGHT_CAP.toLong())
-                    if (flight < allowed) return true
+                    if (flight <= allowed) return true
                     val left = deadline - System.currentTimeMillis()
                     if (left <= 0 || closed) return false
                     lock.wait(left)
@@ -552,39 +596,104 @@ class FoxStack(
     }
 }
 
-class FoxResolver(private val proxyPort: Int) {
+class FoxResolver(
+    private val proxyPort: Int,
+    private val request: ((String, ByteArray) -> ByteArray?)? = null,
+    private val now: () -> Long = { System.nanoTime() / 1_000_000L }
+) {
 
-    private class Entry(val body: ByteArray, val at: Long)
+    private class Entry(val body: ByteArray, val storedAt: Long, val expires: Long)
 
     private val cache = ConcurrentHashMap<String, Entry>()
-    private val lock = Object()
-    private var failures = 0
+    private val slots = Semaphore(8)
 
     fun answer(query: ByteArray): ByteArray? {
-        if (query.size < 13) return null
-        val name = question(query) ?: return null
+        if (query.size < 17 || query[2].toInt() and 0x80 != 0 || short(query, 4) != 1 || question(query) == null) return null
+        val questionEnd = questionEnd(query, 12)
+        if (questionEnd < 0 || questionEnd + 4 > query.size) return null
         val type = questionType(query)
-        val key = name + "|" + type
-        val hit = cache[key]
-        if (hit != null && System.currentTimeMillis() - hit.at < 120000L) return retag(query, hit.body)
         if (type == 28 || type == 65) return empty(query)
-        val body = exchange(query) ?: return null
-        cache[key] = Entry(body, System.currentTimeMillis())
+        val key = String(query, 2, query.size - 2, Charsets.ISO_8859_1)
+        val time = now()
+        val hit = cache[key]
+        if (hit != null) {
+            if (time < hit.expires) return retag(query, hit.body, (time - hit.storedAt).coerceAtLeast(0) / 1000)
+            cache.remove(key, hit)
+        }
+        val body = exchange(query) ?: return failure(query)
+        if (!valid(query, body)) return failure(query)
+        val ttl = ttl(body)
+        if (ttl > 0) {
+            if (cache.size >= 512) {
+                cache.entries.removeAll { it.value.expires <= time }
+                if (cache.size >= 512) cache.clear()
+            }
+            cache[key] = Entry(body, time, time + ttl)
+        }
         return retag(query, body)
     }
 
-    private fun retag(query: ByteArray, body: ByteArray): ByteArray {
+    private fun retag(query: ByteArray, body: ByteArray, age: Long = 0): ByteArray {
         if (body.size < 12 || query.size < 2) return body
         val copy = body.copyOf()
         copy[0] = query[0]
         copy[1] = query[1]
+        if (age == 0L) return copy
+        var at = 12
+        repeat(short(copy, 4)) {
+            at = questionEnd(copy, at)
+            if (at < 0 || at + 4 > copy.size) return copy
+            at += 4
+        }
+        val records = short(copy, 6) + short(copy, 8) + short(copy, 10)
+        if (records > 512) return copy
+        repeat(records) {
+            at = questionEnd(copy, at)
+            if (at < 0 || at + 10 > copy.size) return copy
+            val type = short(copy, at)
+            val ttl = ((copy[at + 4].toLong() and 255) shl 24) or
+                ((copy[at + 5].toLong() and 255) shl 16) or
+                ((copy[at + 6].toLong() and 255) shl 8) or (copy[at + 7].toLong() and 255)
+            val size = short(copy, at + 8)
+            if (at + 10 + size > copy.size) return copy
+            if (type != 41) {
+                val remaining = (ttl - age).coerceAtLeast(0)
+                for (part in 0..3) copy[at + 4 + part] = (remaining ushr (24 - part * 8)).toByte()
+            }
+            at += 10 + size
+        }
         return copy
     }
 
-    private fun empty(query: ByteArray): ByteArray {
-        val copy = query.copyOf()
+    fun truncate(query: ByteArray, answer: ByteArray, maximum: Int): ByteArray {
+        if (answer.size <= maximum) return answer
+        val end = questionEnd(query, 12)
+        if (end < 0 || end + 4 > query.size || end + 4 > maximum) return ByteArray(0)
+        val copy = query.copyOf(end + 4)
+        copy[2] = (answer[2].toInt() or 0x82).toByte()
+        copy[3] = answer[3]
+        putShort(copy, 6, 0)
+        putShort(copy, 8, 0)
+        putShort(copy, 10, 0)
+        return copy
+    }
+
+    fun unavailable(query: ByteArray): ByteArray? {
+        if (query.size < 17 || short(query, 4) != 1) return null
+        val end = questionEnd(query, 12)
+        if (end < 0 || end + 4 > query.size) return null
+        return failure(query)
+    }
+
+    private fun empty(query: ByteArray): ByteArray = response(query, 0)
+
+    private fun failure(query: ByteArray): ByteArray = response(query, 2)
+
+    private fun response(query: ByteArray, code: Int): ByteArray {
+        val end = questionEnd(query, 12)
+        val copy = if (end >= 0 && end + 4 <= query.size) query.copyOf(end + 4) else query.copyOf()
         copy[2] = ((copy[2].toInt() or 0x80) and 0xFF).toByte()
-        copy[3] = ((copy[3].toInt() and 0xF0) or 0x80).toByte()
+        copy[3] = ((copy[3].toInt() and 0x70) or 0x80 or code).toByte()
         putShort(copy, 6, 0)
         putShort(copy, 8, 0)
         putShort(copy, 10, 0)
@@ -592,40 +701,97 @@ class FoxResolver(private val proxyPort: Int) {
     }
 
     private fun exchange(query: ByteArray): ByteArray? {
-        synchronized(lock) {
-            if (failures > 40) return null
-            val body = try {
-                over("https://dns.google/dns-query", query)
-            } catch (e: Exception) {
-                null
-            } ?: try {
-                over("https://mozilla.cloudflare-dns.com/dns-query", query)
-            } catch (e: Exception) {
-                null
+        if (!slots.tryAcquire(2, TimeUnit.SECONDS)) return null
+        try {
+            for (url in listOf("https://dns.google/dns-query", "https://mozilla.cloudflare-dns.com/dns-query")) {
+                val body = try { over(url, query) } catch (_: Exception) { null }
+                if (body != null && valid(query, body) && body[3].toInt() and 0x0F != 2) return body
             }
-            if (body == null) {
-                failures++
-                return null
-            }
-            failures = 0
-            return body
+            return null
+        } finally {
+            slots.release()
         }
     }
 
     private fun over(url: String, query: ByteArray): ByteArray? {
+        request?.let { return it(url, query) }
         val proxy = Proxy(Proxy.Type.HTTP, InetSocketAddress("127.0.0.1", proxyPort))
         val connection = URL(url).openConnection(proxy) as HttpsURLConnection
-        connection.connectTimeout = 8000
-        connection.readTimeout = 8000
-        connection.requestMethod = "POST"
-        connection.doOutput = true
-        connection.setRequestProperty("content-type", "application/dns-message")
-        connection.setRequestProperty("accept", "application/dns-message")
-        connection.outputStream.use { it.write(query) }
-        if (connection.responseCode != 200) return null
-        val body = connection.inputStream.use { it.readBytes() }
-        return if (body.size > 12) body else null
+        try {
+            connection.connectTimeout = 8000
+            connection.readTimeout = 8000
+            connection.requestMethod = "POST"
+            connection.doOutput = true
+            connection.setRequestProperty("content-type", "application/dns-message")
+            connection.setRequestProperty("accept", "application/dns-message")
+            connection.outputStream.use { it.write(query) }
+            if (connection.responseCode != 200) return null
+            val body = connection.inputStream.use { input ->
+                val output = ByteArrayOutputStream()
+                val buffer = ByteArray(4096)
+                while (true) {
+                    val size = input.read(buffer)
+                    if (size < 0) break
+                    if (output.size() + size > 65535) return null
+                    output.write(buffer, 0, size)
+                }
+                output.toByteArray()
+            }
+            return if (body.size in 12..65535) body else null
+        } finally {
+            connection.disconnect()
+        }
     }
+
+    private fun valid(query: ByteArray, body: ByteArray): Boolean {
+        if (body.size < 12 || body[0] != query[0] || body[1] != query[1] || body[2].toInt() and 0x80 == 0) return false
+        if (short(body, 4) != 1 || short(query, 4) != 1) return false
+        val queryEnd = questionEnd(query, 12)
+        val bodyEnd = questionEnd(body, 12)
+        if (queryEnd < 0 || bodyEnd < 0 || queryEnd + 4 > query.size || bodyEnd + 4 > body.size) return false
+        return query.copyOfRange(12, queryEnd + 4).contentEquals(body.copyOfRange(12, bodyEnd + 4))
+    }
+
+    private fun ttl(body: ByteArray): Long {
+        if (body.size < 12 || body[3].toInt() and 0x0F != 0) return 0
+        val count = short(body, 6)
+        if (count !in 1..256) return 0
+        var at = 12
+        repeat(short(body, 4)) {
+            at = questionEnd(body, at)
+            if (at < 0 || at + 4 > body.size) return 0
+            at += 4
+        }
+        var minimum = 120L
+        repeat(count) {
+            at = questionEnd(body, at)
+            if (at < 0 || at + 10 > body.size) return 0
+            val seconds = ((body[at + 4].toLong() and 255) shl 24) or
+                ((body[at + 5].toLong() and 255) shl 16) or
+                ((body[at + 6].toLong() and 255) shl 8) or (body[at + 7].toLong() and 255)
+            val size = short(body, at + 8)
+            if (at + 10 + size > body.size) return 0
+            minimum = minOf(minimum, seconds)
+            at += 10 + size
+        }
+        return minimum * 1000L
+    }
+
+    private fun questionEnd(data: ByteArray, start: Int): Int {
+        var at = start
+        var steps = 0
+        while (at < data.size && steps++ < 128) {
+            val size = data[at].toInt() and 255
+            if (size == 0) return at + 1
+            if (size and 0xC0 == 0xC0) return if (at + 1 < data.size) at + 2 else -1
+            if (size > 63 || at + 1 + size > data.size) return -1
+            at += 1 + size
+        }
+        return -1
+    }
+
+    private fun short(data: ByteArray, at: Int): Int =
+        ((data[at].toInt() and 255) shl 8) or (data[at + 1].toInt() and 255)
 
     private fun question(query: ByteArray): String? {
         val out = StringBuilder()

@@ -3,8 +3,6 @@ package tundev
 import (
 	"errors"
 	"net"
-	"strconv"
-	"strings"
 
 	"golang.org/x/sys/windows"
 )
@@ -28,30 +26,24 @@ func gateway() (string, string) {
 	if err != nil {
 		return "", ""
 	}
-	for _, line := range strings.Split(out, "\n") {
-		fields := strings.Fields(line)
-		if len(fields) < 5 || fields[0] != "0.0.0.0" || fields[1] != "0.0.0.0" {
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		return "", ""
+	}
+	indexes := make(map[string]int)
+	for _, iface := range interfaces {
+		addresses, err := iface.Addrs()
+		if err != nil {
 			continue
 		}
-		ip := net.ParseIP(fields[3])
-		interfaces, err := net.Interfaces()
-		if ip == nil || err != nil {
-			continue
-		}
-		for _, iface := range interfaces {
-			addresses, err := iface.Addrs()
-			if err != nil {
-				continue
-			}
-			for _, address := range addresses {
-				candidate, _, err := net.ParseCIDR(address.String())
-				if err == nil && candidate.Equal(ip) {
-					return fields[2], strconv.Itoa(iface.Index)
-				}
+		for _, address := range addresses {
+			candidate, _, err := net.ParseCIDR(address.String())
+			if err == nil && candidate.To4() != nil {
+				indexes[candidate.String()] = iface.Index
 			}
 		}
 	}
-	return "", ""
+	return windowsDefaultRoute(out, indexes)
 }
 
 func configure(cfg *Config) error {

@@ -433,6 +433,29 @@
             <ImageView style="@style/Gozar.Row.Chevron" />
         </LinearLayout>
 
+        <LinearLayout
+            android:id="@+id/rowRoot"
+            style="@style/Gozar.Row">
+
+            <ImageView
+                style="@style/Gozar.Tile"
+                android:background="@drawable/frame_hex"
+                android:backgroundTint="@color/tile_container"
+                android:contentDescription="@string/root_title"
+                android:src="@drawable/ic_shield"
+                app:tint="@color/tile_on_container" />
+
+            <LinearLayout style="@style/Gozar.Row.Text">
+                <TextView
+                    style="@style/Gozar.Row.Title"
+                    android:text="@string/root_title" />
+                <TextView
+                    android:id="@+id/tvRoot"
+                    style="@style/Gozar.Row.Subtitle" />
+            </LinearLayout>
+            <ImageView style="@style/Gozar.Row.Chevron" />
+        </LinearLayout>
+
         <TextView
             style="@style/Gozar.Section"
             android:text="@string/donate_section" />

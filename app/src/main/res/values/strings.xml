@@ -143,6 +143,7 @@
     <string name="menu_title">Profile options</string>
     <string name="empty_title">No profiles yet</string>
     <string name="empty_desc">Add a config to get started</string>
+    <string name="apps_loading">Finding installed and system apps…</string>
     <string name="apps_search">Search apps</string>
     <string name="apps_empty">No apps found</string>
     <string name="apps_hint">Choose which apps use the tunnel</string>
@@ -361,6 +362,8 @@ AGPL-3.0-or-later</string>
     <string name="donate_copy">Copy address</string>
     <string name="donate_copied">Wallet address copied</string>
     <string name="apps_no_valid">None of the selected apps is installed. Choose apps again before connecting.</string>
+    <string name="account_sheet_hint">Tap an account to switch. Your other accounts stay saved.</string>
+    <string name="account_tap_switch">Tap to switch</string>
     <string name="manage_accounts">Manage accounts</string>
     <string name="saved_accounts">Saved Gozar accounts</string>
     <string name="add_account">Add account</string>
@@ -370,4 +373,15 @@ AGPL-3.0-or-later</string>
     <string name="switch_account_disconnect">Switching or adding an account disconnects the VPN.</string>
     <string name="account_wait">Please wait for the current operation to finish.</string>
     <string name="account_active">Active</string>
+    <string name="root_title">Root traffic (experimental)</string>
+    <string name="root_off">Off · normal VPN</string>
+    <string name="root_ready">Enabled · active only while connected</string>
+    <string name="root_active">Experimental root rules installed · unverified</string>
+    <string name="root_confirm">This asks for superuser permission. Gozar will try to route IPv4 TCP and DNS from root-owned processes through the VPN. Other UDP, IPv6 and some kernel traffic can bypass it. Per-app selection does not include UID 0. This experimental feature has not been verified on a rooted device and can affect firewall rules or connectivity. Do not rely on it for leak protection.</string>
+    <string name="root_enable">Grant and enable</string>
+    <string name="root_disable">Turn off root routing?</string>
+    <string name="root_disconnect">Changing root routing requires disconnecting the VPN first.</string>
+    <string name="root_checking">Checking superuser permission…</string>
+    <string name="root_denied">Superuser permission was not granted.</string>
+    <string name="root_unavailable">Root routing is unavailable; the normal VPN remains active.</string>
 </resources>

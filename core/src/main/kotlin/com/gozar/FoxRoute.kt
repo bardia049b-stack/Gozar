@@ -58,11 +58,12 @@ class FoxSocketPipe private constructor(private val socket: Socket) : FoxPipe {
         }
 
     override fun write(buffer: ByteArray, offset: Int, length: Int) {
-        try {
-            output.write(buffer, offset, length)
-            output.flush()
-        } catch (e: Exception) {
-        }
+        output.write(buffer, offset, length)
+        output.flush()
+    }
+
+    override fun finishWrite() {
+        socket.shutdownOutput()
     }
 
     override fun close() {

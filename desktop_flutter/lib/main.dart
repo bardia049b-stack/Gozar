@@ -817,7 +817,7 @@ class _GozarScreenState extends State<GozarScreen> {
       ..connectionTimeout = const Duration(seconds: 10);
     try {
       final request = await client.getUrl(Uri.parse(
-          'https://api.github.com/repos/bardia049b-stack/Gozar/releases/latest'));
+          'https://api.github.com/repos/bardia049b-stack/Gozar1/releases/latest'));
       request.headers.set(HttpHeaders.userAgentHeader, 'Gozar desktop');
       final response =
           await request.close().timeout(const Duration(seconds: 15));
@@ -826,7 +826,7 @@ class _GozarScreenState extends State<GozarScreen> {
           as Map<String, dynamic>;
       final tag = data['tag_name'] as String? ?? '';
       final url = data['html_url'] as String? ?? '';
-      const current = '1.8.9';
+      const current = '1.9.0';
       List<int> version(String value) => RegExp(r'\d+')
           .allMatches(value)
           .take(3)
@@ -856,7 +856,7 @@ class _GozarScreenState extends State<GozarScreen> {
                 child: Text(words.close)),
             if (newer &&
                 url.startsWith(
-                    'https://github.com/bardia049b-stack/Gozar/releases/'))
+                    'https://github.com/bardia049b-stack/Gozar1/releases/'))
               TextButton(
                   onPressed: () => Navigator.pop(dialogContext, true),
                   child: Text(words.openRelease)),
@@ -975,7 +975,7 @@ class _GozarScreenState extends State<GozarScreen> {
                     onTap: () {
                       Navigator.pop(dialogContext);
                       unawaited(_openPage(
-                          'https://github.com/bardia049b-stack/Gozar'));
+                          'https://github.com/bardia049b-stack/Gozar1'));
                     },
                   ),
                   ListTile(

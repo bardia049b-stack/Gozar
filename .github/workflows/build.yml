@@ -27,6 +27,7 @@ jobs:
       - name: Test Android security, tunnel and interface
         run: bash ./gradlew :core:test :app:testDebugUnitTest --no-daemon
       - name: Signing key
+        if: startsWith(github.ref, 'refs/tags/v')
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
@@ -36,6 +37,7 @@ jobs:
           fi
           echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
       - name: Build release
+        if: startsWith(github.ref, 'refs/tags/v')
         env:
           KEYSTORE_FILE: ${{ runner.temp }}/release.keystore
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -43,6 +45,7 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: bash ./gradlew assembleRelease --no-daemon --stacktrace
       - name: Verify Android signing identity
+        if: startsWith(github.ref, 'refs/tags/v')
         run: |
           set -e
           expected=bc9d3368f2671175f81be047a1ff72bca0cfc58e8b1b8f9f87e24694ba45f5b1
@@ -57,6 +60,7 @@ jobs:
             fi
           done
       - name: Collect APKs
+        if: startsWith(github.ref, 'refs/tags/v')
         run: |
           set -e
           VERSION=$(grep -m1 'versionName' app/build.gradle | sed -E "s/.*'([^']+)'.*/\1/" | tr -d ' ')
@@ -72,7 +76,17 @@ jobs:
             esac
             cp "$f" "out/Gozar_${VERSION}_${abi}.apk"
           done
+      - name: Assemble debug build
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        run: bash ./gradlew :app:assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        with:
+          name: android-debug-not-release
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: startsWith(github.ref, 'refs/tags/v')
         with:
           name: android
           path: out/*
@@ -121,16 +135,33 @@ jobs:
         working-directory: go-desktop
         shell: bash
         run: go vet ./...
-      - name: Test core without tunnel
-        if: matrix.platform == 'linux'
+      - name: Test simulated core and device behavior
         working-directory: go-desktop
         shell: bash
         run: go test ./...
-      - name: Test Windows child-process settings
-        if: matrix.platform == 'windows'
+      - name: Compile live tunnel test
         working-directory: go-desktop
         shell: bash
-        run: go test ./internal/quiet
+        run: |
+          set -e
+          suffix=''
+          if [ "${{ matrix.platform }}" = windows ]; then suffix='.exe'; fi
+          go test -c -o "$RUNNER_TEMP/gozar-live-tun.test$suffix" ./internal/engine
+      - name: Test the real Linux TUN in an isolated namespace
+        if: matrix.platform == 'linux'
+        shell: bash
+        run: scripts/test_live_tun_linux.sh "$RUNNER_TEMP/gozar-live-tun.test"
+      - name: Test the real Windows Wintun device
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          $env:GOZAR_LIVE_TUN_TEST = '1'
+          & "$env:RUNNER_TEMP/gozar-live-tun.test.exe" '-test.v' '-test.run=^TestLiveKernelTunnel$' '-test.timeout=75s'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Test the real macOS utun device
+        if: matrix.platform == 'darwin'
+        shell: bash
+        run: sudo env GOZAR_LIVE_TUN_TEST=1 "$RUNNER_TEMP/gozar-live-tun.test" -test.v '-test.run=^TestLiveKernelTunnel$' -test.timeout=75s
       - name: Inspect Flutter code
         working-directory: desktop_flutter
         shell: bash
@@ -150,10 +181,19 @@ jobs:
           set -e
           flutter build linux --release
           (cd ../go-desktop && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags='-s -w' -o ../desktop_flutter/build/linux/x64/release/bundle/gozar-core ./cmd/gozar)
-          cp ../LICENSE ../NOTICE ../WINTUN-LICENSE.txt build/linux/x64/release/bundle/
+          cp ../LICENSE ../NOTICE ../WINTUN-LICENSE.txt ../QUIC-GO-LICENSE.txt ../QPACK-LICENSE.txt build/linux/x64/release/bundle/
           mkdir -p out
           XZ_OPT=-9 tar -C build/linux/x64/release -cJf out/Gozar-Linux-amd64.tar.xz bundle
+          VERSION=$(awk '/^version:/ {print $2}' pubspec.yaml | cut -d+ -f1)
+          (cd .. && scripts/package_deb.sh "$GITHUB_WORKSPACE/desktop_flutter/build/linux/x64/release/bundle" "$GITHUB_WORKSPACE/desktop_flutter/out/Gozar-Linux-amd64.deb" "$VERSION")
           ls -lh out/*
+      - name: Install Windows installer tool
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          $compiler = Join-Path ${env:ProgramFiles(x86)} 'NSIS\makensis.exe'
+          if (!(Test-Path $compiler)) { choco install nsis --no-progress -y }
+          if (!(Test-Path $compiler)) { throw 'NSIS compiler was not installed' }
       - name: Build Windows
         if: matrix.platform == 'windows'
         working-directory: desktop_flutter
@@ -169,9 +209,20 @@ jobs:
           mkdir -p "$RUNNER_TEMP/gozar-ipc"
           printf '%s\n' '{"id":1,"method":"state"}' '{"id":2,"method":"language","params":{"language":"en"}}' '{"id":3,"method":"quit"}' | APPDATA="$RUNNER_TEMP/gozar-ipc" "$FOLDER/gozar-core.exe" --rpc > "$RUNNER_TEMP/gozar-ipc.jsonl"
           python -c "import json,os; r=[json.loads(x) for x in open(os.path.join(os.environ['RUNNER_TEMP'],'gozar-ipc.jsonl'))]; assert [x['id'] for x in r]==[1,2,3] and r[1]['state']['language']=='en'"
-          cp ../LICENSE ../NOTICE ../WINTUN-LICENSE.txt "$FOLDER/"
+          cp ../LICENSE ../NOTICE ../WINTUN-LICENSE.txt ../QUIC-GO-LICENSE.txt ../QPACK-LICENSE.txt "$FOLDER/"
           mkdir -p out
-          pwsh -NoProfile -Command "Compress-Archive -Path '$FOLDER/*' -DestinationPath 'out/Gozar-Windows-x64.zip' -CompressionLevel Optimal"
+          python ../scripts/archive_windows.py "$FOLDER" out/Gozar-Windows-x64.zip
+          VERSION=$(awk '/^version:/ {print $2}' pubspec.yaml | cut -d+ -f1)
+          COMPILER='/c/Program Files (x86)/NSIS/makensis.exe'
+          "$COMPILER" -V2 \
+            "-DSOURCE=$(cygpath -w "$PWD/$FOLDER")" \
+            "-DOUTPUT=$(cygpath -w "$PWD/out/Gozar-Windows-x64-Setup.exe")" \
+            "-DVERSION=$VERSION" \
+            "-DLICENSE_FILE=$(cygpath -w "$PWD/../LICENSE")" \
+            "-DICON_FILE=$(cygpath -w "$PWD/windows/runner/resources/app_icon.ico")" \
+            "-DWIZARD_FILE=$(cygpath -w "$PWD/../packaging/windows/wizard.bmp")" \
+            "-DHEADER_FILE=$(cygpath -w "$PWD/../packaging/windows/header.bmp")" \
+            "$(cygpath -w "$PWD/../packaging/windows/gozar.nsi")"
           ls -lh out/*
       - name: Build macOS
         if: matrix.platform == 'darwin'
@@ -204,7 +255,7 @@ jobs:
           done
           (cd ../go-desktop && CGO_ENABLED=0 GOOS=darwin GOARCH="$GOARCH" go build -trimpath -ldflags='-s -w' -o "../desktop_flutter/$APP/Contents/MacOS/gozar-core" ./cmd/gozar)
           test "$(lipo -archs "$APP/Contents/MacOS/gozar-core")" = "$ARCH"
-          cp ../LICENSE ../NOTICE ../WINTUN-LICENSE.txt "$APP/Contents/Resources/"
+          cp ../LICENSE ../NOTICE ../WINTUN-LICENSE.txt ../QUIC-GO-LICENSE.txt ../QPACK-LICENSE.txt "$APP/Contents/Resources/"
           codesign --force --deep --sign - "$APP"
           mkdir -p out "$RUNNER_TEMP/gozar-extracted"
           python3 ../scripts/archive_macos.py "$APP" "out/Gozar-$ARTIFACT_NAME.tar.xz"
@@ -231,8 +282,68 @@ jobs:
           path: desktop_flutter/out/*
           if-no-files-found: error
 
+  cores:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            name: Linux-amd64
+            ext: tar.xz
+          - goos: linux
+            goarch: arm64
+            name: Linux-arm64
+            ext: tar.xz
+          - goos: windows
+            goarch: amd64
+            name: Windows-x64
+            ext: zip
+          - goos: windows
+            goarch: arm64
+            name: Windows-arm64
+            ext: zip
+          - goos: darwin
+            goarch: amd64
+            name: macOS-Intel
+            ext: tar.xz
+          - goos: darwin
+            goarch: arm64
+            name: macOS-ARM
+            ext: tar.xz
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.6'
+          cache-dependency-path: go-desktop/go.sum
+      - name: Build native core
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CORE_NAME: ${{ matrix.name }}
+          CORE_EXT: ${{ matrix.ext }}
+          CGO_ENABLED: '0'
+        shell: bash
+        run: |
+          set -e
+          mkdir -p "$RUNNER_TEMP/core" out
+          name=gozar-core
+          flags='-s -w'
+          if [ "$GOOS" = windows ]; then name=gozar-core.exe; flags='-s -w -H=windowsgui'; fi
+          (cd go-desktop && go build -trimpath -ldflags="$flags" -o "$RUNNER_TEMP/core/$name" ./cmd/gozar)
+          if [ "$GOOS" = linux ] && [ "$GOARCH" = amd64 ]; then "$RUNNER_TEMP/core/$name" --version; fi
+          python3 scripts/package_core.py "$RUNNER_TEMP/core/$name" "out/Gozar-Core-$CORE_NAME.$CORE_EXT" "$GOOS" "$GOARCH"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: core-${{ matrix.name }}
+          path: out/*
+          if-no-files-found: error
+
   publish:
-    needs: [android, desktop]
+    needs: [android, desktop, cores]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -259,7 +370,7 @@ jobs:
           ANDROID_VERSION: ${{ steps.version.outputs.android }}
         run: |
           set -e
-          for f in "Gozar_${ANDROID_VERSION}_universal.apk" "Gozar_${ANDROID_VERSION}_arm64-v8a.apk" "Gozar_${ANDROID_VERSION}_armeabi-v7a.apk" "Gozar_${ANDROID_VERSION}_x86.apk" "Gozar_${ANDROID_VERSION}_x86_64.apk" Gozar-Windows-x64.zip Gozar-Linux-amd64.tar.xz Gozar-macOS-ARM.tar.xz Gozar-macOS-Intel.tar.xz; do
+          for f in "Gozar_${ANDROID_VERSION}_universal.apk" "Gozar_${ANDROID_VERSION}_arm64-v8a.apk" "Gozar_${ANDROID_VERSION}_armeabi-v7a.apk" "Gozar_${ANDROID_VERSION}_x86.apk" "Gozar_${ANDROID_VERSION}_x86_64.apk" Gozar-Windows-x64-Setup.exe Gozar-Windows-x64.zip Gozar-Linux-amd64.deb Gozar-Linux-amd64.tar.xz Gozar-macOS-ARM.tar.xz Gozar-macOS-Intel.tar.xz Gozar-Core-Linux-amd64.tar.xz Gozar-Core-Linux-arm64.tar.xz Gozar-Core-Windows-x64.zip Gozar-Core-Windows-arm64.zip Gozar-Core-macOS-Intel.tar.xz Gozar-Core-macOS-ARM.tar.xz; do
             test -s "collected/$f" || { echo "::error::Missing release file: $f"; exit 1; }
           done
       - name: Import signing key
@@ -283,7 +394,7 @@ jobs:
         run: |
           set -e
           cd collected
-          for f in *.apk *.zip *.tar.xz; do
+          for f in *.apk *.exe *.deb *.zip *.tar.xz; do
             [ -e "$f" ] || continue
             gpg --batch --yes --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" --detach-sign --output "$f.sig" "$f"
           done
@@ -293,7 +404,7 @@ jobs:
           mkdir -m 700 "$RUNNER_TEMP/verify-keyring"
           gpg --homedir "$RUNNER_TEMP/verify-keyring" --batch --import collected/gozar-public-key.asc
           cd collected
-          for f in *.apk *.zip *.tar.xz; do
+          for f in *.apk *.exe *.deb *.zip *.tar.xz; do
             [ -e "$f" ] || continue
             test -s "$f.sig"
             gpg --homedir "$RUNNER_TEMP/verify-keyring" --batch --verify "$f.sig" "$f"
@@ -316,7 +427,7 @@ jobs:
         run: |
           set -e
           assets=$(gh release view "$GITHUB_REF_NAME" --json assets --jq '.assets[].name')
-          for f in "Gozar_${ANDROID_VERSION}_universal.apk" "Gozar_${ANDROID_VERSION}_arm64-v8a.apk" "Gozar_${ANDROID_VERSION}_armeabi-v7a.apk" "Gozar_${ANDROID_VERSION}_x86.apk" "Gozar_${ANDROID_VERSION}_x86_64.apk" Gozar-Windows-x64.zip Gozar-Linux-amd64.tar.xz Gozar-macOS-ARM.tar.xz Gozar-macOS-Intel.tar.xz; do
+          for f in "Gozar_${ANDROID_VERSION}_universal.apk" "Gozar_${ANDROID_VERSION}_arm64-v8a.apk" "Gozar_${ANDROID_VERSION}_armeabi-v7a.apk" "Gozar_${ANDROID_VERSION}_x86.apk" "Gozar_${ANDROID_VERSION}_x86_64.apk" Gozar-Windows-x64-Setup.exe Gozar-Windows-x64.zip Gozar-Linux-amd64.deb Gozar-Linux-amd64.tar.xz Gozar-macOS-ARM.tar.xz Gozar-macOS-Intel.tar.xz Gozar-Core-Linux-amd64.tar.xz Gozar-Core-Linux-arm64.tar.xz Gozar-Core-Windows-x64.zip Gozar-Core-Windows-arm64.zip Gozar-Core-macOS-Intel.tar.xz Gozar-Core-macOS-ARM.tar.xz; do
             printf '%s\n' "$assets" | grep -Fx "$f" >/dev/null
             printf '%s\n' "$assets" | grep -Fx "$f.sig" >/dev/null
           done

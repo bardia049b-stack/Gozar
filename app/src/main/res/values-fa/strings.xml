@@ -143,6 +143,7 @@
     <string name="menu_title">گزینه‌های کانفیگ</string>
     <string name="empty_title">هنوز کانفیگی نداری</string>
     <string name="empty_desc">برای شروع یک کانفیگ اضافه کن</string>
+    <string name="apps_loading">در حال پیدا کردن برنامه‌های نصب‌شده و سیستمی…</string>
     <string name="apps_search">جست‌وجوی برنامه</string>
     <string name="apps_empty">برنامه‌ای پیدا نشد</string>
     <string name="apps_hint">انتخاب کن کدام برنامه‌ها از تونل عبور کنند</string>
@@ -361,6 +362,8 @@ AGPL-3.0-or-later</string>
     <string name="donate_copy">کپی نشانی</string>
     <string name="donate_copied">نشانی کیف پول کپی شد</string>
     <string name="apps_no_valid">هیچ‌یک از برنامه‌های انتخاب‌شده نصب نیست. پیش از اتصال، دوباره برنامه‌ها را انتخاب کنید.</string>
+    <string name="account_sheet_hint">برای جابه‌جایی، حساب موردنظر را انتخاب کنید. حساب‌های دیگر محفوظ می‌مانند.</string>
+    <string name="account_tap_switch">برای تغییر ضربه بزنید</string>
     <string name="manage_accounts">مدیریت حساب‌ها</string>
     <string name="saved_accounts">حساب‌های ذخیره‌شده در گذر</string>
     <string name="add_account">افزودن حساب</string>
@@ -370,4 +373,15 @@ AGPL-3.0-or-later</string>
     <string name="switch_account_disconnect">با تغییر یا افزودن حساب، اتصال وی‌پی‌ان قطع می‌شود.</string>
     <string name="account_wait">لطفاً تا پایان عملیات فعلی صبر کنید.</string>
     <string name="account_active">فعال</string>
+    <string name="root_title">ترافیک روت (آزمایشی)</string>
+    <string name="root_off">خاموش · VPN عادی</string>
+    <string name="root_ready">روشن · فقط هنگام اتصال فعال می‌شود</string>
+    <string name="root_active">قواعد آزمایشی روت نصب شد · تأییدنشده</string>
+    <string name="root_confirm">این گزینه اجازهٔ کاربر ارشد می‌خواهد. گذر تلاش می‌کند ترافیک TCP و DNS نسخهٔ IPv4 پردازش‌های متعلق به روت را از VPN عبور دهد. سایر UDP، IPv6 و برخی ترافیک‌های هسته ممکن است بیرون بمانند. انتخاب برنامه‌ها شامل UID صفر نمی‌شود. این قابلیت آزمایشی روی دستگاه روت‌شده تأیید نشده و ممکن است بر دیوارهٔ آتش یا اتصال اثر بگذارد. برای جلوگیری از نشت به آن تکیه نکنید.</string>
+    <string name="root_enable">اجازه و فعال‌سازی</string>
+    <string name="root_disable">مسیریابی روت خاموش شود؟</string>
+    <string name="root_disconnect">برای تغییر مسیریابی روت، ابتدا اتصال VPN قطع می‌شود.</string>
+    <string name="root_checking">در حال بررسی اجازهٔ کاربر ارشد…</string>
+    <string name="root_denied">اجازهٔ کاربر ارشد داده نشد.</string>
+    <string name="root_unavailable">مسیریابی روت در دسترس نیست؛ VPN عادی برقرار می‌ماند.</string>
 </resources>

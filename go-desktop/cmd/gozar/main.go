@@ -4,22 +4,25 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"io"
+	"log"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
 	"time"
 
-	"github.com/bardia049b-stack/gozar/go-desktop/internal/app"
-	"github.com/bardia049b-stack/gozar/go-desktop/internal/fxa"
-	"github.com/bardia049b-stack/gozar/go-desktop/internal/rpc"
-	"github.com/bardia049b-stack/gozar/go-desktop/internal/sysproxy"
-	"github.com/bardia049b-stack/gozar/go-desktop/internal/tundev"
+	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/app"
+	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/fxa"
+	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/rpc"
+	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/sysproxy"
+	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/tundev"
 )
 
-const version = "1.9.4"
+const version = "1.9.5"
 
 func main() {
+	log.SetOutput(io.Discard)
 	rpcMode := flag.Bool("rpc", false, "")
 	headless := flag.Bool("headless", false, "")
 	email := flag.String("email", "", "")

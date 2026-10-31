@@ -68,15 +68,22 @@ func markH2Broken() {
 }
 
 func dialTLS(target Target, protocols []string, timeout time.Duration) (*tls.Conn, error) {
+	return dialTLSConfigured(target, protocols, timeout, nil)
+}
+
+func dialTLSConfigured(target Target, protocols []string, timeout time.Duration, override *tls.Config) (*tls.Conn, error) {
 	raw, err := dialChain(target, timeout)
 	if err != nil {
 		return nil, err
 	}
-	conn := tls.Client(raw, &tls.Config{
-		ServerName: target.Host,
-		NextProtos: protocols,
-		MinVersion: tls.VersionTLS12,
-	})
+	config := &tls.Config{}
+	if override != nil {
+		config = override.Clone()
+	}
+	config.ServerName = target.Host
+	config.NextProtos = protocols
+	config.MinVersion = tls.VersionTLS12
+	conn := tls.Client(raw, config)
 	conn.SetDeadline(time.Now().Add(timeout))
 	if err := conn.Handshake(); err != nil {
 		raw.Close()
@@ -136,6 +143,7 @@ type stream struct {
 
 func (s *stream) Read(p []byte) (int, error)  { return s.reader.Read(p) }
 func (s *stream) Write(p []byte) (int, error) { return s.conn.Write(p) }
+func (s *stream) CloseWrite() error           { return s.conn.CloseWrite() }
 func (s *stream) Close() error                { return s.conn.Close() }
 
 func reason(code int) error {
@@ -219,6 +227,8 @@ func (s *h2Stream) Write(p []byte) (int, error) {
 	return s.writer.Write(p)
 }
 
+func (s *h2Stream) CloseWrite() error { return s.writer.Close() }
+
 func (s *h2Stream) Close() error {
 	var err error
 	s.once.Do(func() {
@@ -231,7 +241,15 @@ func (s *h2Stream) Close() error {
 }
 
 func Probe(target Target, pass string, timeout time.Duration) (string, error) {
-	conn, err := Open(target, "ifconfig.me", 80, pass, timeout)
+	return probe(func() (Dup, error) { return Open(target, "ifconfig.me", 80, pass, timeout) })
+}
+
+func (m *Manager) Probe(pass string, timeout time.Duration) (string, error) {
+	return probe(func() (Dup, error) { return m.Open("ifconfig.me", 80, pass, timeout) })
+}
+
+func probe(open func() (Dup, error)) (string, error) {
+	conn, err := open()
 	if err != nil {
 		return "", err
 	}

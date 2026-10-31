@@ -8,8 +8,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/bardia049b-stack/gozar/go-desktop/internal/dnsproxy"
-	"github.com/bardia049b-stack/gozar/go-desktop/internal/tundev"
+	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/dnsproxy"
+	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/tundev"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
@@ -42,6 +42,10 @@ type Engine struct {
 }
 
 func Start(proxyHost string, dial Dialer, protect []netip.Addr) (*Engine, error) {
+	return start(proxyHost, dial, protect, nil)
+}
+
+func start(proxyHost string, dial Dialer, protect []netip.Addr, testResolver resolver) (*Engine, error) {
 	if !tundev.Privileged() {
 		return nil, errors.New("the tunnel needs administrator rights")
 	}
@@ -79,8 +83,10 @@ func Start(proxyHost string, dial Dialer, protect []netip.Addr) (*Engine, error)
 		{Destination: header.IPv4EmptySubnet, NIC: 1},
 	})
 
-	engine := &Engine{stack: created, device: device, dial: dial}
-	engine.dns = dnsproxy.New(dial)
+	engine := &Engine{stack: created, device: device, dial: dial, dns: testResolver}
+	if engine.dns == nil {
+		engine.dns = dnsproxy.New(dial)
+	}
 
 	tcpForwarder := tcp.NewForwarder(created, 0, 4096, engine.handleTCP)
 	created.SetTransportProtocolHandler(tcp.ProtocolNumber, tcpForwarder.HandlePacket)
@@ -177,40 +183,55 @@ func (e *Engine) handleUDP(request *udp.ForwarderRequest) {
 	}()
 }
 
+func copyMetered(dst io.Writer, src io.Reader, counter *atomic.Int64) error {
+	buffer := make([]byte, 32*1024)
+	for {
+		count, readErr := src.Read(buffer)
+		for offset := 0; offset < count; {
+			written, err := dst.Write(buffer[offset:count])
+			if written > 0 {
+				offset += written
+				counter.Add(int64(written))
+			}
+			if err != nil {
+				return err
+			}
+			if written == 0 {
+				return io.ErrShortWrite
+			}
+		}
+		if readErr == io.EOF {
+			return nil
+		}
+		if readErr != nil {
+			return readErr
+		}
+	}
+}
+
 func (e *Engine) relay(local *gonet.TCPConn, remote io.ReadWriteCloser) {
-	done := make(chan struct{}, 2)
-	go func() {
-		buffer := make([]byte, 32*1024)
-		for {
-			count, err := local.Read(buffer)
-			if count > 0 {
-				if _, werr := remote.Write(buffer[:count]); werr != nil {
-					break
-				}
-				e.up.Add(int64(count))
-			}
-			if err != nil {
-				break
-			}
-		}
-		done <- struct{}{}
-	}()
-	go func() {
-		buffer := make([]byte, 32*1024)
-		for {
-			count, err := remote.Read(buffer)
-			if count > 0 {
-				if _, werr := local.Write(buffer[:count]); werr != nil {
-					break
-				}
-				e.down.Add(int64(count))
-			}
-			if err != nil {
-				break
+	e.relayDuplex(local, remote)
+}
+
+func (e *Engine) relayDuplex(local, remote io.ReadWriteCloser) {
+	done := make(chan error, 2)
+	pump := func(dst, src io.ReadWriteCloser, counter *atomic.Int64) {
+		err := copyMetered(dst, src, counter)
+		if err == nil {
+			if half, ok := dst.(interface{ CloseWrite() error }); ok {
+				err = half.CloseWrite()
+			} else {
+				err = errors.New("half-close unavailable")
 			}
 		}
-		done <- struct{}{}
-	}()
+		done <- err
+	}
+	go pump(remote, local, &e.up)
+	go pump(local, remote, &e.down)
+	if err := <-done; err != nil {
+		local.Close()
+		remote.Close()
+	}
 	<-done
 	local.Close()
 	remote.Close()
@@ -222,6 +243,10 @@ func (e *Engine) Counters() (int64, int64) {
 
 func (e *Engine) Device() string {
 	return e.config.Interface
+}
+
+func (e *Engine) Failures() <-chan error {
+	return e.device.Failures()
 }
 
 func (e *Engine) Stop() {

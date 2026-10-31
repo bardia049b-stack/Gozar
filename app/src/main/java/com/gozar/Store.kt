@@ -28,6 +28,8 @@ object Store {
     fun setBypassList(c: Context, v: String) = p(c).edit().putString("bypass_list", v).apply()
     fun chain(c: Context) = p(c).getString("chain", "") ?: ""
     fun setChain(c: Context, v: String) = p(c).edit().putString("chain", v).apply()
+    fun rootRouting(c: Context) = p(c).getBoolean("root_routing", false)
+    fun setRootRouting(c: Context, v: Boolean) = p(c).edit().putBoolean("root_routing", v).apply()
     fun apps(c: Context) = p(c).getStringSet("apps", emptySet())?.toSet() ?: emptySet()
     fun setApps(c: Context, v: Set<String>) = p(c).edit().putStringSet("apps", v).apply()
 

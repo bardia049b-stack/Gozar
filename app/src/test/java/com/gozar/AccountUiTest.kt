@@ -99,6 +99,32 @@ class AccountUiTest {
     }
 
     @Test
+    fun accountSheetMarksTheActiveAccountAndOffersSwitchAndAdd() {
+        val controller = Robolectric.buildActivity(LoginActivity::class.java).setup()
+        val activity = controller.get()
+        var selected = ""
+        var adding = false
+        val sheet = AccountSheet(activity, { account, _ -> selected = account.id }, { adding = true }).show(listOf(
+            SavedFoxAccount("one", "first@example.test", true),
+            SavedFoxAccount("two", "second@example.test", false)
+        ))
+        val rows = sheet.findViewById<android.widget.LinearLayout>(R.id.accountRows)!!
+        assertEquals(2, rows.childCount)
+        val current = rows.getChildAt(0)
+        val other = rows.getChildAt(1)
+        assertEquals(View.VISIBLE, current.findViewById<View>(R.id.accountCheck).visibility)
+        assertEquals(View.INVISIBLE, other.findViewById<View>(R.id.accountCheck).visibility)
+        current.performClick()
+        assertEquals("", selected)
+        other.performClick()
+        assertEquals("two", selected)
+        sheet.findViewById<View>(R.id.accountAdd)!!.performClick()
+        assertTrue(adding)
+        sheet.dismiss()
+        controller.pause().stop().destroy()
+    }
+
+    @Test
     fun systemSelectionAcceptsOnlyEmailNamesAndHandlesMissingResults() {
         assertEquals("system@example.test", LoginActivity.systemEmail(Intent().putExtra(AccountManager.KEY_ACCOUNT_NAME, "  system@example.test  ")))
         assertNull(LoginActivity.systemEmail(Intent().putExtra(AccountManager.KEY_ACCOUNT_NAME, "not-an-email")))

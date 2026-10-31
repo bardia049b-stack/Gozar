@@ -30,6 +30,7 @@ object FoxLink {
     private var lastUp = 0L
     private var lastAt = 0L
     private var ticker: Thread? = null
+    private var renewer: Thread? = null
 
     var onChange: (() -> Unit)? = null
 
@@ -60,11 +61,11 @@ object FoxLink {
             try {
                 FoxRoute.apply(Store.bypassLan(app), Store.bypassList(app))
                 FoxRoute.applyChain(Store.chain(app))
+                FoxTunnel.resetTransport()
                 val access = Fox.validAccess(app)
                 if (!current(attempt)) return@thread
                 var pass = FoxApi.pass(access.token)
-                if (!current(attempt)) return@thread
-                if (!FoxStore.saveUsage(app, pass, access.id, access.revision)) return@thread
+                if (!storePass(app, pass, access, attempt)) return@thread
                 if (Fox.servers.isEmpty()) {
                     val servers = FoxApi.servers()
                     if (!current(attempt)) return@thread
@@ -91,8 +92,7 @@ object FoxLink {
                         if (!current(attempt)) return@thread
                         val renewed = Fox.validAccess(app)
                         pass = FoxApi.pass(renewed.token)
-                        if (!current(attempt)) return@thread
-                        if (!FoxStore.saveUsage(app, pass, renewed.id, renewed.revision)) return@thread
+                        if (!storePass(app, pass, renewed, attempt)) return@thread
                         FoxTunnel.probe(chosen, pass.token)
                     } else if (reason.contains("allowance") || reason.contains("region") || reason.contains("access") || reason.contains("rejected") || reason.contains("closed the connection")) {
                         throw FoxError(reason)
@@ -111,8 +111,10 @@ object FoxLink {
                     error = ""
                     if (Store.recents(app)) Store.setLastServer(app, chosen.host)
                     startTicker()
+                    startRenewal(app, attempt)
                 }
                 tick()
+                FoxVpnService.activateRoot()
             } catch (e: Exception) {
                 synchronized(stateLock) {
                     if (attempt != generation) return@thread
@@ -132,6 +134,12 @@ object FoxLink {
 
     private fun current(attempt: Long): Boolean = synchronized(stateLock) { attempt == generation }
 
+    private fun storePass(app: Context, pass: FoxPass, access: FoxAccess, attempt: Long, live: Boolean = false): Boolean =
+        synchronized(stateLock) {
+            if (attempt != generation || (live && !connected)) false
+            else FoxStore.saveUsage(app, pass, access.id, access.revision)
+        }
+
     fun stop() {
         synchronized(stateLock) {
             generation += 1
@@ -144,6 +152,7 @@ object FoxLink {
             since = 0L
             error = ""
             stopTicker()
+            stopRenewal()
         }
         tick()
     }
@@ -182,6 +191,37 @@ object FoxLink {
                 tick()
             }
         }
+    }
+
+    private fun startRenewal(app: Context, attempt: Long) {
+        stopRenewal()
+        renewer = thread(isDaemon = true, name = "fox-renew") {
+            var retry = 0L
+            while (current(attempt) && connected) {
+                val wait = if (retry > 0) retry else FoxStore.renewalDelay(FoxStore.passUntil(app))
+                try {
+                    Thread.sleep(wait)
+                } catch (_: InterruptedException) {
+                    break
+                }
+                if (!current(attempt) || !connected) break
+                try {
+                    val access = Fox.validAccess(app)
+                    val pass = FoxApi.pass(access.token)
+                    if (!storePass(app, pass, access, attempt, true)) break
+                    retry = 0L
+                    Fox.load(app)
+                    tick()
+                } catch (_: Exception) {
+                    retry = if (retry == 0L) 15_000L else (retry * 2).coerceAtMost(60_000L)
+                }
+            }
+        }
+    }
+
+    private fun stopRenewal() {
+        renewer?.interrupt()
+        renewer = null
     }
 
     private fun stopTicker() {

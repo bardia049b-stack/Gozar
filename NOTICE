@@ -53,3 +53,9 @@ The Windows tunnel uses Wintun, embedded in the Windows build.
 Copyright (C) 2018-2024 WireGuard LLC
 Source: https://www.wintun.net
 License: Wintun Prebuilt Binaries License; see WINTUN-LICENSE.txt.
+
+quic-go and qpack
+-----------------
+The desktop HTTP/3 transport uses quic-go and qpack.
+Sources: https://github.com/quic-go/quic-go and https://github.com/quic-go/qpack
+Licenses: MIT; see QUIC-GO-LICENSE.txt and QPACK-LICENSE.txt.

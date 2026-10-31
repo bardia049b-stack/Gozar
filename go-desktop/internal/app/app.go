@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"errors"
 	"io"
 	"net"
@@ -11,12 +12,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/bardia049b-stack/gozar/go-desktop/internal/config"
-	"github.com/bardia049b-stack/gozar/go-desktop/internal/engine"
-	"github.com/bardia049b-stack/gozar/go-desktop/internal/fxa"
-	"github.com/bardia049b-stack/gozar/go-desktop/internal/tundev"
-	"github.com/bardia049b-stack/gozar/go-desktop/internal/tunnel"
-	"github.com/bardia049b-stack/gozar/go-desktop/internal/wintun"
+	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/config"
+	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/engine"
+	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/fxa"
+	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/tundev"
+	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/tunnel"
+	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/wintun"
 )
 
 type AccountSummary struct {
@@ -66,6 +67,7 @@ type App struct {
 	authRevision    uint64
 	refreshToken    func(string) (*fxa.Tokens, error)
 	requestPass     func(string) (*fxa.Pass, error)
+	renewCancel     context.CancelFunc
 	cfg             config.Config
 	servers         []fxa.Location
 	pass            *fxa.Pass
@@ -74,6 +76,7 @@ type App struct {
 	pendingKind     string
 	unblockFor      string
 	engine          *engine.Engine
+	transport       *tunnel.Manager
 	stage           string
 	fault           string
 	live            bool
@@ -590,6 +593,10 @@ func (a *App) access() (accountAccess, error) {
 func (a *App) saveUsage(pass *fxa.Pass, access accountAccess) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
+	return a.saveUsageLocked(pass, access)
+}
+
+func (a *App) saveUsageLocked(pass *fxa.Pass, access accountAccess) error {
 	if a.sessionRevision != access.revision || a.cfg.ActiveAccount().ID() != access.id {
 		return errors.New("account changed")
 	}
@@ -704,8 +711,13 @@ func (a *App) connect() error {
 	if target.DialHost == "" {
 		return errors.New("could not resolve the first proxy to IPv4 before starting the tunnel")
 	}
+	transport := tunnel.NewManager(target)
 	dial := func(host string, remotePort int) (io.ReadWriteCloser, error) {
-		return tunnel.Open(target, host, remotePort, pass.Token, 15*time.Second)
+		current, err := a.currentPass()
+		if err != nil {
+			return nil, err
+		}
+		return transport.Open(host, remotePort, current, 15*time.Second)
 	}
 
 	a.mu.Lock()
@@ -713,14 +725,17 @@ func (a *App) connect() error {
 	a.mu.Unlock()
 
 	if err := wintun.Ensure(); err != nil {
+		transport.Close()
 		return err
 	}
 	created, err := engine.Start(target.Host, dial, keep)
 	if err != nil {
+		transport.Close()
 		return err
 	}
 	a.mu.Lock()
 	a.engine = created
+	a.transport = transport
 	a.live = true
 	a.since = time.Now().Unix()
 	if a.cfg.Recents {
@@ -731,7 +746,9 @@ func (a *App) connect() error {
 	a.mu.Lock()
 	a.stage = ""
 	a.mu.Unlock()
-	if ip, err := tunnel.Probe(target, pass.Token, 12*time.Second); err == nil {
+	go a.watchTunnel(created)
+	a.startRenewal()
+	if ip, err := transport.Probe(pass.Token, 12*time.Second); err == nil {
 		a.mu.Lock()
 		a.exit = ip
 		a.mu.Unlock()
@@ -739,14 +756,43 @@ func (a *App) connect() error {
 	return nil
 }
 
+func (a *App) watchTunnel(current *engine.Engine) {
+	err, ok := <-current.Failures()
+	if !ok || err == nil {
+		return
+	}
+	a.connectionMu.Lock()
+	defer a.connectionMu.Unlock()
+	a.mu.Lock()
+	active := a.engine == current
+	a.mu.Unlock()
+	if !active {
+		return
+	}
+	a.teardown()
+	a.mu.Lock()
+	a.fault = "The tunnel device stopped: " + err.Error()
+	a.mu.Unlock()
+}
+
 func (a *App) teardown() {
 	a.mu.Lock()
 	engineNow := a.engine
+	transport := a.transport
+	a.transport = nil
+	cancel := a.renewCancel
+	a.renewCancel = nil
 	a.engine = nil
 	a.live = false
 	a.exit = ""
 	a.since = 0
 	a.mu.Unlock()
+	if cancel != nil {
+		cancel()
+	}
+	if transport != nil {
+		transport.Close()
+	}
 	if engineNow != nil {
 		engineNow.Stop()
 	}

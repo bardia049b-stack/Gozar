@@ -20,6 +20,7 @@ class FoxVpnService : VpnService() {
     private var descriptor: ParcelFileDescriptor? = null
 
     private var stack: FoxStack? = null
+    private var rootSession: RootSession? = null
     private var startFailure = ""
 
     override fun onCreate() {
@@ -47,6 +48,7 @@ class FoxVpnService : VpnService() {
             .addAddress(LOCAL_ADDRESS, 32)
             .addDnsServer(DNS_ADDRESS)
             .addRoute("0.0.0.0", 0)
+            .addRoute(DNS_ADDRESS, 32)
             .setMtu(FoxStack.MTU)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             builder.setMetered(false)
@@ -81,13 +83,16 @@ class FoxVpnService : VpnService() {
         }
         descriptor = fd
         val app = applicationContext
+        val resolver = FoxResolver(FoxLink.WEB_PORT)
         val engine = FoxStack(
             FileInputStream(fd.fileDescriptor),
             FileOutputStream(fd.fileDescriptor),
             addressOf(LOCAL_ADDRESS),
-            FoxResolver(FoxLink.WEB_PORT),
+            resolver,
             { host, port ->
-                if (FoxRoute.direct(host)) {
+                if (port == 53) {
+                    FoxDnsPipe(resolver)
+                } else if (FoxRoute.direct(host)) {
                     FoxSocketPipe.connect(host, port) ?: throw IOException("direct connection failed")
                 } else {
                     val location = FoxLink.location ?: throw IOException("not connected yet")
@@ -132,6 +137,13 @@ class FoxVpnService : VpnService() {
     }
 
     private fun release() {
+        val root = synchronized(this) {
+            val current = rootSession
+            rootSession = null
+            rootActive = false
+            current
+        }
+        root?.stop()
         try {
             stack?.stop()
         } catch (e: Exception) {
@@ -143,6 +155,32 @@ class FoxVpnService : VpnService() {
         }
         descriptor = null
         FoxLink.stop()
+    }
+
+    private fun activateRoot() {
+        if (!Store.rootRouting(this) || !FoxLink.connected) return
+        val current = synchronized(this) {
+            if (rootSession != null) return
+            val fd = descriptor ?: return
+            var made: RootSession? = null
+            val session = RootSession.create(this, fd) { active ->
+                synchronized(this) {
+                    if (rootSession !== made) return@create
+                    rootActive = active
+                    if (!active && FoxLink.connected && Store.rootRouting(this)) {
+                        FoxLink.fault(getString(R.string.root_unavailable))
+                    }
+                }
+            }
+            if (session == null) {
+                FoxLink.fault(getString(R.string.root_unavailable))
+                return
+            }
+            made = session
+            rootSession = session
+            session
+        }
+        current.start()
     }
 
     private fun foreground() {
@@ -193,6 +231,8 @@ class FoxVpnService : VpnService() {
         private const val STOP = "com.gozar.FOX_STOP"
 
         @Volatile private var alive = false
+        @Volatile var rootActive = false
+            private set
         @Volatile private var instance: FoxVpnService? = null
 
         internal fun applyAppSelection(
@@ -219,6 +259,10 @@ class FoxVpnService : VpnService() {
                 }
             }
             return applied > 0
+        }
+
+        fun activateRoot() {
+            instance?.activateRoot()
         }
 
         fun isAlive(): Boolean = alive

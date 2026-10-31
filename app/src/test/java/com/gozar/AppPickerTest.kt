@@ -62,6 +62,19 @@ class AppPickerTest {
     }
 
     @Test
+    fun loadingAppearsImmediatelyAndCanBeDismissed() {
+        val controller = Robolectric.buildActivity(LoginActivity::class.java).setup()
+        val picker = AppPicker(controller.get()) {}
+        val sheet = picker.show(emptyList(), true)
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(View.VISIBLE, sheet.findViewById<View>(R.id.appsLoading)?.visibility)
+        assertEquals(View.GONE, sheet.findViewById<View>(R.id.appList)?.visibility)
+        assertFalse(sheet.findViewById<View>(R.id.appSave)!!.isEnabled)
+        sheet.dismiss()
+        controller.pause().stop().destroy()
+    }
+
+    @Test
     fun allowAndDisallowModesAreNeverMixedAndEmptyValidSelectionFails() {
         val calls = mutableListOf<String>()
         assertTrue(FoxVpnService.applyAppSelection(emptySet(), "self", { calls.add("allow:$it") }, { calls.add("deny:$it") }))

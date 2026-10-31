@@ -39,6 +39,52 @@ class FoxStackTest {
     }
 
     @Test
+    fun malformedShortTcpPacketDoesNotStopThePump() {
+        MemoryTunnel().use { tunnel ->
+            val malformed = ByteArray(28)
+            malformed[0] = 0x45
+            malformed[9] = 6
+            malformed[2] = 0
+            malformed[3] = 28
+            byteArrayOf(10, 111, 0, 2).copyInto(malformed, 12)
+            tunnel.input.offer(malformed)
+            tunnel.input.offer(tcp(1000, 0, 0x02, byteArrayOf()))
+            assertEquals(0x12, tunnel.output.next()[33].toInt() and 255)
+        }
+    }
+
+    @Test
+    fun remoteHalfCloseStillAllowsClientUploadBeforeFin() {
+        val input = PacketInput()
+        val output = PacketOutput()
+        val allowEof = CountDownLatch(1)
+        val uploaded = ByteArrayOutputStream()
+        val finished = CountDownLatch(1)
+        val pipe = object : FoxPipe {
+            override fun read(buffer: ByteArray, offset: Int, length: Int): Int { allowEof.await(); return -1 }
+            override fun write(buffer: ByteArray, offset: Int, length: Int) { uploaded.write(buffer, offset, length) }
+            override fun finishWrite() { finished.countDown() }
+            override fun close() { allowEof.countDown() }
+        }
+        val stack = FoxStack(input, output, 0x0a6f0002, FoxResolver(0), { _, _ -> pipe }, { _, _ -> })
+        stack.start()
+        try {
+            input.offer(tcp(1000, 0, 0x02, byteArrayOf()))
+            val synAck = output.next()
+            val peer = u32(synAck, 24) + 1
+            allowEof.countDown()
+            output.find { (it[33].toInt() and 0x01) != 0 }
+            val payload = "after fin".toByteArray()
+            input.offer(tcp(1001, peer + 1, 0x11, payload))
+            assertTrue(finished.await(3, TimeUnit.SECONDS))
+            assertArrayEquals(payload, uploaded.toByteArray())
+        } finally {
+            stack.stop()
+            input.close()
+        }
+    }
+
+    @Test
     fun unsupportedUdpReturnsIcmpWithoutCallingTheTunnel() {
         MemoryTunnel().use { tunnel ->
             tunnel.input.offer(udp(443, ByteArray(16) { it.toByte() }))
@@ -106,6 +152,115 @@ class FoxStackTest {
         assertTrue(FoxRoute.direct("192.168.1.2"))
         assertTrue(!FoxRoute.direct("203.0.113.7"))
         FoxRoute.apply(false, "")
+    }
+
+    @Test
+    fun fullUploadQueueDoesNotAcknowledgeDiscardedBytesAndReopensWindow() {
+        val input = PacketInput()
+        val output = PacketOutput()
+        val release = CountDownLatch(1)
+        val stopped = CountDownLatch(1)
+        val pipe = object : FoxPipe {
+            override fun read(buffer: ByteArray, offset: Int, length: Int): Int { stopped.await(); return -1 }
+            override fun write(buffer: ByteArray, offset: Int, length: Int) { release.await() }
+            override fun close() { stopped.countDown(); release.countDown() }
+        }
+        val stack = FoxStack(input, output, 0x0a6f0002, FoxResolver(0), { _, _ -> pipe }, { _, _ -> })
+        stack.start()
+        try {
+            input.offer(tcp(1000, 0, 0x02, byteArrayOf()))
+            val synAck = output.next()
+            val peer = u32(synAck, 24) + 1
+            var sequence = 1001L
+            val payload = ByteArray(1360) { 5 }
+            var rejected = false
+            repeat(500) {
+                if (!rejected) {
+                    input.offer(tcp(sequence, peer, 0x18, payload))
+                    val ack = output.next()
+                    val next = u32(ack, 28)
+                    if (next == sequence) rejected = true else {
+                        assertEquals(sequence + payload.size, next)
+                        sequence = next
+                    }
+                }
+            }
+            assertTrue("the bounded queue should apply backpressure", rejected)
+            release.countDown()
+            val update = output.find { u32(it, 28) == sequence && ((it[34].toInt() and 255) shl 8 or (it[35].toInt() and 255)) > 0 }
+            assertEquals(sequence, u32(update, 28))
+            input.offer(tcp(sequence, peer, 0x18, payload))
+            output.find { u32(it, 28) == sequence + payload.size }
+        } finally {
+            release.countDown()
+            stack.stop()
+            input.close()
+        }
+    }
+
+    @Test
+    fun cancelledDialClosesTheLatePipe() {
+        val input = PacketInput()
+        val output = PacketOutput()
+        val started = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val closed = CountDownLatch(1)
+        val pipe = object : FoxPipe {
+            override fun read(buffer: ByteArray, offset: Int, length: Int) = -1
+            override fun write(buffer: ByteArray, offset: Int, length: Int) = Unit
+            override fun close() { closed.countDown() }
+        }
+        val stack = FoxStack(input, output, 0x0a6f0002, FoxResolver(0), { _, _ ->
+            started.countDown()
+            release.await()
+            pipe
+        }, { _, _ -> })
+        stack.start()
+        try {
+            input.offer(tcp(1000, 0, 0x02, byteArrayOf()))
+            output.next()
+            assertTrue(started.await(2, TimeUnit.SECONDS))
+            input.offer(tcp(1001, 0, 0x04, byteArrayOf()))
+            val until = System.nanoTime() + TimeUnit.SECONDS.toNanos(2)
+            while (stack.active() > 0 && System.nanoTime() < until) Thread.yield()
+            assertEquals(0, stack.active())
+            release.countDown()
+            assertTrue(closed.await(2, TimeUnit.SECONDS))
+        } finally {
+            release.countDown()
+            stack.stop()
+            input.close()
+        }
+    }
+
+    @Test
+    fun finWithDataIsDeliveredBeforeHalfClose() {
+        val input = PacketInput()
+        val output = PacketOutput()
+        val written = ByteArrayOutputStream()
+        val finished = CountDownLatch(1)
+        val closed = CountDownLatch(1)
+        val pipe = object : FoxPipe {
+            override fun read(buffer: ByteArray, offset: Int, length: Int): Int { closed.await(); return -1 }
+            override fun write(buffer: ByteArray, offset: Int, length: Int) { written.write(buffer, offset, length) }
+            override fun finishWrite() { finished.countDown() }
+            override fun close() { closed.countDown() }
+        }
+        val stack = FoxStack(input, output, 0x0a6f0002, FoxResolver(0), { _, _ -> pipe }, { _, _ -> })
+        stack.start()
+        try {
+            input.offer(tcp(1000, 0, 0x02, byteArrayOf()))
+            val synAck = output.next()
+            val payload = "last bytes".toByteArray()
+            input.offer(tcp(1001, u32(synAck, 24) + 1, 0x11, payload))
+            val ack = output.next()
+            assertEquals(1001L + payload.size + 1, u32(ack, 28))
+            assertTrue(finished.await(2, TimeUnit.SECONDS))
+            assertArrayEquals(payload, written.toByteArray())
+        } finally {
+            stack.stop()
+            input.close()
+        }
     }
 
     private class MemoryTunnel : Closeable {

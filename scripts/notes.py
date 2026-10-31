@@ -1,14 +1,19 @@
+import base64
 import sys
+from urllib.parse import urlencode
 
 version = sys.argv[1]
-repo = sys.argv[2] if len(sys.argv) > 2 else 'bardia049b-stack/Gozar'
+repo = sys.argv[2] if len(sys.argv) > 2 else 'bardia049b-stack/Gozar1'
 android = sys.argv[3] if len(sys.argv) > 3 else version
 tag = sys.argv[4] if len(sys.argv) > 4 else f'v{version}'
 base = f'https://github.com/{repo}/releases/download/{tag}/'
+windows_svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path fill="white" d="M0 0h7v7H0zm9 0h7v7H9zM0 9h7v7H0zm9 0h7v7H9z"/></svg>'
+windows_logo = 'data:image/svg+xml;base64,' + base64.b64encode(windows_svg.encode()).decode()
 
 
 def badge(label, value, colour, logo, filename):
-    return f'[![{label} {value}](https://img.shields.io/badge/{label}-{value}-{colour}?logo={logo}&logoColor=white)]({base}{filename})'
+    query = urlencode({'logo': logo, 'logoColor': 'white'})
+    return f'[![{label} {value}](https://img.shields.io/badge/{label}-{value}-{colour}?{query})]({base}{filename})'
 
 
 def stack(*items):
@@ -23,155 +28,98 @@ rows = [
         badge('APK', 'ARMv7', '2da44e', 'android', apk + 'armeabi-v7a.apk'),
         badge('APK', 'x86__64', '2da44e', 'android', apk + 'x86_64.apk'),
         badge('APK', 'x86', '2da44e', 'android', apk + 'x86.apk'))),
-    ('**Windows**', badge('ZIP', 'x64', '0550ae', 'windows', 'Gozar-Windows-x64.zip')),
+    ('**Windows**', stack(
+        badge('Installer', 'EXE__x64', '0550ae', windows_logo, 'Gozar-Windows-x64-Setup.exe'),
+        badge('Portable', 'ZIP__x64', '0550ae', windows_logo, 'Gozar-Windows-x64.zip'))),
+    ('**Linux**', stack(
+        badge('Package', 'DEB__amd64', 'e36209', 'linux', 'Gozar-Linux-amd64.deb'),
+        badge('Portable', 'TAR.XZ__amd64', 'e36209', 'linux', 'Gozar-Linux-amd64.tar.xz'))),
     ('**macOS**', stack(
         badge('TAR.XZ', 'Apple__Silicon', '24292f', 'apple', 'Gozar-macOS-ARM.tar.xz'),
         badge('TAR.XZ', 'Intel', '24292f', 'apple', 'Gozar-macOS-Intel.tar.xz'))),
-    ('**Linux**', badge('TAR.XZ', 'amd64', 'e36209', 'linux', 'Gozar-Linux-amd64.tar.xz')),
+    ('**Separate cores**', stack(
+        badge('Core', 'Windows__x64', '4b4b4b', windows_logo, 'Gozar-Core-Windows-x64.zip'),
+        badge('Core', 'Windows__ARM64', '4b4b4b', windows_logo, 'Gozar-Core-Windows-arm64.zip'),
+        badge('Core', 'Linux__amd64', '4b4b4b', 'linux', 'Gozar-Core-Linux-amd64.tar.xz'),
+        badge('Core', 'Linux__ARM64', '4b4b4b', 'linux', 'Gozar-Core-Linux-arm64.tar.xz'),
+        badge('Core', 'macOS__Intel', '4b4b4b', 'apple', 'Gozar-Core-macOS-Intel.tar.xz'),
+        badge('Core', 'macOS__ARM64', '4b4b4b', 'apple', 'Gozar-Core-macOS-ARM.tar.xz'))),
 ]
 
 print(f'# Gozar Android {android} / Desktop {version}')
 print()
-print('Firefox-only Gozar for Android, Windows, macOS and Linux. This release keeps the earlier releases available.')
+print('Firefox-only Gozar for Android, Windows, macOS and Linux. Earlier releases remain available.')
 print()
 print('| System | Download |')
-print('|:--:|:--:|')
+print('|:--:|:--|')
 for name, downloads in rows:
     print(f'| {name} | {downloads} |')
 print()
-print('## Android 13: Firefox VPN certificate connection error')
+print('The Windows EXE and Linux DEB include the app, native core, libraries and licenses. '
+      'Portable archives are also available. Separate core downloads are native developer components, not graphical apps. '
+      'Desktop downloads are individually limited to under 17 MB and do not include a JVM.')
 print()
-print('Some Android 13 devices reported `java.security.cert.CertPathValidatorException: Trust anchor for certification path not found` when connecting. '
-      'A public Fastly Firefox VPN endpoint was observed presenting a chain to GlobalSign Root E46; the relevant newer roots are absent from the AOSP Android 13 root set. '
-      'Different Android vendors and server chains can behave differently.')
+print('## Adaptive tunneling')
 print()
-print('Gozar adds the verified GlobalSign E46 and R46 roots alongside the system roots **only for `fastly-masque.net` and its subdomains**. '
-      'Certificate-chain validation and hostname verification stay enabled. A TLS failure during the connection probe is reported as a failure rather than a successful connection. '
-      'The HTTP/2 tunnel also preserves data when a frame is larger than the caller’s read buffer.')
+print('- **Android:** Gozar chooses between HTTPS CONNECT over HTTP/2 and HTTP/1.1 for new connections, '
+      'using endpoint-specific connection timing and temporary failure history. It periodically samples the alternative and keeps certificate and hostname verification enabled.')
+print('- **Desktop:** the core reuses a small pool of HTTP/2 connections and can try HTTP/3 CONNECT when the selected endpoint and network actually accept it. '
+      'It falls back to HTTP/2 or HTTP/1.1 when appropriate. A configured TCP proxy chain is never bypassed to try HTTP/3. '
+      'The selector learns from new connection attempts; it does not move existing connections or guarantee the fastest path.')
+print('- HTTP/3 was exercised against a local simulated proxy, including session reuse and rejection of an untrusted certificate. '
+      'Support on a particular Firefox endpoint or network has not been established. HTTP/3 to a proxy does **not** mean arbitrary destination UDP is supported.')
 print()
-print('**Physical-device confirmation:** the user reports that their friend tested the preceding certificate fix on the previously affected Android 13 phone '
-      'and successfully connected. That confirms the reported case on that device; this new release itself has not been independently tested on that phone. '
-      'Other trust stores, server domains, incorrect device time, or network interception can still cause certificate errors.')
+print('## Reliability fixes')
 print()
-print('The certificate scope, hostname verification and tunnel handling were additionally checked with local tests and simulations. '
-      'If a certificate error persists, check the date and time, try another network or server, and report the Android version and exact error. '
-      'Never share passwords, access tokens, or screenshots containing credentials.')
+print('- Fixed an Android TCP upload path that could acknowledge data without retaining it under backpressure. '
+      'The tunnel now bounds its queue, reopens the receive window as space becomes available, and closes a connection that completes after its flow was cancelled.')
+print('- Updated Android DNS handling to allow concurrent lookups, honor bounded response TTLs, avoid caching failed answers as successful results, '
+      'and recover after failures instead of remaining latched. Large UDP answers are marked truncated so clients can retry over TCP; TCP DNS requests are resolved through the same DNS-over-HTTPS path. A specific route for the in-tunnel DNS address also takes precedence over an optional LAN exclusion.')
+print('- Improved HTTP/2 handling of padded frames, data frames larger than the caller’s read buffer, long authorization headers, flow-control windows, write errors, and TCP half-close. '
+      'Fallback does not disable TLS verification.')
+print('- Fixed native TUN packet headroom for modern Linux TUN offload and macOS utun, released incoming packet buffers correctly, '
+      'and made device read/write failures stop the tunnel rather than silently dropping packets. Linux proxy bypass now preserves the actual route selected for the upstream, including direct and non-default-interface routes; Windows default-route selection uses the lowest available metric.')
+print('- Android and desktop now schedule proxy-pass renewal before the advertised expiry, retry temporary failures, '
+      'and stop the renewal task on disconnect. New desktop connections read the current pass instead of a token captured at connection time. '
+      'Account and connection generation checks prevent a cancelled renewal from replacing a newer session.')
 print()
-print('## Accounts and sign-in')
+print('## Android root routing — experimental and opt-in')
 print()
-print('- Add another Firefox account from **Settings → Manage accounts**, keep multiple sessions, and switch between them inside Gozar. '
-      'Adding or switching accounts disconnects an active VPN first; cancelling sign-in leaves the previous session intact.')
-print('- Signing out stops the VPN and removes only the active session. Other saved Gozar sessions remain available from the sign-in screen. '
-      'Session tokens and quota information are kept separate; passwords are not saved.')
-print('- Android’s email icon opens the **system account chooser** and accepts the selected name only if it is an email address. '
-      'It does not perform Google Sign-In or request contacts/account-list permission. The chooser can include non-email system accounts; '
-      'those cannot be used to fill the email field. Manual entry is always available.')
-print('- Linux can show email-like identities from GNOME Online Accounts when that service is available, after an explicit click. '
-      'This is separate from the saved Gozar sessions. Windows and macOS do not have a verified universal system-email picker in this build; '
-      'manual entry remains available. Not every Linux desktop provides GNOME Online Accounts.')
-print('- Android keeps the email and password visible but locked while signing in, with only a spinner in the button. '
-      'Language selection is on the sign-in screen and in Settings.')
+print('A new Settings option requests superuser permission using `su` and checks for UID 0. '
+      'Only after explicit consent does Gozar attempt extra routing for IPv4 TCP and DNS from root-owned processes while the normal VPN is connected. '
+      'It attempts to preserve protected/explicitly selected sockets and LAN bypass, uses source NAT for the tunnel, '
+      'and removes its own rules on normal disconnect or partial setup failure. A process watchdog attempts cleanup after an app crash.')
 print()
-print('## Android interface')
+print('**Important:** no rooted Android device was available for physical verification. '
+      'Firewall implementations, policy marks, SELinux, NAT and crash cleanup vary by device; the option may fail or affect connectivity. '
+      'Non-DNS UDP, IPv6 and some kernel-originated traffic may remain outside the tunnel. Per-app selection does not define the UID 0 policy. '
+      'Do not rely on this experimental option for leak protection or assume it covers all device traffic.')
 print()
-print('Persian and right-to-left sign-in and account/quota presentation have been adjusted, the Persian application name is گذر, '
-      'and settings press feedback follows the shape of its row. The app-selection sheet uses a nested-scrolling list that includes installed and system applications. '
-      'The VPN builder now uses either an allow-list or an exclude-self list, not both. A selection with no valid installed apps is rejected.')
+print('## Android interface and Android 13')
 print()
-print('Direct-host matching is applied to ordinary TUN TCP flows as well as the local proxy, using the DNS-to-address information available to the app. '
-      'Domain-to-IP associations, shared IP addresses, DNS changes, unsupported UDP, and platform routing can limit this feature; '
-      'it is not a guarantee that all traffic for a domain follows the intended rule. Android 13 and newer can also exclude LAN ranges at the VPN route level.')
+print('- The per-app sheet appears immediately with a loading indicator while installed and system applications are enumerated. '
+      'It can be dismissed during loading; filtering and selection remain available after loading.')
+print('- The account switcher now presents the active account, saved alternatives and an add-account action in a clearer sheet. '
+      'Switching or adding an account disconnects the active VPN first; signing out returns to sign-in.')
+print('- The Android 13 certificate-chain fix from the preceding release remains in place. '
+      'The user reports that their friend tested that earlier fix on the affected Android 13 phone and successfully connected. '
+      'This release has not separately been verified on that phone; certificate and hostname checks remain enabled.')
 print()
-print('## Desktop settings')
+print('## Desktop and platform limits')
 print()
-print('The Flutter Material 3 interface now exposes functional language and light/dark/system appearance choices, Firefox account switching and sign-out, '
-      'a remembered last-connected server preference, a manual GitHub release check, an about/source link, and TON support. '
-      'The ordered proxy-chain editor supports unauthenticated SOCKS5 and HTTP CONNECT hops; the Go tunnel uses the chain when it connects. '
-      'A local proxy can be used as the first hop for a tunnel-in-tunnel configuration when that proxy is already running.')
+print('The Windows installer installs per user and offers an optional desktop shortcut. The VPN app requests administrator approval '
+      'for its TUN device. The EXE is not Authenticode-signed. macOS builds are ad-hoc signed and not notarized. '
+      'Linux TUN setup needs suitable privileges. A real Linux TUN was exercised in isolated network namespaces with a local mock upstream and DNS; this did not verify a real Firefox server or production account.')
 print()
-print('Desktop per-app and per-domain routing, a dedicated LAN-bypass control, and a route map are **not implemented** in this build. '
-      'The settings screen says so rather than pretending to apply a rule. Existing operating-system LAN routes can still bypass the tunnel. '
-      'Proxy authentication is not supported. Changes to a proxy chain require disconnection.')
+print('Desktop per-app and per-domain routing, a dedicated LAN-bypass control and a route map are not implemented. '
+      'The existing proxy-chain editor accepts unauthenticated SOCKS5 and HTTP CONNECT hops; changes require disconnection. '
+      'IPv6 and general non-DNS UDP coverage are not established. No leak-free, universal-coverage, '
+      'or network-speed guarantee is made. Windows interface “No Internet” indicators can reflect Windows connectivity checks '
+      'or a real connectivity problem and should be investigated separately.')
 print()
-print('## Planned desktop improvements — not in this release')
+print('## Verification and signing')
 print()
-print('The items below describe intended future work, not features available today or a promise of a delivery date. '
-      'Each needs platform-specific implementation and testing; some may be limited by the operating system, providers, or Firefox VPN service.')
-print()
-print('### Per-app selection and split tunneling')
-print()
-print('We intend to investigate application-based routing on Windows and Linux first: a searchable list of installed and system programs, '
-      'followed by a way to select which programs use or bypass the tunnel. A real implementation must associate network flows with the correct program, '
-      'route explicitly excluded traffic through the physical interface, and keep the VPN core’s own connections from looping back into its tunnel. '
-      'Existing connections, permissions, multiple processes, DNS, UDP and unexpected shutdowns all need careful handling. '
-      'macOS requires separate feasibility work and may have different capabilities. Until implemented, there is no per-app bypass in desktop Gozar.')
-print()
-print('### Domain rules, LAN bypass and route visibility')
-print()
-print('We also intend to investigate hostname/domain rules, an explicit LAN-bypass preference and a route view resembling the Android settings. '
-      'A domain can resolve to several changing or shared IP addresses, so DNS-to-address matching alone cannot guarantee perfect routing. '
-      'A future LAN bypass must distinguish intended local traffic from public traffic, show what is excluded, '
-      'and clean up operating-system routes on disconnect and errors. LAN access can expose traffic to the local network; it should be an explicit choice. '
-      'None of these desktop controls is available in this release.')
-print()
-print('### Desktop system-email choices and account security')
-print()
-print('We plan to investigate provider-supported system-account selection on Windows and macOS while retaining manual email entry. '
-      'Operating systems and identity providers do not offer one unrestricted universal email list, so availability and consent may vary. '
-      'Such a picker must remain separate from Gozar’s saved account switcher and must not read system passwords. '
-      'We also intend to evaluate OS-backed credential storage and migration of existing sessions; currently desktop tokens remain in a local file and are not encrypted by Gozar.')
-print()
-print('### Connectivity, traffic coverage and polish')
-print()
-print('Further work may investigate Windows NCSI reporting, safer recovery of routes and DNS after interruptions, '
-      'and clearer connection diagnostics. IPv6 and UDP coverage require separate research and depend on the upstream Firefox proxy, '
-      'which carries TCP and restricts destination ports; future support for arbitrary UDP or leak-free device-wide tunneling is not promised. '
-      'The settings interface and route visualization can be refined alongside those underlying capabilities. '
-      'As requested, no live desktop TUN connection was tested by the development agent for this release.')
-print()
-print('## Windows: Wi-Fi icon may say “No Internet”')
-print()
-print('Windows uses Network Connectivity Status Indicator (NCSI) probes to decide what its network icon displays. '
-      'With a Wintun VPN interface, interface-specific routing, DNS, proxy or probe settings can make that indicator disagree with actual connectivity. '
-      'If Gozar is connected and websites work, the label may be cosmetic; it does not on its own prove an outage. '
-      'If websites and applications also fail, treat that as a real connection problem rather than dismissing it as an icon issue. '
-      'This release does not claim to fix Windows NCSI reporting or change its policies.')
-print()
-print('NCSI uses configured connectivity probes and the routing and DNS available to each interface. '
-      'Gozar’s Wintun interface and the more-specific IPv4 routes used for the VPN can affect which interface handles a probe; '
-      'this is a plausible explanation, not a confirmed diagnosis of any particular Windows installation. '
-      'The label can also be affected by local policy, captive portals, DNS, proxies, firewalls or blocked probe endpoints. '
-      'Gozar does not change NCSI registry or policy settings to hide the warning.')
-print()
-print('To distinguish an indicator issue from a real outage, check whether several websites actually load while Gozar says it is connected. '
-      'If they do not, disconnect Gozar and check the same sites again, try another server or network, and review Windows proxy settings. '
-      'When asking for help, include the Windows version, whether sites work with the VPN disconnected, and any non-sensitive error text; '
-      'do not post passwords, tokens, or screenshots containing credentials.')
-print()
-print('Windows routing commands run without opening console windows. Gozar does not set a system proxy. '
-      'If an older version left one behind, review your proxy settings manually rather than deleting a proxy whose ownership is unknown.')
-print()
-print('## Install')
-print()
-print('- **Android:** install the universal APK or the file named for your device. The APKs contain no ABI-specific native libraries and may be identical.')
-print('- **Windows:** extract the ZIP and run `gozar.exe`, keeping the extracted files together. TUN requires administrator permission.')
-print('- **macOS:** extract with `tar -xJf ARCHIVE.tar.xz` and open `Gozar.app`. Choose the Intel or Apple Silicon archive for your Mac; each contains only its own architecture. The app is ad-hoc signed, not notarized.')
-print('- **Linux:** extract the archive, keep the bundle together, and launch with the privileges needed for TUN.')
-print()
-print('## Testing and security limits')
-print()
-print('The Android physical-device result above is user-reported. The new account-management and interface behavior is exercised by local unit/widget tests and simulations; '
-      'real account sign-in and OS-provided account pickers are subject to provider behavior. The agent did not test a live desktop TUN connection. '
-      'IPv6 can bypass the desktop tunnel, non-DNS UDP is unsupported, and Mozilla restricts destination ports. '
-      'Do not rely on this experimental client for leak-free or complete device-wide coverage.')
-print()
-print('Session tokens are sensitive. Android uses app-private preferences; desktop uses a local configuration file, not the OS keychain. '
-      'Tokens are not encrypted by Gozar. Windows binaries are not Authenticode-signed.')
-print()
-print('## Signatures and support')
-print()
-print('Every APK and desktop archive has a detached OpenPGP `.sig` file. Import `gozar-public-key.asc` and verify the downloaded file with GPG; '
-      'these signatures are not Windows Authenticode or Apple notarization.')
-print()
-print('If you would like to support development, Gozar also shows an optional TON donation address in Settings: '
-      '`UQDxiU-jPFK_TgB0wOzZndhf3IKJLTLm8Vg_Uaif7_C2eCL3`.')
+print('Automated unit tests and local simulations cover the changed tunnel, resolver, selector, root command planning and interface paths; '
+      'they do not replace testing with real accounts and networks. Each published file is accompanied by a detached OpenPGP signature and '
+      '`gozar-public-key.asc`. The Android release APKs must be signed with the existing official Android key to upgrade an existing install. '
+      'Do not substitute a debug or newly generated key as an official upgrade.')

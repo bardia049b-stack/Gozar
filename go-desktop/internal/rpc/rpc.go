@@ -8,9 +8,9 @@ import (
 	"os"
 	"sync"
 
-	"github.com/bardia049b-stack/gozar/go-desktop/internal/app"
-	"github.com/bardia049b-stack/gozar/go-desktop/internal/fxa"
-	"github.com/bardia049b-stack/gozar/go-desktop/internal/systemaccounts"
+	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/app"
+	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/fxa"
+	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/systemaccounts"
 )
 
 type Request struct {

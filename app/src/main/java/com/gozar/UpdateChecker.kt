@@ -15,7 +15,7 @@ import kotlin.concurrent.thread
 object UpdateChecker {
     private const val JOB_ID = 7_324
     private const val CHECK_INTERVAL_MS = 24L * 60L * 60L * 1000L
-    private const val LATEST_RELEASE = "https://api.github.com/repos/bardia049b-stack/Gozar/releases/latest"
+    private const val LATEST_RELEASE = "https://api.github.com/repos/bardia049b-stack/Gozar1/releases/latest"
     private val main = Handler(Looper.getMainLooper())
     private val lock = Any()
     private val callbacks = mutableListOf<(Result) -> Unit>()

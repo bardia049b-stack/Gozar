@@ -21,6 +21,20 @@ object FoxStore {
     fun expiresAt(c: Context): Long = p(c).getLong("expires_at", 0L)
     fun pass(c: Context): String = p(c).getString("pass", "") ?: ""
     fun passUntil(c: Context): Long = p(c).getLong("pass_until", 0L)
+
+    internal fun passExpiry(token: String, now: Long = System.currentTimeMillis()): Long {
+        return try {
+            val payload = token.split('.').getOrNull(1) ?: return now + 4 * 60_000L
+            val decoded = android.util.Base64.decode(payload, android.util.Base64.URL_SAFE or android.util.Base64.NO_WRAP)
+            val seconds = JSONObject(String(decoded, Charsets.UTF_8)).optLong("exp", 0)
+            if (seconds in 1..4_102_444_800L) seconds * 1000L else now + 4 * 60_000L
+        } catch (_: Exception) {
+            now + 4 * 60_000L
+        }
+    }
+
+    internal fun renewalDelay(expiry: Long, now: Long = System.currentTimeMillis()): Long =
+        (expiry - now - 120_000L).coerceIn(15_000L, 4 * 60_000L)
     fun limit(c: Context): Long = p(c).getLong("limit", 0L)
     fun remaining(c: Context): Long = p(c).getLong("remaining", 0L)
     fun reset(c: Context): String = p(c).getString("reset", "") ?: ""
@@ -141,7 +155,7 @@ object FoxStore {
             .put("refresh", tokens.refresh)
             .put("expires_at", System.currentTimeMillis() + tokens.expiresIn * 1000L)
             .put("pass", pass.token)
-            .put("pass_until", System.currentTimeMillis() + 4 * 60 * 1000L)
+            .put("pass_until", passExpiry(pass.token))
             .put("limit", pass.limit)
             .put("remaining", pass.remaining)
             .put("reset", pass.reset)
@@ -175,7 +189,7 @@ object FoxStore {
         val data = entries(prefs)
         val account = data.optJSONObject(id) ?: snapshot(prefs)
         account.put("pass", pass.token)
-            .put("pass_until", System.currentTimeMillis() + 4 * 60 * 1000L)
+            .put("pass_until", passExpiry(pass.token))
             .put("limit", pass.limit)
             .put("remaining", pass.remaining)
             .put("reset", pass.reset)

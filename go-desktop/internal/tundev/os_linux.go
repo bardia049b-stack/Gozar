@@ -2,6 +2,7 @@ package tundev
 
 import (
 	"errors"
+	"net/netip"
 	"os"
 	"strings"
 )
@@ -18,25 +19,26 @@ func configure(cfg *Config) error {
 	if err := mustRun("ip", "addr", "add", Address.String()+"/32", "dev", cfg.Interface); err != nil {
 		return err
 	}
-	out, err := command("ip", "route", "show", "default")
-	if err != nil {
-		return err
-	}
-	fields := strings.Fields(strings.SplitN(out, "\n", 2)[0])
-	var gateway, device string
-	for index, field := range fields {
-		if field == "via" && index+1 < len(fields) {
-			gateway = fields[index+1]
-		}
-		if field == "dev" && index+1 < len(fields) {
-			device = fields[index+1]
-		}
-	}
-	if gateway == "" || device == "" {
-		return errors.New("no usable default gateway")
-	}
 	for _, keep := range cfg.Keep {
-		if err := mustRun("ip", "route", "add", keep.String()+"/32", "via", gateway, "dev", device); err != nil {
+		existing, err := command("ip", "-4", "route", "show", "exact", keep.String()+"/32")
+		if err != nil {
+			return err
+		}
+		if strings.TrimSpace(existing) != "" {
+			continue
+		}
+		out, err := command("ip", "-4", "route", "get", keep.String())
+		if err != nil {
+			return err
+		}
+		args, needed, err := routeForKeep(keep, out)
+		if err != nil {
+			return err
+		}
+		if !needed {
+			continue
+		}
+		if err := mustRun("ip", args...); err != nil {
 			return err
 		}
 		cfg.AddedKeep = append(cfg.AddedKeep, keep)
@@ -59,6 +61,36 @@ func configure(cfg *Config) error {
 		return err
 	}
 	return nil
+}
+
+func routeForKeep(address netip.Addr, output string) ([]string, bool, error) {
+	fields := strings.Fields(strings.SplitN(output, "\n", 2)[0])
+	if len(fields) == 0 {
+		return nil, false, errors.New("no route to the proxy")
+	}
+	if fields[0] == "local" {
+		return nil, false, nil
+	}
+	var device string
+	var gateway []string
+	for index, field := range fields {
+		if field == "dev" && index+1 < len(fields) {
+			device = fields[index+1]
+		}
+		if field == "via" && index+1 < len(fields) {
+			gateway = []string{"via", fields[index+1]}
+			if (fields[index+1] == "inet" || fields[index+1] == "inet6") && index+2 < len(fields) {
+				gateway = append(gateway, fields[index+2])
+			}
+		}
+	}
+	if device == "" {
+		return nil, false, errors.New("no usable route to the proxy")
+	}
+	args := []string{"-4", "route", "add", address.String() + "/32"}
+	args = append(args, gateway...)
+	args = append(args, "dev", device)
+	return args, true, nil
 }
 
 func restore(cfg *Config) {

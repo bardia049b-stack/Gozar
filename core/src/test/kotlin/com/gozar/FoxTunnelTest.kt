@@ -64,6 +64,61 @@ class FoxTunnelTest {
     }
 
     @Test
+    fun paddedAndContinuedHeadersWithTableUpdateAreAccepted() {
+        LocalProxy(splitH2Headers = true).use { proxy ->
+            assertArrayEquals(proxy.reply, exchange(proxy))
+            assertTrue(proxy.problems.isEmpty())
+        }
+    }
+
+    @Test
+    fun huffmanEncodedAuthenticationRefusalDoesNotRetryAnotherProtocol() {
+        LocalProxy(refuseH2 = true).use { proxy ->
+            val error = failure { open(proxy) }
+            assertTrue(error is FoxProxyRefusal)
+            assertEquals(407, (error as FoxProxyRefusal).status)
+            assertEquals(listOf("h2"), proxy.protocols.toList())
+        }
+    }
+
+    @Test
+    fun zeroInitialWindowAndEarlyUpdatePermitBoundedUpload() {
+        LocalProxy(smallWindow = true).use { proxy ->
+            val pipe = open(proxy)
+            val done = LinkedBlockingQueue<ByteArray>()
+            val reader = thread(isDaemon = true) {
+                val result = ByteArrayOutputStream()
+                val data = ByteArray(512)
+                while (true) {
+                    val count = pipe.read(data, 0, data.size)
+                    if (count < 0) break
+                    result.write(data, 0, count)
+                }
+                done.put(result.toByteArray())
+            }
+            try {
+                val request = "upload-over-tunnel".toByteArray(Charsets.US_ASCII)
+                pipe.write(request, 0, request.size)
+                assertArrayEquals(proxy.reply, done.poll(5, TimeUnit.SECONDS))
+                assertEquals("upload-over-tunnel", String(proxy.upload.toByteArray(), Charsets.US_ASCII))
+                assertTrue(proxy.problems.isEmpty())
+            } finally {
+                pipe.close()
+                reader.join(2000)
+            }
+        }
+    }
+
+    @Test
+    fun unavailableH2AlpnFallsBackToVerifiedH1() {
+        LocalProxy(h1Only = true).use { proxy ->
+            assertArrayEquals(proxy.reply, exchange(proxy))
+            assertEquals(listOf("http/1.1"), proxy.protocols.toList())
+            assertTrue(proxy.problems.isEmpty())
+        }
+    }
+
+    @Test
     fun h2FailureFallsBackToVerifiedH1Tunnel() {
         LocalProxy(rejectH2 = true).use { proxy ->
             val reply = exchange(proxy)
@@ -191,9 +246,7 @@ class FoxTunnelTest {
     }
 
     private fun resetH2() {
-        val field = FoxTunnel::class.java.getDeclaredField("h2DownUntil")
-        field.isAccessible = true
-        field.setLong(null, 0L)
+        FoxTunnel.resetTransport()
     }
 
     private fun clientContext(root: String): SSLContext {
@@ -209,7 +262,11 @@ class FoxTunnelTest {
     private class LocalProxy(
         private val rejectH2: Boolean = false,
         private val alwaysExpired: Boolean = false,
-        private val secondExpired: Boolean = false
+        private val secondExpired: Boolean = false,
+        private val splitH2Headers: Boolean = false,
+        private val refuseH2: Boolean = false,
+        private val smallWindow: Boolean = false,
+        private val h1Only: Boolean = false
     ) : Closeable {
         val reply = ByteArray(8000) { (it % 251).toByte() }
         val upload = ByteArrayOutputStream()
@@ -253,7 +310,7 @@ class FoxTunnelTest {
             val socket = context.socketFactory.createSocket(raw, "127.0.0.1", raw.port, true) as SSLSocket
             socket.use {
                 socket.useClientMode = false
-                socket.sslParameters = socket.sslParameters.apply { applicationProtocols = arrayOf("h2", "http/1.1") }
+                socket.sslParameters = socket.sslParameters.apply { applicationProtocols = if (h1Only) arrayOf("http/1.1") else arrayOf("h2", "http/1.1") }
                 socket.startHandshake()
                 val protocol = socket.applicationProtocol
                 protocols.add(protocol)
@@ -276,14 +333,29 @@ class FoxTunnelTest {
                 output.flush()
                 return
             }
-            output.write(frame(4, 0, 0, ByteArray(0)))
-            output.write(frame(1, 4, 1, byteArrayOf(0x88.toByte())))
+            val settings = if (smallWindow) byteArrayOf(0, 4, 0, 0, 0, 0) else ByteArray(0)
+            output.write(frame(4, 0, 0, settings))
+            if (smallWindow) output.write(frame(8, 0, 1, byteArrayOf(0, 0, 0, 5)))
+            if (refuseH2) {
+                output.write(frame(1, 4, 1, byteArrayOf(0x08, 0x83.toByte(), 0x68, 0x0e, 0xff.toByte())))
+                output.flush()
+                return
+            } else if (splitH2Headers) {
+                output.write(frame(1, 0x28, 1, byteArrayOf(2, 0, 0, 0, 0, 0, 0x20, 0, 0)))
+                output.write(frame(9, 4, 1, byteArrayOf(0x88.toByte())))
+            } else {
+                output.write(frame(1, 4, 1, byteArrayOf(0x88.toByte())))
+            }
             output.flush()
-            while (true) {
+            while (upload.size() < "upload-over-tunnel".length) {
                 val data = readFrame(input)
                 if (data.first == 0) {
                     upload.write(data.second)
-                    break
+                    if (smallWindow) {
+                        val amount = data.second.size
+                        output.write(frame(8, 0, 1, byteArrayOf(0, 0, 0, amount.toByte())))
+                        output.flush()
+                    }
                 }
             }
             output.write(frame(0, 1, 1, reply))

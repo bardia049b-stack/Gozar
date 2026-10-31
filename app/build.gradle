@@ -14,8 +14,8 @@ android {
         applicationId 'com.gozar'
         minSdk 24
         targetSdk 35
-        versionCode 29
-        versionName '1.8.9'
+        versionCode 30
+        versionName '1.9.0'
         manifestPlaceholders.appLabel = '@string/app_name'
         if (project.hasProperty('gozarDiagnostic')) {
             applicationIdSuffix '.diagnostic'
@@ -54,7 +54,7 @@ android {
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig hasSigning ? signingConfigs.release : signingConfigs.debug
+            signingConfig hasSigning ? signingConfigs.release : null
         }
         debug {
             minifyEnabled false

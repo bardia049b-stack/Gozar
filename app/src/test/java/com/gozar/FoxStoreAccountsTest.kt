@@ -100,6 +100,21 @@ class FoxStoreAccountsTest {
     }
 
     @Test
+    fun proxyPassExpiryUsesBoundedRenewalAndFallback() {
+        val now = 1_800_000_000_000L
+        val payload = android.util.Base64.encodeToString(
+            "{\"exp\":1800000180}".toByteArray(),
+            android.util.Base64.URL_SAFE or android.util.Base64.NO_WRAP or android.util.Base64.NO_PADDING
+        )
+        val expiry = FoxStore.passExpiry("header.$payload.signature", now)
+        assertEquals(now + 180_000L, expiry)
+        assertEquals(60_000L, FoxStore.renewalDelay(expiry, now))
+        assertEquals(15_000L, FoxStore.renewalDelay(now - 1, now))
+        assertEquals(240_000L, FoxStore.passExpiry("malformed", now) - now)
+        assertEquals(120_000L, FoxStore.renewalDelay(FoxStore.passExpiry("malformed", now), now))
+    }
+
+    @Test
     fun unknownSwitchDoesNotAlterTheActiveSession() {
         save("first@example.test", "first", "first", 800)
         val revision = FoxStore.credentials(context).revision

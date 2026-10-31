@@ -3,7 +3,6 @@ package tundev
 import (
 	"context"
 	"errors"
-	"io"
 	"runtime"
 	"sync"
 
@@ -16,15 +15,19 @@ import (
 )
 
 const Name = "Gozar"
+const packetOffset = 16
 
 type Device struct {
-	link wtun.Device
-	end  *channel.Endpoint
-	name string
-	mtu  int
-	ctx  context.Context
-	stop context.CancelFunc
-	pump sync.WaitGroup
+	link      wtun.Device
+	end       *channel.Endpoint
+	name      string
+	mtu       int
+	ctx       context.Context
+	stop      context.CancelFunc
+	pump      sync.WaitGroup
+	failures  chan error
+	closeOnce sync.Once
+	closeErr  error
 }
 
 func Open(mtu int) (*Device, error) {
@@ -43,7 +46,7 @@ func Open(mtu int) (*Device, error) {
 	}
 	end := channel.New(512, uint32(mtu), "")
 	ctx, stop := context.WithCancel(context.Background())
-	device := &Device{link: created, end: end, name: actual, mtu: mtu, ctx: ctx, stop: stop}
+	device := &Device{link: created, end: end, name: actual, mtu: mtu, ctx: ctx, stop: stop, failures: make(chan error, 1)}
 	device.pump.Add(2)
 	go device.readLoop()
 	go device.writeLoop()
@@ -54,24 +57,43 @@ func (d *Device) Endpoint() stack.LinkEndpoint { return d.end }
 
 func (d *Device) Name() string { return d.name }
 
+func (d *Device) Failures() <-chan error { return d.failures }
+
+func (d *Device) fail(err error) {
+	if err == nil || d.ctx.Err() != nil {
+		return
+	}
+	select {
+	case d.failures <- err:
+	default:
+	}
+	d.stop()
+}
+
 func (d *Device) readLoop() {
 	defer d.pump.Done()
 	batch := d.link.BatchSize()
 	bufs := make([][]byte, batch)
 	sizes := make([]int, batch)
 	for index := range bufs {
-		bufs[index] = make([]byte, d.mtu)
+		bufs[index] = make([]byte, d.mtu+packetOffset)
 	}
 	for {
-		count, err := d.link.Read(bufs, sizes, 0)
+		count, err := d.link.Read(bufs, sizes, packetOffset)
 		if err != nil {
-			if errors.Is(err, io.EOF) || d.ctx.Err() != nil {
-				return
-			}
-			continue
+			d.fail(err)
+			return
+		}
+		if count < 0 || count > len(bufs) {
+			d.fail(errors.New("invalid tunnel packet count"))
+			return
 		}
 		for index := 0; index < count; index++ {
-			packet := bufs[index][:sizes[index]]
+			if sizes[index] < 0 || sizes[index] > d.mtu {
+				d.fail(errors.New("invalid tunnel packet length"))
+				return
+			}
+			packet := bufs[index][packetOffset : packetOffset+sizes[index]]
 			if len(packet) == 0 {
 				continue
 			}
@@ -80,7 +102,9 @@ func (d *Device) readLoop() {
 				proto = header.IPv6ProtocolNumber
 			}
 			payload := buffer.MakeWithData(append([]byte{}, packet...))
-			d.end.InjectInbound(proto, stack.NewPacketBuffer(stack.PacketBufferOptions{Payload: payload}))
+			incoming := stack.NewPacketBuffer(stack.PacketBufferOptions{Payload: payload})
+			d.end.InjectInbound(proto, incoming)
+			incoming.DecRef()
 		}
 	}
 }
@@ -96,18 +120,28 @@ func (d *Device) writeLoop() {
 		packet.DecRef()
 		data := view.AsSlice()
 		if len(data) > 0 {
-			d.link.Write([][]byte{append([]byte{}, data...)}, 0)
+			outgoing := make([]byte, packetOffset+len(data))
+			copy(outgoing[packetOffset:], data)
+			_, err := d.link.Write([][]byte{outgoing}, packetOffset)
+			if err != nil {
+				view.Release()
+				d.fail(err)
+				return
+			}
 		}
 		view.Release()
 	}
 }
 
 func (d *Device) Close() error {
-	d.stop()
-	d.end.Close()
-	err := d.link.Close()
-	d.pump.Wait()
-	return err
+	d.closeOnce.Do(func() {
+		d.stop()
+		d.end.Close()
+		d.closeErr = d.link.Close()
+		d.pump.Wait()
+		close(d.failures)
+	})
+	return d.closeErr
 }
 
 var Address = tcpip.AddrFrom4([4]byte{10, 111, 0, 2})

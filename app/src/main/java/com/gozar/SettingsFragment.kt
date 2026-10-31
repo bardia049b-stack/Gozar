@@ -22,6 +22,8 @@ class SettingsFragment : Fragment() {
 
     private val tonAddress = "UQDxiU-jPFK_TgB0wOzZndhf3IKJLTLm8Vg_Uaif7_C2eCL3"
     private var updateChecking = false
+    private var rootChecking = false
+    private var appPicker: AppPicker? = null
     private val listener: () -> Unit = { if (isAdded && view != null) paint() }
 
     private fun <T : View> find(id: Int): T = view!!.findViewById(id)
@@ -43,6 +45,7 @@ class SettingsFragment : Fragment() {
         find<View>(R.id.rowRouting).setOnClickListener { pickRouting() }
         find<View>(R.id.rowChain).setOnClickListener { editChain() }
         find<View>(R.id.rowApps).setOnClickListener { pickApps() }
+        find<View>(R.id.rowRoot).setOnClickListener { pickRoot() }
         find<View>(R.id.rowDonate).setOnClickListener { showDonation() }
         find<View>(R.id.btnAccounts).setOnClickListener { showAccounts() }
         find<View>(R.id.btnAccountRefresh).setOnClickListener {
@@ -56,6 +59,8 @@ class SettingsFragment : Fragment() {
 
     override fun onDestroyView() {
         Fox.unwatch(listener)
+        appPicker?.dismiss()
+        appPicker = null
         super.onDestroyView()
     }
 
@@ -105,6 +110,12 @@ class SettingsFragment : Fragment() {
         val hops = FoxUpstream.parse(Store.chain(context)).size
         find<TextView>(R.id.tvChain).text =
             if (hops > 0) getString(R.string.chain_on, hops) else getString(R.string.chain_off)
+        find<TextView>(R.id.tvRoot).text = getString(when {
+            rootChecking -> R.string.root_checking
+            FoxVpnService.rootActive -> R.string.root_active
+            Store.rootRouting(context) -> R.string.root_ready
+            else -> R.string.root_off
+        })
         val only = Store.apps(context)
         find<TextView>(R.id.tvApps).text =
             if (only.isEmpty()) getString(R.string.apps_all) else getString(R.string.apps_count, only.size)
@@ -193,8 +204,59 @@ class SettingsFragment : Fragment() {
             .show()
     }
 
+    private fun pickRoot() {
+        if (rootChecking) return
+        val context = requireContext()
+        if (FoxLink.connected || FoxLink.connecting || FoxVpnService.isAlive()) {
+            MaterialAlertDialogBuilder(context)
+                .setTitle(R.string.root_title)
+                .setMessage(R.string.root_disconnect)
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton(R.string.ok) { _, _ ->
+                    FoxVpnService.stop(context)
+                    chooseRoot()
+                }.show()
+        } else chooseRoot()
+    }
+
+    private fun chooseRoot() {
+        val context = requireContext()
+        if (Store.rootRouting(context)) {
+            MaterialAlertDialogBuilder(context)
+                .setTitle(R.string.root_title)
+                .setMessage(R.string.root_disable)
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton(R.string.ok) { _, _ ->
+                    Store.setRootRouting(context, false)
+                    paint()
+                }.show()
+            return
+        }
+        MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.root_title)
+            .setMessage(R.string.root_confirm)
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.root_enable) { _, _ ->
+                rootChecking = true
+                paint()
+                val app = context.applicationContext
+                kotlin.concurrent.thread(isDaemon = true, name = "gozar-root-check") {
+                    val granted = RootAccess.granted()
+                    if (granted) Store.setRootRouting(app, true)
+                    android.os.Handler(android.os.Looper.getMainLooper()).post {
+                        rootChecking = false
+                        if (isAdded && view != null) {
+                            if (!granted) toast(R.string.root_denied)
+                            paint()
+                        }
+                    }
+                }
+            }.show()
+    }
+
     private fun pickApps() {
-        AppPicker(requireContext()) { applyApps() }.open()
+        if (appPicker == null) appPicker = AppPicker(requireContext()) { applyApps() }
+        appPicker?.open()
     }
 
     private fun describeApps(count: Int): String =
@@ -214,28 +276,21 @@ class SettingsFragment : Fragment() {
 
     private fun showAccounts() {
         val context = requireContext()
-        val accounts = FoxStore.accounts(context)
-        val labels = accounts.map { account ->
-            if (account.active) "${ltr(account.email)} · ${getString(R.string.account_active)}" else ltr(account.email)
-        }.toTypedArray()
-        MaterialAlertDialogBuilder(context)
-            .setTitle(R.string.manage_accounts)
-            .setItems(labels) { _, which ->
-                val target = accounts[which]
-                if (!target.active) withDisconnected {
-                    if (!Fox.switchAccount(context, target.id)) toast(R.string.account_wait)
+        AccountSheet(context, { target, sheet ->
+            withDisconnected {
+                if (Fox.switchAccount(context, target.id)) {
+                    sheet.dismiss()
                     paint()
-                }
+                } else toast(R.string.account_wait)
             }
-            .setNegativeButton(R.string.cancel, null)
-            .setPositiveButton(R.string.add_account) { _, _ ->
-                withDisconnected {
-                    FoxVpnService.stop(context)
-                    Fox.cancelLogin()
-                    startActivity(Intent(context, LoginActivity::class.java).putExtra(LoginActivity.ADD_ACCOUNT, true))
-                }
+        }, { sheet ->
+            withDisconnected {
+                sheet.dismiss()
+                FoxVpnService.stop(context)
+                Fox.cancelLogin()
+                startActivity(Intent(context, LoginActivity::class.java).putExtra(LoginActivity.ADD_ACCOUNT, true))
             }
-            .show()
+        }).show(FoxStore.accounts(context))
     }
 
     private fun withDisconnected(action: () -> Unit) {
@@ -363,7 +418,7 @@ class SettingsFragment : Fragment() {
     private fun ltr(value: String): String =
         BidiFormatter.getInstance(resources.configuration.locales[0]).unicodeWrap(value, TextDirectionHeuristics.LTR)
 
-    private fun openProject() = openUrl("https://github.com/bardia049b-stack/Gozar")
+    private fun openProject() = openUrl("https://github.com/bardia049b-stack/Gozar1")
 
     private fun openUrl(url: String) {
         try {
