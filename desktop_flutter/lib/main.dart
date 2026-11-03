@@ -1232,7 +1232,7 @@ class _GozarScreenState extends State<GozarScreen> with WindowListener {
                     color: muted(context), fontSize: 12, height: 1.55)),
             const SizedBox(height: 8),
             Row(children: [
-              Icon(Icons.info_outline, size: 14, color: soft),
+              const Icon(Icons.info_outline, size: 14, color: soft),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(words.consoleUdpNotice,
@@ -1315,7 +1315,7 @@ class _GozarScreenState extends State<GozarScreen> with WindowListener {
       Card(
         margin: const EdgeInsets.only(bottom: 8),
         child: SwitchListTile(
-          secondary: Icon(Icons.swap_vert, color: soft),
+          secondary: const Icon(Icons.swap_vert, color: soft),
           title: Text(words.udpRelay),
           subtitle: Text(words.udpRelayDetail),
           value: _state.udpRelay,
