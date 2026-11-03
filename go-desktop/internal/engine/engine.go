@@ -35,6 +35,7 @@ type Engine struct {
 	config  tundev.Config
 	dial    Dialer
 	udpDial DatagramDialer
+	fullUDP atomic.Bool
 	dns     resolver
 	down    atomic.Int64
 	up      atomic.Int64
@@ -153,6 +154,13 @@ func (e *Engine) listenUDP(created *stack.Stack) {
 // answers with ICMP port unreachable so applications fail over to TCP immediately.
 func (e *Engine) SetUDPDialer(dial DatagramDialer) {
 	e.udpDial = dial
+	e.fullUDP.Store(false)
+	resetUDPDenials()
+}
+
+func (e *Engine) SetFullDatagramDialer(dial DatagramDialer) {
+	e.udpDial = dial
+	e.fullUDP.Store(dial != nil)
 	resetUDPDenials()
 }
 
@@ -161,7 +169,13 @@ func (e *Engine) UDPEnabled() bool {
 }
 
 func (e *Engine) relayable(port int) bool {
-	return e.udpDial != nil && udpAllowed(port)
+	if e.udpDial == nil {
+		return false
+	}
+	if e.fullUDP.Load() {
+		return true
+	}
+	return udpAllowed(port)
 }
 
 func (e *Engine) handleUDP(request *udp.ForwarderRequest) {

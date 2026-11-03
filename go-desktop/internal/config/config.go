@@ -54,6 +54,9 @@ type Config struct {
 	BridgeUser      string    `json:"bridge_user,omitempty"`
 	BridgePass      string    `json:"bridge_pass,omitempty"`
 	BridgeAllow     []string  `json:"bridge_allow,omitempty"`
+	WARP            bool      `json:"warp"`
+	WARPMTU         int       `json:"warp_mtu,omitempty"`
+	WARPVia         string    `json:"warp_via,omitempty"`
 }
 
 func Dir() string {

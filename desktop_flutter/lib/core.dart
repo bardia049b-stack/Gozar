@@ -122,6 +122,8 @@ class CoreState {
     this.server,
     this.servers = const [],
     this.udpRelay = true,
+    this.warp = false,
+    this.warpVia = 'direct',
     this.udpPorts = const [],
     this.console = 'playstation',
     this.consoleOn = false,
@@ -153,6 +155,8 @@ class CoreState {
   final Place? server;
   final List<Place> servers;
   final bool udpRelay;
+  final bool warp;
+  final String warpVia;
   final List<String> udpPorts;
   final String console;
   final bool consoleOn;
@@ -192,6 +196,8 @@ class CoreState {
       server:
           rawServer is Map<String, dynamic> ? Place.fromJson(rawServer) : null,
       udpRelay: json['udp_relay'] as bool? ?? true,
+      warp: json['warp'] as bool? ?? false,
+      warpVia: json['warp_via'] as String? ?? 'direct',
       udpPorts: (json['udp_ports'] as List<dynamic>? ?? const [])
           .whereType<String>()
           .toList(growable: false),

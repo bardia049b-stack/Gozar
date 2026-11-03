@@ -185,6 +185,22 @@ func (s *Server) handle(request Request) Response {
 				response.Error = err.Error()
 			}
 		}
+	case "warp":
+		var body struct {
+			Path *bool  `json:"path"`
+			Via  string `json:"via"`
+		}
+		json.Unmarshal(request.Params, &body)
+		if body.Via != "" {
+			if err := s.app.SetWARPVia(body.Via); err != nil {
+				response.Error = err.Error()
+			}
+		}
+		if body.Path != nil {
+			if err := s.app.SetWARP(*body.Path); err != nil {
+				response.Error = err.Error()
+			}
+		}
 	case "console":
 		var body struct {
 			Mode *bool  `json:"mode"`

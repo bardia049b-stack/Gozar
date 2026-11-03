@@ -176,7 +176,7 @@ func (a *App) SetBridgeAllow(values []string) error {
 
 func (a *App) startBridge() error {
 	a.mu.Lock()
-	if !a.live || a.transport == nil || a.engine == nil {
+	if !a.live || a.engine == nil {
 		a.mu.Unlock()
 		return errors.New("the tunnel is not running")
 	}
@@ -213,14 +213,18 @@ func (a *App) startBridge() error {
 	if localPort == 0 {
 		localPort = 8899
 	}
-	transport := a.transport
 	resolver := a.engine.Resolver()
+	egress := a.egress
+	transport := a.transport
 	a.mu.Unlock()
 	if err := config.Save(settings); err != nil {
 		return err
 	}
 
 	dial := func(host string, port int) (io.ReadWriteCloser, error) {
+		if egress != nil {
+			return egress(host, port)
+		}
 		current, err := a.currentPass()
 		if err != nil {
 			return nil, err

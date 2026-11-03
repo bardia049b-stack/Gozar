@@ -1201,9 +1201,7 @@ class _GozarScreenState extends State<GozarScreen> with WindowListener {
 
   Widget _consoleCard(String kind, String title, String steps) {
     final selected = _state.console == kind;
-    final accent = kind == 'xbox'
-        ? const Color(0xFF107C10)
-        : const Color(0xFF003791);
+    final accent = mid;
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: InkWell(
@@ -1324,6 +1322,32 @@ class _GozarScreenState extends State<GozarScreen> with WindowListener {
               : (value) => unawaited(_requestSetting('udp', {'relay': value})),
         ),
       ),
+      Card(
+        margin: const EdgeInsets.only(bottom: 8),
+        child: SwitchListTile(
+          secondary: const Icon(Icons.cloud_outlined, color: soft),
+          title: Text(words.warpPath),
+          subtitle: Text(words.warpPathDetail),
+          value: _state.warp,
+          onChanged: _busy || _state.live || _state.connecting
+              ? null
+              : (value) => unawaited(_requestSetting('warp', {'path': value})),
+        ),
+      ),
+      if (_state.warp)
+        Card(
+          margin: const EdgeInsets.only(bottom: 8),
+          child: SwitchListTile(
+            secondary: const Icon(Icons.hub_outlined, color: soft),
+            title: Text(words.warpVia),
+            subtitle: Text(words.warpViaDetail),
+            value: _state.warpVia == 'relay',
+            onChanged: _busy || _state.live || _state.connecting
+                ? null
+                : (value) => unawaited(_requestSetting(
+                    'warp', {'path': true, 'via': value ? 'relay' : 'direct'})),
+          ),
+        ),
       _settingTile(
           Icons.tune,
           words.udpPorts,

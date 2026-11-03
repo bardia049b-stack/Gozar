@@ -18,6 +18,7 @@ import (
 	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/fxa"
 	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/tundev"
 	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/tunnel"
+	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/warp"
 	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/wintun"
 )
 
@@ -55,6 +56,8 @@ type State struct {
 	Reset      string           `json:"reset"`
 	Port       int              `json:"port"`
 	UDPRelay   bool             `json:"udp_relay"`
+	WARP       bool             `json:"warp"`
+	WARPVia    string           `json:"warp_via"`
 	UDPPorts   []string         `json:"udp_ports"`
 	Console    string           `json:"console"`
 	ConsoleOn  bool             `json:"console_on"`
@@ -83,6 +86,9 @@ type App struct {
 	unblockFor      string
 	engine          *engine.Engine
 	transport       *tunnel.Manager
+	warpstack       *warp.Stack
+	warpRelease     func()
+	egress          func(host string, port int) (io.ReadWriteCloser, error)
 	bridge          *bridge.Server
 	stage           string
 	fault           string
@@ -134,6 +140,8 @@ func (a *App) State() State {
 		NeedsAdmin: a.needAdmin,
 		Port:       a.cfg.Port,
 		UDPRelay:   a.cfg.UDPRelay,
+		WARP:       a.cfg.WARP,
+		WARPVia:    a.warpViaLocked(),
 		UDPPorts:   append([]string{}, a.cfg.ExtraUDPPorts...),
 		Console:    a.cfg.ConsoleKind,
 		ConsoleOn:  a.cfg.ConsoleMode,
@@ -737,6 +745,9 @@ func (a *App) connect() error {
 	if target.DialHost == "" {
 		return errors.New("could not resolve the first proxy to IPv4 before starting the tunnel")
 	}
+	if a.warpEnabled() {
+		return a.connectWARP()
+	}
 	transport := tunnel.NewManager(target)
 	dial := func(host string, remotePort int) (io.ReadWriteCloser, error) {
 		current, err := a.currentPass()
@@ -785,6 +796,7 @@ func (a *App) connect() error {
 	a.mu.Lock()
 	a.engine = created
 	a.transport = transport
+	a.egress = dial
 	for _, place := range servers {
 		if strings.EqualFold(place.Host, target.Host) {
 			a.activeServer = place
@@ -841,6 +853,11 @@ func (a *App) teardown() {
 	a.mu.Lock()
 	engineNow := a.engine
 	transport := a.transport
+	warped := a.warpstack
+	release := a.warpRelease
+	a.warpRelease = nil
+	a.warpstack = nil
+	a.egress = nil
 	a.transport = nil
 	cancel := a.renewCancel
 	a.renewCancel = nil
@@ -863,6 +880,12 @@ func (a *App) teardown() {
 	}
 	if engineNow != nil {
 		engineNow.Stop()
+	}
+	if warped != nil {
+		warped.Close()
+	}
+	if release != nil {
+		release()
 	}
 }
 

@@ -225,6 +225,14 @@ class Words {
   String get udpRelayDetail => pick(
       'بازی‌ها، تماس صوتی، QUIC و DNS را روی همان تونل می‌برد.',
       'Carries games, voice calls, QUIC and DNS over the same tunnel.');
+  String get warpPath => pick('مسیر WARP', 'WARP path');
+  String get warpPathDetail => pick(
+      'همهٔ درگاه‌های TCP و UDP را از تونل اختصاصی WARP می‌برد؛ نشانی و کلیدها خودکار ساخته می‌شوند.',
+      'Carries every TCP and UDP port over a private WARP tunnel; the address and keys are created automatically.');
+  String get warpVia => pick('WARP از راه پروکسی', 'WARP through the proxy');
+  String get warpViaDetail => pick(
+      'تونل WARP داخل پروکسی ام‌آزیلاس پیچیده می‌شود تا در شبکهٔ فیلترشده هم بالا بیاید.',
+      'Wraps the WARP tunnel inside the Mozilla proxy so it still comes up on a filtered network.');
   String get udpPorts => pick('درگاه‌های اضافی UDP', 'Extra datagram ports');
   String get udpPortsHint => pick(
       'فهرست درگاه‌ها با کاما؛ برای نمونه 3074,3479,9295',
