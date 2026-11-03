@@ -145,6 +145,13 @@ jobs:
         working-directory: go-desktop
         shell: bash
         run: go vet ./...
+      - name: Test the desktop UI
+        working-directory: desktop_flutter
+        shell: bash
+        run: |
+          flutter pub get
+          flutter analyze
+          flutter test
       - name: Test simulated core and device behavior
         if: hashFiles('go-desktop/**/*_test.go') != ''
         working-directory: go-desktop

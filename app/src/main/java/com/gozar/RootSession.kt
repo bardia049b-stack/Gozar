@@ -96,7 +96,10 @@ internal class RootSession private constructor(
                 val flag = File(context.filesDir, ".gozar-root-$suffix")
                 val plan = RootPlan(
                     iface, Process.myPid(), startedAt, flag.absolutePath, suffix,
-                    30000 + random.nextInt(30000), 7000 + random.nextInt(3000), false
+                    30000 + random.nextInt(30000), 7000 + random.nextInt(3000), false,
+                    Store.config(context).let {
+                        it.consoleMode && UdpPolicy.effective(it.udpMode, it.batterySaver) == UdpPolicy.GAME
+                    }
                 )
                 RootSession(flag, plan, callback)
             } catch (_: Exception) {
