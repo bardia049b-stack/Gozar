@@ -14,3 +14,4 @@ app/build
 .kotlin/
 core/build
 desktop/build
+app/libs/
