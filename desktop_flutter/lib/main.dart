@@ -1201,7 +1201,7 @@ class _GozarScreenState extends State<GozarScreen> with WindowListener {
 
   Widget _consoleCard(String kind, String title, String steps) {
     final selected = _state.console == kind;
-    final accent = mid;
+    const accent = mid;
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: InkWell(
