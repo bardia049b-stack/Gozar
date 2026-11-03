@@ -15,7 +15,7 @@ type DatagramCarrier interface {
 }
 
 type Carrier struct {
-	Session *session
+	Session DatagramSession
 	local   net.PacketConn
 }
 

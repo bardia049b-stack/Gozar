@@ -29,7 +29,10 @@ class FoxStack(
     private val local: Int,
     private val resolver: FoxResolver,
     private val dial: (String, String, Int) -> FoxPipe,
-    private val meter: (Boolean, Long) -> Unit
+    private val meter: (Boolean, Long) -> Unit,
+    private val udp: FoxUdpEngine? = null,
+    private val policy: () -> FoxConfig = { FoxConfig() },
+    private val dnsUpstream: () -> String = { "1.1.1.1" }
 ) {
 
     companion object {
@@ -47,11 +50,14 @@ class FoxStack(
         private const val FLIGHT_CAP = 256 * 1024
         private const val MASK = 0xFFFFFFFFL
         private const val MAX_FLOWS = 512
+        private const val MAX_DATAGRAMS = 256
+        private const val DATAGRAM_IDLE = 120000L
         private const val MAX_NAMES = 4096
         private const val SYN_BURST = 256
     }
 
     private val flows = ConcurrentHashMap<Long, Flow>()
+    private val datagrams = ConcurrentHashMap<Long, UdpFlow>()
     private val names = ConcurrentHashMap<Int, String>()
     private val stamp = AtomicInteger(1)
     private val synTokens = AtomicInteger(SYN_BURST)
@@ -73,6 +79,11 @@ class FoxStack(
                     flows.remove(entry.key, entry.value)
                     entry.value.shutdown()
                 }
+                val udpLimit = System.currentTimeMillis() - DATAGRAM_IDLE
+                for (entry in datagrams.entries.filter { it.value.idleAt < udpLimit }) {
+                    datagrams.remove(entry.key, entry.value)
+                    entry.value.shutdown()
+                }
             }
         }
     }
@@ -86,10 +97,14 @@ class FoxStack(
             }
         }
         flows.clear()
+        for (flow in datagrams.values) flow.shutdown()
+        datagrams.clear()
         dnsWorkers.shutdownNow()
     }
 
     fun active(): Int = flows.size
+
+    fun datagramCount(): Int = datagrams.size
 
     fun nameOf(address: Int): String? = names[address]
 
@@ -194,9 +209,22 @@ class FoxStack(
         val serverPort = u16(packet, header + 2)
         val length = u16(packet, header + 4)
         val start = header + 8
-        if (length < 20 || start + length - 8 > total) return
+        if (length < 8 || start + length - 8 > total) return
         if (serverPort != 53) {
-            unreachable(target, packet, total)
+            val config = policy()
+            val route = UdpPolicy.route(config.udpMode, config.consoleMode, config.batterySaver, serverPort, false)
+            val engine = udp
+            if (engine == null || route == UdpPolicy.ROUTE_DROP) {
+                unreachable(target, packet, total)
+                return
+            }
+            forwardDatagram(engine, route, packet, start, length - 8, appPort, target, serverPort, null)
+            return
+        }
+        val dnsConfig = policy()
+        val dnsRoute = UdpPolicy.route(dnsConfig.udpMode, dnsConfig.consoleMode, dnsConfig.batterySaver, 53, true)
+        if (udp != null && dnsRoute == UdpPolicy.ROUTE_WARP) {
+            forwardDatagram(udp, dnsRoute, packet, start, length - 8, appPort, target, serverPort, dnsUpstream())
             return
         }
         meter(false, length.toLong())
@@ -215,6 +243,106 @@ class FoxStack(
         } catch (_: RejectedExecutionException) {
             val failure = resolver.unavailable(query)
             if (failure != null) replyUdp(target, appPort, serverPort, failure)
+        }
+    }
+
+    private fun forwardDatagram(
+        engine: FoxUdpEngine,
+        route: String,
+        packet: ByteArray,
+        start: Int,
+        size: Int,
+        appPort: Int,
+        target: Int,
+        serverPort: Int,
+        hostOverride: String?
+    ) {
+        val key = key(appPort, target, serverPort)
+        var flow = datagrams[key]
+        if (flow != null && flow.route != route) {
+            datagrams.remove(key, flow)
+            flow.shutdown()
+            flow = null
+        }
+        if (flow == null) {
+            if (datagrams.size >= MAX_DATAGRAMS) {
+                val oldest = datagrams.entries.minByOrNull { it.value.idleAt }
+                if (oldest != null) {
+                    datagrams.remove(oldest.key, oldest.value)
+                    oldest.value.shutdown()
+                }
+            }
+            val host = hostOverride ?: names[target] ?: dotted(target)
+            val created = try {
+                engine.open(host, serverPort, route)
+            } catch (_: Exception) {
+                null
+            }
+            if (created == null) {
+                engine.invalidate()
+                unreachable(target, packet, start + size)
+                return
+            }
+            flow = UdpFlow(key, route, created, target, appPort, serverPort)
+            datagrams[key] = flow
+            flow.begin()
+        }
+        flow.idleAt = System.currentTimeMillis()
+        meter(false, size.toLong())
+        try {
+            flow.datagram.send(packet.copyOfRange(start, start + size), size)
+        } catch (_: Exception) {
+            datagrams.remove(key, flow)
+            flow.shutdown()
+            engine.invalidate()
+        }
+    }
+
+    private fun dotted(address: Int): String =
+        "${(address ushr 24) and 0xFF}.${(address ushr 16) and 0xFF}.${(address ushr 8) and 0xFF}.${address and 0xFF}"
+
+    private inner class UdpFlow(
+        private val key: Long,
+        val route: String,
+        val datagram: FoxDatagram,
+        private val target: Int,
+        private val appPort: Int,
+        private val serverPort: Int
+    ) {
+        @Volatile var idleAt = System.currentTimeMillis()
+        @Volatile private var alive = true
+
+        fun begin() {
+            thread(isDaemon = true, name = "fox-udp-$appPort") {
+                val buffer = ByteArray(65535)
+                while (alive && running) {
+                    val size = try {
+                        datagram.receive(buffer, 1000)
+                    } catch (_: Exception) {
+                        -1
+                    }
+                    if (size > 0) {
+                        idleAt = System.currentTimeMillis()
+                        try {
+                            replyUdp(target, appPort, serverPort, buffer.copyOf(size))
+                        } catch (_: Exception) {
+                            break
+                        }
+                    } else if (size == -1) {
+                        break
+                    }
+                }
+                shutdown()
+            }
+        }
+
+        fun shutdown() {
+            alive = false
+            datagrams.remove(key, this)
+            try {
+                datagram.close()
+            } catch (_: Exception) {
+            }
         }
     }
 

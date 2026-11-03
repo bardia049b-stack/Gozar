@@ -800,9 +800,6 @@ func (a *App) connect() error {
 			return session, nil
 		})
 	}
-	// Three-way routing: game datagrams go to a side WARP tunnel, Iranian and
-	// other direct destinations stay direct, and everything else spends the
-	// Mozilla quota. relay_only never opens WARP at all.
 	created.SetUDPPolicy(udpMode, consoleMode, batterySaver)
 	var game *gamePath
 	if consoleMode && engine.EffectiveUDPMode(udpMode, batterySaver) != engine.ModeRelayOnly {

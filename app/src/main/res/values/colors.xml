@@ -39,4 +39,7 @@
     <color name="surface_container_highest">@color/m3_surface_container_highest</color>
     <color name="surface_variant">@color/m3_surface_variant</color>
     <color name="on_surface_variant">@color/m3_on_surface_variant</color>
+    <color name="udp_warning_stroke">#FFB300</color>
+    <color name="udp_warning_background">#26FFB300</color>
+    <color name="udp_warning_text">#7A4F01</color>
 </resources>

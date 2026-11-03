@@ -221,6 +221,61 @@ class Words {
   String get gatewayAllowHint => pick(
       'فقط نشانی‌های همین فهرست می‌توانند از درگاه استفاده کنند.',
       'Only addresses in this list may use the gateway.');
+  String get udpSection => pick('حالت UDP', 'UDP Mode');
+  String get consoleMasterTitle => pick('حالت کنسول / بازی', 'Console / Game Mode');
+  String get consoleMasterOff => pick(
+      'خاموش: فقط پروکسی موزیلا (TCP). کمترین مصرف داده و باتری.',
+      'Off: Mozilla relay only (TCP). Low data and battery use.');
+  String get consoleMasterOn => pick(
+      'روشن: مسیریابی UDP فعال است. یکی از حالت‌های زیر را انتخاب کنید.',
+      'On: UDP routing is active. Pick a mode below.');
+  String get udpNormalTitle => pick('عادی', 'Normal');
+  String get udpNormalDetail => pick(
+      'وب و تماس تصویری از موزیلا، ترافیک بازی از WARP. (کمترین مصرف سهمیهٔ WARP.)',
+      'Web and video calls go through Mozilla, game traffic goes through WARP. (Lowest WARP data use.)');
+  String get udpGameTitle => pick('حالت بازی', 'Game Mode');
+  String get udpGameDetail => pick(
+      'همهٔ ترافیک UDP (وب، تماس، بازی) از WARP. (بهترین NAT و پینگ برای Xbox/PS5، ولی مصرف بیشتر WARP.)',
+      'All UDP traffic (web, calls, games) goes through WARP. (Best NAT type and ping for Xbox/PS5, but higher WARP data use.)');
+  String get udpRelayOnlyTitle => pick('فقط موزیلا (اضطراری)', 'Mozilla only (emergency)');
+  String get udpRelayOnlyDetail => pick(
+      'UDP فقط از درگاه‌های مجاز موزیلا می‌رود. (وقتی WARP در شبکهٔ شما بسته است. بازی آنلاین ممکن است کار نکند.)',
+      "UDP traffic only goes through Mozilla's allowed ports. (Use when WARP is blocked on your network. Online games may not work.)");
+  String get udpBatteryTitle => pick('صرفه‌جویی باتری', 'Battery saver');
+  String get udpBatteryDetail => pick(
+      'حتی اگر حالت بازی انتخاب شده باشد، WARP فقط برای درگاه‌های بازی می‌ماند.',
+      'Keeps WARP only for game ports, even if Game Mode is selected.');
+  String get udpBatteryWarning => pick(
+      'حالت بازی دو تونل را هم‌زمان زنده نگه می‌دارد و باتری و سهمیهٔ WARP بیشتری مصرف می‌کند.',
+      'Game Mode keeps two tunnels alive and uses more battery and WARP data.');
+  String get udpRelayWarning => pick(
+      'برای اینکه بازی‌های آنلاین کار کنن، باید گزینهٔ «UDP Relay» رو هم روشن کنی.',
+      'To make online games work, you also need to turn on "UDP Relay".');
+  String get udpRelayWarningAction => pick('روشن کردن UDP Relay', 'Turn on UDP Relay');
+  String get udpHelpTitle => pick('راهنما', 'Guide');
+  String get udpHelpBrowseTitle => pick('وب‌گردی معمولی', 'Normal browsing');
+  String get udpHelpBrowseBody => pick(
+      'فقط «اتصال» را بزنید. وب و DNS از پروکسی موزیلا می‌روند. برای این کار به WARP یا حالت بازی نیازی نیست.',
+      'Just press Connect. Web traffic and DNS go through the Mozilla relay. You do not need WARP or Game Mode for this.');
+  String get udpHelpConsoleTitle => pick('بازی روی PS5 یا Xbox', 'Playing on PS5 or Xbox');
+  String get udpHelpConsoleBody => pick(
+      'در تنظیمات، بخش اتصال، «حالت کنسول / بازی» را روشن کنید و «حالت بازی» را انتخاب کنید. کنسول را به نشانی درگاه نشان‌داده‌شده در بخش کنسول وصل کنید.',
+      'Turn on Console / Game Mode, then choose Game Mode. Point your console at the gateway address shown in the Console section.');
+  String get udpHelpBlockedTitle => pick('اگر WARP بسته بود', 'If WARP is blocked');
+  String get udpHelpBlockedBody => pick(
+      '«فقط موزیلا (اضطراری)» را انتخاب کنید. UDP فقط از درگاه‌های مجاز می‌رود. بازی آنلاین ممکن است کار نکند، ولی وب و تماس کار می‌کنند.',
+      'Choose Mozilla only (emergency). UDP then uses just the allowed ports. Online games may not work, but browsing and calls keep working.');
+  String get udpHelpBatteryTitle => pick('باتری و داده', 'Battery and data');
+  String get udpHelpBatteryBody => pick(
+      'حالت بازی باتری بیشتری مصرف می‌کند چون دو تونل باز می‌مانند. «صرفه‌جویی باتری» را روشن کنید یا پس از پایان بازی حالت کنسول را خاموش کنید.',
+      'Game Mode uses more battery because two tunnels stay open. Turn on Battery saver, or turn off Console / Game Mode when you finish playing.');
+  String get udpHelpNetworkTitle => pick('جابه‌جایی Wi-Fi و دادهٔ همراه', 'Switching Wi-Fi and mobile data');
+  String get udpHelpNetworkBody => pick(
+      'گذر تونل‌ها هنگام تغییر شبکه خودکار بازسازی می‌شود. یک وقفهٔ کوتاه طبیعی است.',
+      'Gozar rebuilds the tunnels automatically when the network changes. A short pause during a switch is normal.');
+  String get udpRestartNote => pick(
+      'تغییرات روی اتصال‌های تازه اعمال می‌شوند؛ برای نشست جاری دوباره وصل شوید.',
+      'Changes apply to new connections. Reconnect to apply them to the current session.');
   String get udpRelay => pick('انتقال UDP', 'Datagram relay');
   String get udpRelayDetail => pick(
       'بازی‌ها، تماس صوتی، QUIC و DNS را روی همان تونل می‌برد.',

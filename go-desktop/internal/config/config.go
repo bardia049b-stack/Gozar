@@ -224,17 +224,12 @@ func Save(current Config) error {
 
 func (c Config) SignedIn() bool { return c.Email != "" && (c.Refresh != "" || c.Access != "") }
 
-// UDP routing modes. "normal" spends the least WARP quota, "game" gives
-// consoles the best NAT type, and "relay_only" is the fallback for networks
-// where WARP itself is blocked.
 const (
 	UDPNormal    = "normal"
 	UDPGame      = "game"
 	UDPRelayOnly = "relay_only"
 )
 
-// NormalizeUDPMode maps anything unrecognised back to the safe default so a
-// hand-edited or older config can never select a broken routing policy.
 func NormalizeUDPMode(value string) string {
 	switch strings.ToLower(strings.TrimSpace(value)) {
 	case UDPGame:

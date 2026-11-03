@@ -1273,8 +1273,8 @@ class _GozarScreenState extends State<GozarScreen> with WindowListener {
               ),
           ],
         ),
-        value: _state.consoleOn && ready,
-        onChanged: _busy || !_state.live
+        value: _state.consoleOn,
+        onChanged: _busy
             ? null
             : (value) => unawaited(
                 _requestSetting('console', {'mode': value})),
@@ -1285,6 +1285,7 @@ class _GozarScreenState extends State<GozarScreen> with WindowListener {
   Widget _consoleSettings() {
     final gateway = _state.gateway;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      ..._udpModeSettings(),
       _consoleCard('playstation', words.consolePlaystation,
           words.playstationSteps),
       _consoleCard('xbox', words.consoleXbox, words.xboxSteps),
@@ -1354,6 +1355,178 @@ class _GozarScreenState extends State<GozarScreen> with WindowListener {
           _state.udpPorts.isEmpty ? words.udpPortsHint : _state.udpPorts.join(', '),
           _state.live ? null : () => unawaited(_editUDPPorts())),
     ]);
+  }
+
+  List<Widget> _udpModeSettings() {
+    final locked = _busy || _state.live || _state.connecting;
+    final on = _state.consoleOn;
+    return [
+      Card(
+        margin: const EdgeInsets.only(bottom: 8),
+        child: SwitchListTile(
+          secondary: const Icon(Icons.sports_esports_outlined, color: soft),
+          title: Text(words.consoleMasterTitle),
+          subtitle: Text(on ? words.consoleMasterOn : words.consoleMasterOff),
+          value: on,
+          onChanged: _busy
+              ? null
+              : (value) => unawaited(_requestSetting('udp', {'console': value})),
+        ),
+      ),
+      if (udpRelayWarningNeeded(_state)) _udpRelayWarning(),
+      if (on) ...[
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 4, 4, 8),
+          child: Text(words.udpSection,
+              style: const TextStyle(fontWeight: FontWeight.w600)),
+        ),
+        _udpModeCard('normal', words.udpNormalTitle, words.udpNormalDetail),
+        _udpModeCard('game', words.udpGameTitle, words.udpGameDetail),
+        _udpModeCard(
+            'relay_only', words.udpRelayOnlyTitle, words.udpRelayOnlyDetail),
+        if (_state.udpMode == 'game' && !_state.batterySaver)
+          Card(
+            margin: const EdgeInsets.only(bottom: 8),
+            child: ListTile(
+              leading: const Icon(Icons.battery_alert_outlined, color: soft),
+              title: Text(words.udpBatteryWarning),
+            ),
+          ),
+        Card(
+          margin: const EdgeInsets.only(bottom: 8),
+          child: SwitchListTile(
+            secondary: const Icon(Icons.battery_saver_outlined, color: soft),
+            title: Text(words.udpBatteryTitle),
+            subtitle: Text(words.udpBatteryDetail),
+            value: _state.batterySaver,
+            onChanged: locked
+                ? null
+                : (value) =>
+                    unawaited(_requestSetting('udp', {'battery_saver': value})),
+          ),
+        ),
+        if (locked)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+            child: Text(words.udpRestartNote,
+                style: TextStyle(color: muted(context), fontSize: 12)),
+          ),
+      ],
+      _settingTile(Icons.help_outline, words.udpHelpTitle,
+          words.udpHelpBrowseTitle, () => unawaited(_showUdpHelp())),
+    ];
+  }
+
+  Widget _udpRelayWarning() {
+    const amber = Color(0xFFFFB300);
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      color: amber.withOpacity(0.14),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: amber, width: 1.4),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.warning_amber_rounded, color: amber),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(words.udpRelayWarning,
+                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                ),
+              ],
+            ),
+            Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: TextButton.icon(
+                onPressed:
+                    _busy ? null : () => unawaited(_enableUDPRelayFromWarning()),
+                icon: const Icon(Icons.toggle_on_outlined, color: amber),
+                label: Text(words.udpRelayWarningAction),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _enableUDPRelayFromWarning() async {
+    final locked = _state.live || _state.connecting;
+    if (locked) {
+      await _requestSetting('udp', {'console': false});
+    }
+    await _requestSetting('udp', {'relay': true});
+    if (locked) {
+      await _requestSetting('udp', {'console': true});
+    }
+  }
+
+  Widget _udpModeCard(String mode, String title, String detail) {
+    final locked = _busy || _state.live || _state.connecting;
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: RadioListTile<String>(
+        value: mode,
+        groupValue: _state.udpMode,
+        title: Text(title),
+        subtitle: Text(detail),
+        onChanged: locked
+            ? null
+            : (value) => unawaited(_requestSetting('udp', {'mode': value})),
+      ),
+    );
+  }
+
+  Future<void> _showUdpHelp() async {
+    final sections = <List<String>>[
+      [words.udpHelpBrowseTitle, words.udpHelpBrowseBody],
+      [words.udpHelpConsoleTitle, words.udpHelpConsoleBody],
+      [words.udpHelpBlockedTitle, words.udpHelpBlockedBody],
+      [words.udpHelpBatteryTitle, words.udpHelpBatteryBody],
+      [words.udpHelpNetworkTitle, words.udpHelpNetworkBody],
+    ];
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(words.udpHelpTitle),
+        content: SizedBox(
+          width: 520,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (final section in sections)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(section[0],
+                            style:
+                                const TextStyle(fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 4),
+                        Text(section[1]),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(words.close)),
+        ],
+      ),
+    );
   }
 
   Future<void> _copyText(String value, String note) async {

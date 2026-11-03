@@ -7,7 +7,6 @@ import (
 	"time"
 )
 
-// fakeClock keeps the backoff tests instant while still recording every wait.
 type fakeClock struct {
 	current time.Time
 	waits   []time.Duration

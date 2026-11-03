@@ -95,6 +95,23 @@ class GatewayState {
   }
 }
 
+bool _flag(Object? raw, [bool fallback = false]) {
+  if (raw is bool) return raw;
+  if (raw is num) return raw != 0;
+  if (raw is String) {
+    if (raw == 'true' || raw == '1') return true;
+    if (raw == 'false' || raw == '0') return false;
+  }
+  return fallback;
+}
+
+String _udpMode(Object? raw) {
+  final value = raw is String ? raw : 'normal';
+  return const ['normal', 'game', 'relay_only'].contains(value) ? value : 'normal';
+}
+
+bool udpRelayWarningNeeded(CoreState state) => state.consoleOn && !state.udpRelay;
+
 class CoreState {
   const CoreState({
     this.signedIn = false,
@@ -122,6 +139,8 @@ class CoreState {
     this.server,
     this.servers = const [],
     this.udpRelay = true,
+    this.udpMode = 'normal',
+    this.batterySaver = false,
     this.warp = false,
     this.warpVia = 'direct',
     this.udpPorts = const [],
@@ -155,6 +174,8 @@ class CoreState {
   final Place? server;
   final List<Place> servers;
   final bool udpRelay;
+  final String udpMode;
+  final bool batterySaver;
   final bool warp;
   final String warpVia;
   final List<String> udpPorts;
@@ -195,14 +216,16 @@ class CoreState {
       version: json['version'] as String? ?? '',
       server:
           rawServer is Map<String, dynamic> ? Place.fromJson(rawServer) : null,
-      udpRelay: json['udp_relay'] as bool? ?? true,
+      udpRelay: _flag(json['udp_relay'], true),
+      udpMode: _udpMode(json['udpMode']),
+      batterySaver: _flag(json['battery_saver']),
       warp: json['warp'] as bool? ?? false,
       warpVia: json['warp_via'] as String? ?? 'direct',
       udpPorts: (json['udp_ports'] as List<dynamic>? ?? const [])
           .whereType<String>()
           .toList(growable: false),
       console: json['console'] as String? ?? 'playstation',
-      consoleOn: json['console_on'] as bool? ?? false,
+      consoleOn: _flag(json['console_on']),
       gateway: json['gateway'] is Map<String, dynamic>
           ? GatewayState.fromJson(json['gateway'] as Map<String, dynamic>)
           : const GatewayState(),

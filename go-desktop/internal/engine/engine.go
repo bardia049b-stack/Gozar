@@ -30,18 +30,18 @@ type resolver interface {
 }
 
 type Engine struct {
-	stack   *stack.Stack
-	device  *tundev.Device
-	config  tundev.Config
-	dial    Dialer
-	udpDial DatagramDialer
+	stack    *stack.Stack
+	device   *tundev.Device
+	config   tundev.Config
+	dial     Dialer
+	udpDial  DatagramDialer
 	warpDial DatagramDialer
-	policy  udpPolicy
-	fullUDP atomic.Bool
-	dns     resolver
-	down    atomic.Int64
-	up      atomic.Int64
-	once    sync.Once
+	policy   udpPolicy
+	fullUDP  atomic.Bool
+	dns      resolver
+	down     atomic.Int64
+	up       atomic.Int64
+	once     sync.Once
 }
 
 func Start(proxyHost string, dial Dialer, protect []netip.Addr) (*Engine, error) {
@@ -145,8 +145,6 @@ func (e *Engine) listenUDP(created *stack.Stack) {
 	forwarder := udp.NewForwarder(created, e.handleUDP)
 	created.SetTransportProtocolHandler(udp.ProtocolNumber, func(id stack.TransportEndpointID, packet *stack.PacketBuffer) bool {
 		if id.LocalPort == 53 {
-			// DNS is always accepted: it is served over DoH unless the policy
-			// explicitly asks for a raw datagram resolver through WARP.
 			return forwarder.HandlePacket(id, packet)
 		}
 		if e.routeFor(int(id.LocalPort), false) == RouteDrop {

@@ -223,6 +223,81 @@
                 </LinearLayout>
                 <ImageView style="@style/Gozar.Row.Chevron" android:tint="?attr/colorOnSurfaceVariant" />
             </LinearLayout>
+            <TextView style="@style/Gozar.Section" android:text="@string/udp_section" />
+            <LinearLayout android:id="@+id/rowConsoleMaster" style="@style/Gozar.Row" android:background="@drawable/settings_group_top">
+                <ImageView style="@style/Gozar.Tile" android:contentDescription="@string/console_master_title" android:src="@drawable/ic_console" />
+                <LinearLayout style="@style/Gozar.Row.Text">
+                    <TextView style="@style/Gozar.Row.Title" android:text="@string/console_master_title" />
+                    <TextView android:id="@+id/tvConsoleMaster" style="@style/Gozar.Row.Subtitle" android:text="@string/console_master_desc" />
+                </LinearLayout>
+                <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/swConsoleMaster" android:layout_width="wrap_content" android:layout_height="wrap_content" android:contentDescription="@string/console_master_title" />
+            </LinearLayout>
+            <com.google.android.material.card.MaterialCardView android:id="@+id/cardUdpRelayWarning" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="@dimen/stack_gap" android:visibility="gone" app:cardBackgroundColor="@color/udp_warning_background" app:cardCornerRadius="14dp" app:cardElevation="0dp" app:strokeColor="@color/udp_warning_stroke" app:strokeWidth="1.5dp">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="14dp">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                        <ImageView android:layout_width="24dp" android:layout_height="24dp" android:contentDescription="@string/udp_relay_warning" android:src="@drawable/ic_warning" app:tint="@color/udp_warning_stroke" />
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="10dp" android:text="@string/udp_relay_warning" android:textColor="@color/udp_warning_text" android:textSize="14sp" android:textStyle="bold" />
+                    </LinearLayout>
+                    <com.google.android.material.button.MaterialButton android:id="@+id/btnEnableUdpRelay" style="@style/Widget.Material3.Button.TextButton" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="end" android:text="@string/udp_relay_warning_action" android:textColor="@color/udp_warning_text" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+            <LinearLayout android:id="@+id/rowUdpNormal" style="@style/Gozar.Row" android:layout_marginTop="@dimen/stack_gap" android:background="@drawable/settings_group_top" android:visibility="gone">
+                <ImageView style="@style/Gozar.Tile" android:contentDescription="@string/udp_normal_title" android:src="@drawable/ic_alt_route" />
+                <LinearLayout style="@style/Gozar.Row.Text">
+                    <TextView style="@style/Gozar.Row.Title" android:text="@string/udp_normal_title" />
+                    <TextView style="@style/Gozar.Row.Subtitle" android:text="@string/udp_normal_desc" />
+                </LinearLayout>
+                <RadioButton android:id="@+id/rbUdpNormal" android:layout_width="wrap_content" android:layout_height="wrap_content" android:clickable="false" android:background="@null" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/rowUdpGame" style="@style/Gozar.Row" android:layout_marginTop="@dimen/stack_gap" android:background="@drawable/settings_group_middle" android:visibility="gone">
+                <ImageView style="@style/Gozar.Tile" android:contentDescription="@string/udp_game_title" android:src="@drawable/ic_console" />
+                <LinearLayout style="@style/Gozar.Row.Text">
+                    <TextView style="@style/Gozar.Row.Title" android:text="@string/udp_game_title" />
+                    <TextView style="@style/Gozar.Row.Subtitle" android:text="@string/udp_game_desc" />
+                </LinearLayout>
+                <RadioButton android:id="@+id/rbUdpGame" android:layout_width="wrap_content" android:layout_height="wrap_content" android:clickable="false" android:background="@null" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/rowUdpRelay" style="@style/Gozar.Row" android:layout_marginTop="@dimen/stack_gap" android:background="@drawable/settings_group_bottom" android:visibility="gone">
+                <ImageView style="@style/Gozar.Tile" android:contentDescription="@string/udp_relay_title" android:src="@drawable/ic_shield" />
+                <LinearLayout style="@style/Gozar.Row.Text">
+                    <TextView style="@style/Gozar.Row.Title" android:text="@string/udp_relay_title" />
+                    <TextView style="@style/Gozar.Row.Subtitle" android:text="@string/udp_relay_desc" />
+                </LinearLayout>
+                <RadioButton android:id="@+id/rbUdpRelay" android:layout_width="wrap_content" android:layout_height="wrap_content" android:clickable="false" android:background="@null" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/rowUdpRelayToggle" style="@style/Gozar.Row" android:layout_marginTop="@dimen/stack_gap" android:background="@drawable/settings_group_top" android:visibility="gone">
+                <ImageView style="@style/Gozar.Tile" android:contentDescription="@string/udp_relay_toggle_title" android:src="@drawable/ic_swap" />
+                <LinearLayout style="@style/Gozar.Row.Text">
+                    <TextView style="@style/Gozar.Row.Title" android:text="@string/udp_relay_toggle_title" />
+                    <TextView style="@style/Gozar.Row.Subtitle" android:text="@string/udp_relay_toggle_desc" />
+                </LinearLayout>
+                <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/swUdpRelay" android:layout_width="wrap_content" android:layout_height="wrap_content" android:contentDescription="@string/udp_relay_toggle_title" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/rowBatterySaver" style="@style/Gozar.Row" android:layout_marginTop="@dimen/stack_gap" android:background="@drawable/settings_group_bottom" android:visibility="gone">
+                <ImageView style="@style/Gozar.Tile" android:contentDescription="@string/udp_battery_title" android:src="@drawable/ic_battery" />
+                <LinearLayout style="@style/Gozar.Row.Text">
+                    <TextView style="@style/Gozar.Row.Title" android:text="@string/udp_battery_title" />
+                    <TextView style="@style/Gozar.Row.Subtitle" android:text="@string/udp_battery_desc" />
+                </LinearLayout>
+                <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/swBatterySaver" android:layout_width="wrap_content" android:layout_height="wrap_content" android:contentDescription="@string/udp_battery_title" />
+            </LinearLayout>
+            <TextView android:id="@+id/tvUdpBatteryWarning" style="@style/Gozar.Row.Subtitle" android:layout_marginTop="@dimen/stack_gap" android:paddingHorizontal="6dp" android:text="@string/udp_battery_warning" android:textColor="@color/m3_warn" android:visibility="gone" />
+            <LinearLayout android:id="@+id/rowWarpVia" style="@style/Gozar.Row" android:layout_marginTop="@dimen/stack_gap" android:background="@drawable/settings_group_top" android:visibility="gone">
+                <ImageView style="@style/Gozar.Tile" android:contentDescription="@string/udp_warp_via_title" android:src="@drawable/ic_cloud" />
+                <LinearLayout style="@style/Gozar.Row.Text">
+                    <TextView style="@style/Gozar.Row.Title" android:text="@string/udp_warp_via_title" />
+                    <TextView android:id="@+id/tvWarpVia" style="@style/Gozar.Row.Subtitle" />
+                </LinearLayout>
+                <ImageView style="@style/Gozar.Row.Chevron" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/rowHelp" style="@style/Gozar.Row" android:layout_marginTop="@dimen/stack_gap" android:background="@drawable/settings_group_bottom">
+                <ImageView style="@style/Gozar.Tile" android:contentDescription="@string/help_title" android:src="@drawable/ic_help" />
+                <LinearLayout style="@style/Gozar.Row.Text">
+                    <TextView style="@style/Gozar.Row.Title" android:text="@string/help_title" />
+                    <TextView style="@style/Gozar.Row.Subtitle" android:text="@string/help_desc" />
+                </LinearLayout>
+                <ImageView style="@style/Gozar.Row.Chevron" />
+            </LinearLayout>
         </LinearLayout>
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

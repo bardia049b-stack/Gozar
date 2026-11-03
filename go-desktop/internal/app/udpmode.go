@@ -14,13 +14,6 @@ import (
 	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/warp"
 )
 
-// gamePath is the side WARP tunnel that runs next to the Mozilla relay. It is
-// created lazily on the first game datagram, so a user who never plays never
-// pays for a second tunnel, and it rebuilds itself after a network change.
-//
-// Every failure is contained: a dead or unreachable WARP tunnel backs off and
-// the engine falls back to the relay, so gaming traffic degrades instead of
-// hanging the app.
 type gamePath struct {
 	mu       sync.Mutex
 	stack    *warp.Stack
@@ -48,8 +41,6 @@ func (g *gamePath) resetLocked() {
 	}
 }
 
-// noteFailure parks the path for 1s, 2s, 4s … up to 30s so a blocked network
-// cannot turn into a reconnect storm.
 func (g *gamePath) noteFailure() {
 	g.mu.Lock()
 	defer g.mu.Unlock()
@@ -71,7 +62,6 @@ func (g *gamePath) noteSuccess() {
 	g.retryAt = time.Time{}
 }
 
-// datagram returns a live datagram flow, rebuilding the tunnel when it died.
 func (g *gamePath) datagram(a *App, host string, port int) (engine.Datagram, error) {
 	g.mu.Lock()
 	if g.closed {
@@ -108,7 +98,7 @@ func (g *gamePath) datagram(a *App, host string, port int) (engine.Datagram, err
 		return nil, engine.ErrUDPDenied
 	}
 	if g.stack != nil {
-		// Another goroutine won the race; keep the existing tunnel.
+
 		g.mu.Unlock()
 		created.stack.Close()
 		created.release()
@@ -138,8 +128,6 @@ type gameTunnel struct {
 	release func()
 }
 
-// openGamePath brings up a WARP stack that shares the Mozilla carrier when the
-// user asked for WARP-over-relay, and uses direct QUIC otherwise.
 func (a *App) openGamePath() (*gameTunnel, error) {
 	a.mu.Lock()
 	via := a.cfg.WARPVia
@@ -187,8 +175,6 @@ func (a *App) openGamePath() (*gameTunnel, error) {
 	return &gameTunnel{stack: stack, release: release}, nil
 }
 
-// SetUDPMode persists the routing mode. It refuses to change under a live
-// session because the tunnels are built at connect time.
 func (a *App) SetUDPMode(mode string) error {
 	normalized := config.NormalizeUDPMode(mode)
 	a.mu.Lock()
@@ -205,7 +191,6 @@ func (a *App) SetUDPMode(mode string) error {
 	return nil
 }
 
-// SetBatterySaver keeps WARP only for game ports, even in Game Mode.
 func (a *App) SetBatterySaver(enabled bool) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()

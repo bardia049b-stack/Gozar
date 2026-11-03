@@ -9,10 +9,6 @@ import (
 	"time"
 )
 
-// throttle serialises Mozilla account calls and backs off on 429/503 so a burst
-// of logins can never get the client IP banned. It mirrors FoxThrottle on
-// Android: a minimum gap between calls, an exponential backoff capped at one
-// minute, and honouring Retry-After (delta-seconds or HTTP-date) when present.
 type throttle struct {
 	mu       sync.Mutex
 	gap      time.Duration
@@ -42,9 +38,6 @@ func newThrottle() *throttle {
 	}
 }
 
-// run executes task, retrying while Mozilla answers 429 or 503. The final reply
-// is returned unchanged once the attempts are exhausted so the caller can show
-// the real error instead of a generic failure.
 func (t *throttle) run(task func() (*Reply, error)) (*Reply, error) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -95,7 +88,6 @@ func (t *throttle) backoff(round int, reply *Reply) time.Duration {
 	return delay + t.jitter(400*time.Millisecond)
 }
 
-// cooldown lets a caller park the account API after an out-of-band rate limit.
 func (t *throttle) cooldown(d time.Duration) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -108,8 +100,6 @@ func retryableStatus(code int) bool {
 	return code == http.StatusTooManyRequests || code == http.StatusServiceUnavailable
 }
 
-// retryAfter reads Retry-After in either accepted form. Values are clamped to an
-// hour so a hostile or broken header cannot park the client forever.
 func retryAfter(reply *Reply, now time.Time) time.Duration {
 	if reply == nil || reply.Headers == nil {
 		return 0

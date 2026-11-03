@@ -119,10 +119,6 @@ func (e *Engine) relayDatagrams(local net.PacketConn, remote Datagram) {
 	remote.Close()
 }
 
-// dialDatagram picks the tunnel for one flow: WARP for game traffic, the
-// Mozilla relay for everything it is allowed to carry. A missing WARP tunnel
-// degrades to the relay rather than dropping the flow, so a WARP outage never
-// takes the whole connection down with it.
 func (e *Engine) dialDatagram(host string, port int) (Datagram, error) {
 	switch e.routeFor(port, port == 53) {
 	case RouteWarp:

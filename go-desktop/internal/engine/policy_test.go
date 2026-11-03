@@ -13,8 +13,7 @@ func TestMasterOffDropsEveryDatagram(t *testing.T) {
 }
 
 func TestGameModeSendsEverythingToWarp(t *testing.T) {
-	// Non-game ports are the point of this mode: consoles and launchers pick
-	// unpredictable ports, so "game" must not filter.
+
 	for _, port := range []int{443, 80, 8080, 12345, 50000, 3074, 53} {
 		if got := RouteUDP(ModeGame, true, false, port, port == 53); got != RouteWarp {
 			t.Fatalf("game mode must use WARP for port %d, got %s", port, got)
@@ -25,7 +24,7 @@ func TestGameModeSendsEverythingToWarp(t *testing.T) {
 func TestNormalModeOnlySendsGamePortsToWarp(t *testing.T) {
 	cases := map[int]string{
 		3074:  RouteWarp,
-		3478:  RouteWarp, // STUN: WARP wins over the relay allowance
+		3478:  RouteWarp,
 		9295:  RouteWarp,
 		51820: RouteWarp,
 		443:   RouteRelay,
@@ -66,7 +65,7 @@ func TestBatterySaverDowngradesGameToNormal(t *testing.T) {
 	if got := EffectiveUDPMode(ModeRelayOnly, true); got != ModeRelayOnly {
 		t.Fatalf("relay_only must survive the saver, got %s", got)
 	}
-	// With the saver on, web UDP leaves WARP but game ports stay.
+
 	if got := RouteUDP(ModeGame, true, true, 443, false); got != RouteRelay {
 		t.Fatalf("saver must move web UDP off WARP, got %s", got)
 	}
@@ -130,8 +129,7 @@ func TestDialDatagramFallsBackWhenWarpIsDown(t *testing.T) {
 		relayCalled = true
 		return nil, ErrUDPDenied
 	}
-	// 3478 is both a game port and a relay port: with no WARP tunnel it must
-	// fall back to the relay rather than fail.
+
 	e.dialDatagram("1.1.1.1", 3478)
 	if !relayCalled {
 		t.Fatal("a missing WARP tunnel must fall back to the relay")

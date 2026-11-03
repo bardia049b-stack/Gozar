@@ -22,8 +22,6 @@ const (
 
 var client = newHTTPClient()
 
-// limiter guards every account call so repeated logins queue up instead of
-// hammering Mozilla and earning an IP ban.
 var limiter = newThrottle()
 
 type Reply struct {
@@ -56,8 +54,6 @@ func call(method, url, body string, headers map[string]string) (*Reply, error) {
 			return reply, err
 		}
 		if retryableStatus(reply.Code) && account {
-			// The limiter already exhausted its retries; keep the real status so
-			// the UI can explain the wait instead of looping again.
 			return reply, nil
 		}
 		if reply.Code != http.StatusNotAcceptable || !account {

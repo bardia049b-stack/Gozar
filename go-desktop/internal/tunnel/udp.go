@@ -16,6 +16,12 @@ import (
 	"github.com/quic-go/quic-go/quicvarint"
 )
 
+type DatagramSession interface {
+	Send([]byte) error
+	Receive(context.Context) ([]byte, error)
+	Close()
+}
+
 var (
 	ErrUDPRefused     = errors.New("the proxy refused the udp tunnel")
 	ErrUDPUnsupported = errors.New("the proxy does not offer datagram tunnels")
@@ -135,7 +141,7 @@ func readHeaderFrame(stream interface{ Read([]byte) (int, error) }) (uint64, []b
 	return kind, body, nil
 }
 
-func OpenUDP(target Target, host string, port int, pass string, timeout time.Duration) (*session, error) {
+func OpenUDP(target Target, host string, port int, pass string, timeout time.Duration) (DatagramSession, error) {
 	if pass == "" {
 		return nil, errors.New("the tunnel needs a proxy pass")
 	}
