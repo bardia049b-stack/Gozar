@@ -7,6 +7,7 @@ cd "$ROOT/go-desktop"
 go install "golang.org/x/mobile/cmd/gomobile@$VERSION"
 go install "golang.org/x/mobile/cmd/gobind@$VERSION"
 go get "golang.org/x/mobile/bind@$VERSION"
+rm -rf "$ROOT/app/libs"
 mkdir -p "$ROOT/app/libs"
 "$(go env GOPATH)/bin/gomobile" bind \
   -target=android/arm64,android/arm,android/amd64,android/386 \

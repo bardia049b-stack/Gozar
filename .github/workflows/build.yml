@@ -29,9 +29,9 @@ jobs:
         with:
           go-version: '1.24.6'
       - name: Build the native UDP core
-        env:
-          ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.2.12479018
-        run: bash scripts/build_android_core.sh
+        run: |
+          export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/27.2.12479018"
+          bash scripts/build_android_core.sh
       - uses: gradle/actions/setup-gradle@v4
       - name: Test Android security, tunnel and interface
         if: hashFiles('app/src/test/**', 'core/src/test/**') != ''
