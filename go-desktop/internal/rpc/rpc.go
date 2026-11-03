@@ -171,10 +171,28 @@ func (s *Server) handle(request Request) Response {
 		}
 	case "udp":
 		var body struct {
-			Relay *bool    `json:"relay"`
-			Ports []string `json:"ports"`
+			Relay   *bool    `json:"relay"`
+			Ports   []string `json:"ports"`
+			Mode    string   `json:"mode"`
+			Console *bool    `json:"console"`
+			Saver   *bool    `json:"battery_saver"`
 		}
 		json.Unmarshal(request.Params, &body)
+		if body.Mode != "" {
+			if err := s.app.SetUDPMode(body.Mode); err != nil {
+				response.Error = err.Error()
+			}
+		}
+		if body.Saver != nil {
+			if err := s.app.SetBatterySaver(*body.Saver); err != nil {
+				response.Error = err.Error()
+			}
+		}
+		if body.Console != nil {
+			if err := s.app.SetConsoleMode(*body.Console); err != nil {
+				response.Error = err.Error()
+			}
+		}
 		if body.Ports != nil {
 			if err := s.app.SetExtraUDPPorts(body.Ports); err != nil {
 				response.Error = err.Error()

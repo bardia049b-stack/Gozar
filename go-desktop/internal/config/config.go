@@ -47,6 +47,8 @@ type Config struct {
 	Chain           []string  `json:"chain"`
 	Port            int       `json:"port"`
 	UDPRelay        bool      `json:"udp_relay"`
+	UDPMode         string    `json:"udpMode"`
+	BatterySaver    bool      `json:"battery_saver"`
 	ExtraUDPPorts   []string  `json:"extra_udp_ports,omitempty"`
 	ConsoleMode     bool      `json:"console_mode"`
 	ConsoleKind     string    `json:"console_kind,omitempty"`
@@ -71,10 +73,10 @@ func Dir() string {
 
 func path() string { return filepath.Join(Dir(), "config.json") }
 
-const schema = 2
+const schema = 3
 
 func defaults() Config {
-	return Config{FullTunnel: true, Theme: "system", SettingsVersion: schema, Port: 10810, UDPRelay: true, BridgePort: 8899, BridgeUser: "gozar", ConsoleKind: "playstation"}
+	return Config{FullTunnel: true, Theme: "system", SettingsVersion: schema, Port: 10810, UDPRelay: true, UDPMode: "normal", BridgePort: 8899, BridgeUser: "gozar", ConsoleKind: "playstation"}
 }
 
 func (c Config) ActiveAccount() Account {
@@ -173,6 +175,7 @@ func Load() Config {
 	if loaded.SettingsVersion < 2 {
 		loaded.UDPRelay = true
 	}
+	loaded.UDPMode = NormalizeUDPMode(loaded.UDPMode)
 	loaded.SettingsVersion = schema
 	if loaded.BridgePort == 0 {
 		loaded.BridgePort = fresh.BridgePort
@@ -189,6 +192,7 @@ func Load() Config {
 func Save(current Config) error {
 	final := current.WithCurrentAccount()
 	final.SettingsVersion = schema
+	final.UDPMode = NormalizeUDPMode(final.UDPMode)
 	final.sealTokens()
 	data, err := json.MarshalIndent(final, "", "  ")
 	if err != nil {
@@ -219,3 +223,25 @@ func Save(current Config) error {
 }
 
 func (c Config) SignedIn() bool { return c.Email != "" && (c.Refresh != "" || c.Access != "") }
+
+// UDP routing modes. "normal" spends the least WARP quota, "game" gives
+// consoles the best NAT type, and "relay_only" is the fallback for networks
+// where WARP itself is blocked.
+const (
+	UDPNormal    = "normal"
+	UDPGame      = "game"
+	UDPRelayOnly = "relay_only"
+)
+
+// NormalizeUDPMode maps anything unrecognised back to the safe default so a
+// hand-edited or older config can never select a broken routing policy.
+func NormalizeUDPMode(value string) string {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case UDPGame:
+		return UDPGame
+	case UDPRelayOnly:
+		return UDPRelayOnly
+	default:
+		return UDPNormal
+	}
+}

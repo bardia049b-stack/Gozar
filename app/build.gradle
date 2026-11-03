@@ -14,8 +14,8 @@ android {
         applicationId 'com.gozar'
         minSdk 24
         targetSdk 35
-        versionCode 37
-        versionName '1.10.5'
+        versionCode 38
+        versionName '1.10.6'
         manifestPlaceholders.appLabel = '@string/app_name'
         manifestPlaceholders.xiaomiAppId = System.getenv('XIAOMI_APP_ID') ?: ''
         manifestPlaceholders.xiaomiDebug = 'false'
@@ -103,6 +103,7 @@ dependencies {
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.robolectric:robolectric:4.14.1'
     implementation project(':core')
+    implementation files('libs/gozarcore.aar')
     implementation 'com.google.zxing:core:3.5.3'
     implementation 'androidx.core:core:1.17.0'
     implementation 'androidx.appcompat:appcompat:1.7.1'

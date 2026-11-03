@@ -35,6 +35,8 @@ type Engine struct {
 	config  tundev.Config
 	dial    Dialer
 	udpDial DatagramDialer
+	warpDial DatagramDialer
+	policy  udpPolicy
 	fullUDP atomic.Bool
 	dns     resolver
 	down    atomic.Int64
@@ -142,7 +144,12 @@ func (e *Engine) handleTCP(request *tcp.ForwarderRequest) {
 func (e *Engine) listenUDP(created *stack.Stack) {
 	forwarder := udp.NewForwarder(created, e.handleUDP)
 	created.SetTransportProtocolHandler(udp.ProtocolNumber, func(id stack.TransportEndpointID, packet *stack.PacketBuffer) bool {
-		if id.LocalPort != 53 && !e.relayable(int(id.LocalPort)) {
+		if id.LocalPort == 53 {
+			// DNS is always accepted: it is served over DoH unless the policy
+			// explicitly asks for a raw datagram resolver through WARP.
+			return forwarder.HandlePacket(id, packet)
+		}
+		if e.routeFor(int(id.LocalPort), false) == RouteDrop {
 			return false
 		}
 		return forwarder.HandlePacket(id, packet)
@@ -169,13 +176,14 @@ func (e *Engine) UDPEnabled() bool {
 }
 
 func (e *Engine) relayable(port int) bool {
-	if e.udpDial == nil {
+	switch e.routeFor(port, false) {
+	case RouteWarp:
+		return e.warpDial != nil
+	case RouteRelay:
+		return e.udpDial != nil && (e.fullUDP.Load() || udpAllowed(port))
+	default:
 		return false
 	}
-	if e.fullUDP.Load() {
-		return true
-	}
-	return udpAllowed(port)
 }
 
 func (e *Engine) handleUDP(request *udp.ForwarderRequest) {
@@ -184,6 +192,10 @@ func (e *Engine) handleUDP(request *udp.ForwarderRequest) {
 		if !e.relayable(int(id.LocalPort)) {
 			return
 		}
+		go e.handleDataUDP(forwardAdapter{request: request, id: id})
+		return
+	}
+	if e.routeFor(53, true) == RouteWarp && e.warpDial != nil {
 		go e.handleDataUDP(forwardAdapter{request: request, id: id})
 		return
 	}

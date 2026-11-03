@@ -201,6 +201,30 @@ func (s *Stack) DialDatagram(host string, port int) (*Datagram, error) {
 	return &Datagram{conn: conn}, nil
 }
 
+// Done closes when the underlying tunnel dies. Callers use it to notice a WARP
+// outage without polling, so a dropped tunnel can be rebuilt in the background.
+func (s *Stack) Done() <-chan struct{} {
+	if s == nil || s.tunnel == nil {
+		closed := make(chan struct{})
+		close(closed)
+		return closed
+	}
+	return s.tunnel.Done()
+}
+
+// Alive reports whether the tunnel is still usable.
+func (s *Stack) Alive() bool {
+	if s == nil {
+		return false
+	}
+	select {
+	case <-s.Done():
+		return false
+	default:
+		return true
+	}
+}
+
 func (s *Stack) Close() {
 	s.once.Do(func() {
 		s.stop()

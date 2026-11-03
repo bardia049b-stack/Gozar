@@ -29,42 +29,44 @@ type AccountSummary struct {
 }
 
 type State struct {
-	Accounts   []AccountSummary `json:"accounts"`
-	SignedIn   bool             `json:"signed_in"`
-	Email      string           `json:"email"`
-	Language   string           `json:"language"`
-	Theme      string           `json:"theme"`
-	Recents    bool             `json:"recents"`
-	LastServer string           `json:"last_server"`
-	Chain      []string         `json:"chain"`
-	Stage      string           `json:"stage"`
-	Live       bool             `json:"live"`
-	Connecting bool             `json:"connecting"`
-	Mode       string           `json:"mode"`
-	Exit       string           `json:"exit"`
-	Server     fxa.Location     `json:"server"`
-	Servers    []fxa.Location   `json:"servers"`
-	Down       int64            `json:"down"`
-	Up         int64            `json:"up"`
-	RateDown   int64            `json:"rate_down"`
-	RateUp     int64            `json:"rate_up"`
-	Since      int64            `json:"since"`
-	Fault      string           `json:"fault"`
-	NeedsAdmin bool             `json:"needs_admin"`
-	Limit      int64            `json:"limit"`
-	Remaining  int64            `json:"remaining"`
-	Reset      string           `json:"reset"`
-	Port       int              `json:"port"`
-	UDPRelay   bool             `json:"udp_relay"`
-	WARP       bool             `json:"warp"`
-	WARPVia    string           `json:"warp_via"`
-	UDPPorts   []string         `json:"udp_ports"`
-	Console    string           `json:"console"`
-	ConsoleOn  bool             `json:"console_on"`
-	Gateway    bridge.Stats     `json:"gateway"`
-	Device     string           `json:"device"`
-	Version    string           `json:"version"`
-	Admin      bool             `json:"admin"`
+	Accounts     []AccountSummary `json:"accounts"`
+	SignedIn     bool             `json:"signed_in"`
+	Email        string           `json:"email"`
+	Language     string           `json:"language"`
+	Theme        string           `json:"theme"`
+	Recents      bool             `json:"recents"`
+	LastServer   string           `json:"last_server"`
+	Chain        []string         `json:"chain"`
+	Stage        string           `json:"stage"`
+	Live         bool             `json:"live"`
+	Connecting   bool             `json:"connecting"`
+	Mode         string           `json:"mode"`
+	Exit         string           `json:"exit"`
+	Server       fxa.Location     `json:"server"`
+	Servers      []fxa.Location   `json:"servers"`
+	Down         int64            `json:"down"`
+	Up           int64            `json:"up"`
+	RateDown     int64            `json:"rate_down"`
+	RateUp       int64            `json:"rate_up"`
+	Since        int64            `json:"since"`
+	Fault        string           `json:"fault"`
+	NeedsAdmin   bool             `json:"needs_admin"`
+	Limit        int64            `json:"limit"`
+	Remaining    int64            `json:"remaining"`
+	Reset        string           `json:"reset"`
+	Port         int              `json:"port"`
+	UDPRelay     bool             `json:"udp_relay"`
+	UDPMode      string           `json:"udpMode"`
+	BatterySaver bool             `json:"battery_saver"`
+	WARP         bool             `json:"warp"`
+	WARPVia      string           `json:"warp_via"`
+	UDPPorts     []string         `json:"udp_ports"`
+	Console      string           `json:"console"`
+	ConsoleOn    bool             `json:"console_on"`
+	Gateway      bridge.Stats     `json:"gateway"`
+	Device       string           `json:"device"`
+	Version      string           `json:"version"`
+	Admin        bool             `json:"admin"`
 }
 
 type App struct {
@@ -86,6 +88,7 @@ type App struct {
 	unblockFor      string
 	engine          *engine.Engine
 	transport       *tunnel.Manager
+	game            *gamePath
 	warpstack       *warp.Stack
 	warpRelease     func()
 	egress          func(host string, port int) (io.ReadWriteCloser, error)
@@ -123,32 +126,34 @@ func (a *App) State() State {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	state := State{
-		SignedIn:   a.cfg.SignedIn(),
-		Email:      a.cfg.Email,
-		Language:   a.cfg.Language,
-		Theme:      a.cfg.Theme,
-		Recents:    a.cfg.Recents,
-		LastServer: a.cfg.LastServer,
-		Chain:      append([]string(nil), a.cfg.Chain...),
-		Stage:      a.stage,
-		Live:       a.live,
-		Connecting: a.connecting,
-		Mode:       a.mode(),
-		Exit:       a.exit,
-		Servers:    append([]fxa.Location(nil), a.servers...),
-		Fault:      a.fault,
-		NeedsAdmin: a.needAdmin,
-		Port:       a.cfg.Port,
-		UDPRelay:   a.cfg.UDPRelay,
-		WARP:       a.cfg.WARP,
-		WARPVia:    a.warpViaLocked(),
-		UDPPorts:   append([]string{}, a.cfg.ExtraUDPPorts...),
-		Console:    a.cfg.ConsoleKind,
-		ConsoleOn:  a.cfg.ConsoleMode,
-		Version:    a.version,
-		Admin:      a.admin,
-		RateDown:   a.rateDown.Load(),
-		RateUp:     a.rateUp.Load(),
+		SignedIn:     a.cfg.SignedIn(),
+		Email:        a.cfg.Email,
+		Language:     a.cfg.Language,
+		Theme:        a.cfg.Theme,
+		Recents:      a.cfg.Recents,
+		LastServer:   a.cfg.LastServer,
+		Chain:        append([]string(nil), a.cfg.Chain...),
+		Stage:        a.stage,
+		Live:         a.live,
+		Connecting:   a.connecting,
+		Mode:         a.mode(),
+		Exit:         a.exit,
+		Servers:      append([]fxa.Location(nil), a.servers...),
+		Fault:        a.fault,
+		NeedsAdmin:   a.needAdmin,
+		Port:         a.cfg.Port,
+		UDPRelay:     a.cfg.UDPRelay,
+		UDPMode:      config.NormalizeUDPMode(a.cfg.UDPMode),
+		BatterySaver: a.cfg.BatterySaver,
+		WARP:         a.cfg.WARP,
+		WARPVia:      a.warpViaLocked(),
+		UDPPorts:     append([]string{}, a.cfg.ExtraUDPPorts...),
+		Console:      a.cfg.ConsoleKind,
+		ConsoleOn:    a.cfg.ConsoleMode,
+		Version:      a.version,
+		Admin:        a.admin,
+		RateDown:     a.rateDown.Load(),
+		RateUp:       a.rateUp.Load(),
 	}
 	active := a.cfg.ActiveAccount()
 	state.Limit, state.Remaining, state.Reset = active.Limit, active.Remaining, active.Reset
@@ -774,6 +779,8 @@ func (a *App) connect() error {
 	udpEnabled := a.cfg.UDPRelay
 	extraPorts := append([]string(nil), a.cfg.ExtraUDPPorts...)
 	consoleMode := a.cfg.ConsoleMode
+	udpMode := config.NormalizeUDPMode(a.cfg.UDPMode)
+	batterySaver := a.cfg.BatterySaver
 	a.mu.Unlock()
 	engine.SetRelayPorts(engine.NormalizePorts(extraPorts))
 	if udpEnabled && len(hops) == 0 {
@@ -793,7 +800,19 @@ func (a *App) connect() error {
 			return session, nil
 		})
 	}
+	// Three-way routing: game datagrams go to a side WARP tunnel, Iranian and
+	// other direct destinations stay direct, and everything else spends the
+	// Mozilla quota. relay_only never opens WARP at all.
+	created.SetUDPPolicy(udpMode, consoleMode, batterySaver)
+	var game *gamePath
+	if consoleMode && engine.EffectiveUDPMode(udpMode, batterySaver) != engine.ModeRelayOnly {
+		game = &gamePath{}
+		created.SetWARPDDialer(func(host string, remotePort int) (engine.Datagram, error) {
+			return game.datagram(a, host, remotePort)
+		})
+	}
 	a.mu.Lock()
+	a.game = game
 	a.engine = created
 	a.transport = transport
 	a.egress = dial
@@ -855,6 +874,8 @@ func (a *App) teardown() {
 	transport := a.transport
 	warped := a.warpstack
 	release := a.warpRelease
+	game := a.game
+	a.game = nil
 	a.warpRelease = nil
 	a.warpstack = nil
 	a.egress = nil
@@ -886,6 +907,9 @@ func (a *App) teardown() {
 	}
 	if release != nil {
 		release()
+	}
+	if game != nil {
+		game.close()
 	}
 }
 

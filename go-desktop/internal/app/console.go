@@ -74,12 +74,11 @@ func (a *App) SetConsoleKind(kind string) error {
 	return nil
 }
 
+// SetConsoleMode is the master Console / Game Mode switch. It may be flipped
+// while offline: the flag is persisted and both the UDP policy and the console
+// gateway are armed on the next connect.
 func (a *App) SetConsoleMode(enabled bool) error {
 	a.mu.Lock()
-	if enabled && !a.live {
-		a.mu.Unlock()
-		return errors.New("connect to a server before starting the console gateway")
-	}
 	if !enabled {
 		next := a.cfg
 		next.ConsoleMode = false
@@ -107,7 +106,12 @@ func (a *App) SetConsoleMode(enabled bool) error {
 		return err
 	}
 	a.cfg = next
+	live := a.live
 	a.mu.Unlock()
+	if !live {
+		// Armed for the next connect; connect() starts the gateway itself.
+		return nil
+	}
 	return a.startBridge()
 }
 

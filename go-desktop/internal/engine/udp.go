@@ -119,8 +119,35 @@ func (e *Engine) relayDatagrams(local net.PacketConn, remote Datagram) {
 	remote.Close()
 }
 
+// dialDatagram picks the tunnel for one flow: WARP for game traffic, the
+// Mozilla relay for everything it is allowed to carry. A missing WARP tunnel
+// degrades to the relay rather than dropping the flow, so a WARP outage never
+// takes the whole connection down with it.
+func (e *Engine) dialDatagram(host string, port int) (Datagram, error) {
+	switch e.routeFor(port, port == 53) {
+	case RouteWarp:
+		if e.warpDial != nil {
+			remote, err := e.warpDial(host, port)
+			if err == nil {
+				return remote, nil
+			}
+		}
+		if e.udpDial != nil && udpAllowed(port) {
+			return e.udpDial(host, port)
+		}
+		return nil, ErrUDPDenied
+	case RouteRelay:
+		if e.udpDial == nil {
+			return nil, ErrUDPDenied
+		}
+		return e.udpDial(host, port)
+	default:
+		return nil, ErrUDPDenied
+	}
+}
+
 func (e *Engine) handleDataUDP(request udpForwardRequest) {
-	remote, err := e.udpDial(request.host(), request.port())
+	remote, err := e.dialDatagram(request.host(), request.port())
 	if err != nil {
 		if errors.Is(err, ErrUDPDenied) {
 			denyUDPPort(request.port())
