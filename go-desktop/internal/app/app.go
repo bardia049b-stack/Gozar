@@ -12,13 +12,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/bridge"
 	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/config"
 	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/engine"
 	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/fxa"
 	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/tundev"
 	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/tunnel"
-	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/warp"
 	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/wintun"
 )
 
@@ -29,44 +27,35 @@ type AccountSummary struct {
 }
 
 type State struct {
-	Accounts     []AccountSummary `json:"accounts"`
-	SignedIn     bool             `json:"signed_in"`
-	Email        string           `json:"email"`
-	Language     string           `json:"language"`
-	Theme        string           `json:"theme"`
-	Recents      bool             `json:"recents"`
-	LastServer   string           `json:"last_server"`
-	Chain        []string         `json:"chain"`
-	Stage        string           `json:"stage"`
-	Live         bool             `json:"live"`
-	Connecting   bool             `json:"connecting"`
-	Mode         string           `json:"mode"`
-	Exit         string           `json:"exit"`
-	Server       fxa.Location     `json:"server"`
-	Servers      []fxa.Location   `json:"servers"`
-	Down         int64            `json:"down"`
-	Up           int64            `json:"up"`
-	RateDown     int64            `json:"rate_down"`
-	RateUp       int64            `json:"rate_up"`
-	Since        int64            `json:"since"`
-	Fault        string           `json:"fault"`
-	NeedsAdmin   bool             `json:"needs_admin"`
-	Limit        int64            `json:"limit"`
-	Remaining    int64            `json:"remaining"`
-	Reset        string           `json:"reset"`
-	Port         int              `json:"port"`
-	UDPRelay     bool             `json:"udp_relay"`
-	UDPMode      string           `json:"udpMode"`
-	BatterySaver bool             `json:"battery_saver"`
-	WARP         bool             `json:"warp"`
-	WARPVia      string           `json:"warp_via"`
-	UDPPorts     []string         `json:"udp_ports"`
-	Console      string           `json:"console"`
-	ConsoleOn    bool             `json:"console_on"`
-	Gateway      bridge.Stats     `json:"gateway"`
-	Device       string           `json:"device"`
-	Version      string           `json:"version"`
-	Admin        bool             `json:"admin"`
+	Accounts   []AccountSummary `json:"accounts"`
+	SignedIn   bool             `json:"signed_in"`
+	Email      string           `json:"email"`
+	Language   string           `json:"language"`
+	Theme      string           `json:"theme"`
+	Recents    bool             `json:"recents"`
+	LastServer string           `json:"last_server"`
+	Chain      []string         `json:"chain"`
+	Stage      string           `json:"stage"`
+	Live       bool             `json:"live"`
+	Connecting bool             `json:"connecting"`
+	Mode       string           `json:"mode"`
+	Exit       string           `json:"exit"`
+	Server     fxa.Location     `json:"server"`
+	Servers    []fxa.Location   `json:"servers"`
+	Down       int64            `json:"down"`
+	Up         int64            `json:"up"`
+	RateDown   int64            `json:"rate_down"`
+	RateUp     int64            `json:"rate_up"`
+	Since      int64            `json:"since"`
+	Fault      string           `json:"fault"`
+	NeedsAdmin bool             `json:"needs_admin"`
+	Limit      int64            `json:"limit"`
+	Remaining  int64            `json:"remaining"`
+	Reset      string           `json:"reset"`
+	Port       int              `json:"port"`
+	Device     string           `json:"device"`
+	Version    string           `json:"version"`
+	Admin      bool             `json:"admin"`
 }
 
 type App struct {
@@ -88,11 +77,6 @@ type App struct {
 	unblockFor      string
 	engine          *engine.Engine
 	transport       *tunnel.Manager
-	game            *gamePath
-	warpstack       *warp.Stack
-	warpRelease     func()
-	egress          func(host string, port int) (io.ReadWriteCloser, error)
-	bridge          *bridge.Server
 	stage           string
 	fault           string
 	live            bool
@@ -126,34 +110,26 @@ func (a *App) State() State {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	state := State{
-		SignedIn:     a.cfg.SignedIn(),
-		Email:        a.cfg.Email,
-		Language:     a.cfg.Language,
-		Theme:        a.cfg.Theme,
-		Recents:      a.cfg.Recents,
-		LastServer:   a.cfg.LastServer,
-		Chain:        append([]string(nil), a.cfg.Chain...),
-		Stage:        a.stage,
-		Live:         a.live,
-		Connecting:   a.connecting,
-		Mode:         a.mode(),
-		Exit:         a.exit,
-		Servers:      append([]fxa.Location(nil), a.servers...),
-		Fault:        a.fault,
-		NeedsAdmin:   a.needAdmin,
-		Port:         a.cfg.Port,
-		UDPRelay:     a.cfg.UDPRelay,
-		UDPMode:      config.NormalizeUDPMode(a.cfg.UDPMode),
-		BatterySaver: a.cfg.BatterySaver,
-		WARP:         a.cfg.WARP,
-		WARPVia:      a.warpViaLocked(),
-		UDPPorts:     append([]string{}, a.cfg.ExtraUDPPorts...),
-		Console:      a.cfg.ConsoleKind,
-		ConsoleOn:    a.cfg.ConsoleMode,
-		Version:      a.version,
-		Admin:        a.admin,
-		RateDown:     a.rateDown.Load(),
-		RateUp:       a.rateUp.Load(),
+		SignedIn:   a.cfg.SignedIn(),
+		Email:      a.cfg.Email,
+		Language:   a.cfg.Language,
+		Theme:      a.cfg.Theme,
+		Recents:    a.cfg.Recents,
+		LastServer: a.cfg.LastServer,
+		Chain:      append([]string(nil), a.cfg.Chain...),
+		Stage:      a.stage,
+		Live:       a.live,
+		Connecting: a.connecting,
+		Mode:       a.mode(),
+		Exit:       a.exit,
+		Servers:    append([]fxa.Location(nil), a.servers...),
+		Fault:      a.fault,
+		NeedsAdmin: a.needAdmin,
+		Port:       a.cfg.Port,
+		Version:    a.version,
+		Admin:      a.admin,
+		RateDown:   a.rateDown.Load(),
+		RateUp:     a.rateUp.Load(),
 	}
 	active := a.cfg.ActiveAccount()
 	state.Limit, state.Remaining, state.Reset = active.Limit, active.Remaining, active.Reset
@@ -182,17 +158,6 @@ func (a *App) State() State {
 		state.Down, state.Up = a.engine.Counters()
 		state.Device = a.engine.Device()
 	}
-	if a.bridge != nil {
-		state.Gateway = a.bridge.Stats()
-	}
-	if state.Gateway.Port == 0 {
-		state.Gateway.Port = a.cfg.BridgePort
-	}
-	if state.Gateway.Address == "" {
-		state.Gateway.Address = bridgeAddress(nil)
-	}
-	state.Gateway.Requires = a.cfg.BridgePass != ""
-	state.Gateway.Allow = append([]string{}, a.cfg.BridgeAllow...)
 	return state
 }
 
@@ -750,9 +715,6 @@ func (a *App) connect() error {
 	if target.DialHost == "" {
 		return errors.New("could not resolve the first proxy to IPv4 before starting the tunnel")
 	}
-	if a.warpEnabled() {
-		return a.connectWARP()
-	}
 	transport := tunnel.NewManager(target)
 	dial := func(host string, remotePort int) (io.ReadWriteCloser, error) {
 		current, err := a.currentPass()
@@ -776,43 +738,8 @@ func (a *App) connect() error {
 		return err
 	}
 	a.mu.Lock()
-	udpEnabled := a.cfg.UDPRelay
-	extraPorts := append([]string(nil), a.cfg.ExtraUDPPorts...)
-	consoleMode := a.cfg.ConsoleMode
-	udpMode := config.NormalizeUDPMode(a.cfg.UDPMode)
-	batterySaver := a.cfg.BatterySaver
-	a.mu.Unlock()
-	engine.SetRelayPorts(engine.NormalizePorts(extraPorts))
-	if udpEnabled && len(hops) == 0 {
-		udpTarget := target
-		created.SetUDPDialer(func(host string, remotePort int) (engine.Datagram, error) {
-			current, err := a.currentPass()
-			if err != nil {
-				return nil, err
-			}
-			session, err := tunnel.OpenUDP(udpTarget, host, remotePort, current, 10*time.Second)
-			if err != nil {
-				if errors.Is(err, tunnel.ErrUDPRefused) || errors.Is(err, tunnel.ErrUDPUnsupported) {
-					return nil, engine.ErrUDPDenied
-				}
-				return nil, err
-			}
-			return session, nil
-		})
-	}
-	created.SetUDPPolicy(udpMode, consoleMode, batterySaver)
-	var game *gamePath
-	if consoleMode && engine.EffectiveUDPMode(udpMode, batterySaver) != engine.ModeRelayOnly {
-		game = &gamePath{}
-		created.SetWARPDDialer(func(host string, remotePort int) (engine.Datagram, error) {
-			return game.datagram(a, host, remotePort)
-		})
-	}
-	a.mu.Lock()
-	a.game = game
 	a.engine = created
 	a.transport = transport
-	a.egress = dial
 	for _, place := range servers {
 		if strings.EqualFold(place.Host, target.Host) {
 			a.activeServer = place
@@ -830,13 +757,6 @@ func (a *App) connect() error {
 	a.stage = ""
 	a.mu.Unlock()
 	go a.watchTunnel(created)
-	if consoleMode {
-		if err := a.startBridge(); err != nil {
-			a.mu.Lock()
-			a.fault = "The console gateway could not start: " + err.Error()
-			a.mu.Unlock()
-		}
-	}
 	a.startRenewal()
 	if ip, err := transport.Probe(pass.Token, 12*time.Second); err == nil {
 		a.mu.Lock()
@@ -869,27 +789,15 @@ func (a *App) teardown() {
 	a.mu.Lock()
 	engineNow := a.engine
 	transport := a.transport
-	warped := a.warpstack
-	release := a.warpRelease
-	game := a.game
-	a.game = nil
-	a.warpRelease = nil
-	a.warpstack = nil
-	a.egress = nil
 	a.transport = nil
 	cancel := a.renewCancel
 	a.renewCancel = nil
 	a.engine = nil
 	a.live = false
-	gateway := a.bridge
-	a.bridge = nil
 	a.activeServer = fxa.Location{}
 	a.exit = ""
 	a.since = 0
 	a.mu.Unlock()
-	if gateway != nil {
-		gateway.Stop()
-	}
 	if cancel != nil {
 		cancel()
 	}
@@ -898,15 +806,6 @@ func (a *App) teardown() {
 	}
 	if engineNow != nil {
 		engineNow.Stop()
-	}
-	if warped != nil {
-		warped.Close()
-	}
-	if release != nil {
-		release()
-	}
-	if game != nil {
-		game.close()
 	}
 }
 

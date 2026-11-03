@@ -28,8 +28,6 @@ object Store {
     fun setBypassList(c: Context, v: String) = p(c).edit().putString("bypass_list", v).apply()
     fun chain(c: Context) = p(c).getString("chain", "") ?: ""
     fun setChain(c: Context, v: String) = p(c).edit().putString("chain", v).apply()
-    fun consoleKind(c: Context) = p(c).getString("console_kind", "none") ?: "none"
-    fun setConsoleKind(c: Context, v: String) = p(c).edit().putString("console_kind", v).apply()
     fun rootRouting(c: Context) = p(c).getBoolean("root_routing", false)
     fun setRootRouting(c: Context, v: Boolean) = p(c).edit().putBoolean("root_routing", v).apply()
     fun dnsProfile(c: Context) = p(c).getString("dns_profile", DnsPolicy.AUTO) ?: DnsPolicy.AUTO
@@ -40,26 +38,6 @@ object Store {
     fun setBlockAds(c: Context, value: Boolean) = p(c).edit().putBoolean("block_ads", value).apply()
     fun notificationAsked(c: Context) = p(c).getBoolean("notification_asked", false)
     fun setNotificationAsked(c: Context) = p(c).edit().putBoolean("notification_asked", true).apply()
-    fun config(c: Context): FoxConfig = FoxConfig.load(c.filesDir)
-
-    fun setConfig(c: Context, value: FoxConfig) {
-        FoxConfig.save(c.filesDir, value)
-    }
-
-    fun udpMode(c: Context) = config(c).udpMode
-    fun setUdpMode(c: Context, v: String) = setConfig(c, config(c).copy(udpMode = UdpPolicy.normalize(v)))
-    fun consoleMode(c: Context) = config(c).consoleMode
-    fun setConsoleMode(c: Context, v: Boolean) = setConfig(c, config(c).copy(consoleMode = v))
-    fun batterySaver(c: Context) = config(c).batterySaver
-    fun setBatterySaver(c: Context, v: Boolean) = setConfig(c, config(c).copy(batterySaver = v))
-    fun warpVia(c: Context) = config(c).warpVia
-    fun setWarpVia(c: Context, v: String) = setConfig(c, config(c).copy(warpVia = FoxConfig.normalizeVia(v)))
-
-    fun udpRelay(c: Context) = p(c).getBoolean("udp_relay", true)
-    fun setUdpRelay(c: Context, v: Boolean) = p(c).edit().putBoolean("udp_relay", v).apply()
-
-    fun udpRelayWarning(c: Context) = UdpWarning.relayNeeded(consoleMode(c), udpRelay(c))
-
     fun apps(c: Context) = p(c).getStringSet("apps", emptySet())?.toSet() ?: emptySet()
     fun setApps(c: Context, v: Set<String>) = p(c).edit().putStringSet("apps", v).apply()
 

@@ -27,8 +27,6 @@ class FoxVpnService : VpnService() {
 
     private var stack: FoxStack? = null
     @Volatile private var resolver: FoxResolver? = null
-    private var udp: GozarUdp? = null
-    private var networkCallback: android.net.ConnectivityManager.NetworkCallback? = null
     private var rootSession: RootSession? = null
     private var startFailure = ""
     private var systemStarted = false
@@ -119,15 +117,7 @@ class FoxVpnService : VpnService() {
             addressOf(LOCAL_ADDRESS),
             resolver,
             { host, address, port ->
-                val settings = Store.config(app)
-                val gameRoute = settings.consoleMode &&
-                    UdpPolicy.effective(settings.udpMode, settings.batterySaver) != UdpPolicy.RELAY_ONLY &&
-                    (UdpPolicy.effective(settings.udpMode, settings.batterySaver) == UdpPolicy.GAME ||
-                        UdpPolicy.isGamePort(port))
-                val warpPipe = if (gameRoute) udpEngine()?.warpStream(address, port) else null
-                if (warpPipe != null) {
-                    warpPipe
-                } else if (directRoutingAllowed() && FoxRoute.direct(host)) {
+                if (directRoutingAllowed() && FoxRoute.direct(host)) {
                     val pipe = FoxSocketPipe.connect(address, port) ?: throw IOException("direct connection failed")
                     DirectPipe(pipe) { directRoutingAllowed() }
                 } else {
@@ -137,14 +127,10 @@ class FoxVpnService : VpnService() {
                     FoxTunnel.open(location, host, port, token)
                 }
             },
-            { inbound, size -> FoxLink.count(inbound, size) },
-            udpEngine(),
-            { Store.config(app) },
-            { DnsPolicy.datagramServer(Store.dnsProfile(app), Store.blockAds(app)) }
+            { inbound, size -> FoxLink.count(inbound, size) }
         )
         engine.start()
         stack = engine
-        registerNetworkCallback()
         FoxLink.start(this)
     }
 
@@ -176,55 +162,7 @@ class FoxVpnService : VpnService() {
         stopSelf()
     }
 
-    private fun registerNetworkCallback() {
-        val manager = getSystemService(android.net.ConnectivityManager::class.java) ?: return
-        val callback = object : android.net.ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: android.net.Network) {
-                udp?.invalidate()
-                FoxTunnel.resetTransport()
-            }
-
-            override fun onLost(network: android.net.Network) {
-                udp?.invalidate()
-            }
-        }
-        try {
-            manager.registerDefaultNetworkCallback(callback)
-            networkCallback = callback
-        } catch (e: Exception) {
-        }
-    }
-
-    private fun unregisterNetworkCallback() {
-        val callback = networkCallback ?: return
-        networkCallback = null
-        try {
-            getSystemService(android.net.ConnectivityManager::class.java)?.unregisterNetworkCallback(callback)
-        } catch (e: Exception) {
-        }
-    }
-
-    private fun udpEngine(): GozarUdp? {
-        synchronized(this) {
-            val current = udp
-            if (current != null) return current
-            val created = GozarUdp(applicationContext)
-            udp = created
-            return created
-        }
-    }
-
     private fun release() {
-        val engineUdp = synchronized(this) {
-            val current = udp
-            udp = null
-            current
-        }
-        try {
-            engineUdp?.shutdown()
-        } catch (e: Exception) {
-        }
-        unregisterNetworkCallback()
         val root = synchronized(this) {
             val current = rootSession
             rootSession = null
@@ -402,13 +340,6 @@ class FoxVpnService : VpnService() {
         }
 
         fun isAlive(): Boolean = alive
-
-        fun udpSettingsChanged(context: Context) {
-            val service = instance ?: return
-            service.udp?.invalidate()
-        }
-
-        fun udpWarpReady(): Boolean = instance?.udp?.warpReady() == true
 
         fun lockdownState(): Int {
             val service = instance ?: return 0

@@ -2,87 +2,42 @@ import base64
 import sys
 from urllib.parse import urlencode
 
-SECURITY = r"""# Gozar 1.10.6 — UDP that games can actually use, on every platform
+SECURITY = r"""## Gozar 1.10.3 — نسخهٔ سخت‌سازی امنیتی
 
-This release fixes the reason online games kept failing. Gozar now decides, per
-datagram, whether traffic should go through Cloudflare WARP, stay direct, or
-spend your Mozilla quota — and it does the same on Android, Windows, Linux and
-macOS.
+این نسخه حاصل یک بازبینی امنیتی کامل روی کلاینت است: هر مورد در محیط آزمایشی بازتولید شد، رفع شد و برای آن تست خودکار نوشته شد. هیچ‌چیز در روش برقراری تونل تغییر نکرده است؛ رمزنگاری، ترنسپورت MASQUE، جریان ورود به حساب و انتخاب سرور دست‌نخورده‌اند، بنابراین نسخهٔ نصب‌شدهٔ فعلی بعد از آپدیت دقیقاً مثل قبل کار می‌کند.
 
-## Three UDP modes
+### ۱) نشت IPv6 — افشای هویت واقعی کاربر
+**مشکل:** در اندروید فقط مسیر `0.0.0.0/0` به اینترفیس VPN داده می‌شد و در دسکتاپ فقط `0.0.0.0/1` و `128.0.0.0/1`. روی هر شبکه‌ای که IPv6 بدهد (اپراتورهای موبایل، اکثر ISPهای خانگی و همهٔ مودم‌های جدید) سوکت‌های IPv6 کلاً از تونل بیرون می‌زدند و آدرس واقعی دستگاه روی اینترنت دیده می‌شد؛ یک کوئری AAAA کافی بود.
+**رفع:** اینترفیس اندروید حالا آدرس `fd00:111:0:2::2/128` و مسیر `::/0` را در اختیار می‌گیرد؛ ویندوز، لینوکس و مک مسیرهای `::/1` و `8000::/1` را به اینترفیس مجازی اضافه می‌کنند. چون پشتهٔ فضای کاربر فقط IPv4 را پردازش می‌کند، بستهٔ IPv6 الان وارد تونل می‌شود و همان‌جا دور ریخته می‌شود، نه اینکه از لینک فیزیکی فرار کند. رزولور هم مثل قبل به کوئری AAAA پاسخ خالی می‌دهد تا برنامه‌ها بلافاصله روی IPv4 بیفتند. این مسیرها «بهترین تلاش» هستند: اگر کرنلی اضافه‌کردن‌شان را رد کند، تونل باز هم بالا می‌آید و فقط همان خانواده مسدود نمی‌شود.
 
-A new **UDP Mode** section sits in Settings → Connection, under a single
-**Console / Game Mode** master switch.
+### ۲) ذخیرهٔ توکن‌ها به‌صورت متن خام
+**مشکل (اندروید):** اکسس‌توکن، رفرش‌توکن و رمز تونل در `SharedPreferences` ساده ذخیره می‌شدند؛ هر بکاپ، هر باگ‌گیری یا هر ابزار روت می‌توانست آن‌ها را بردارد و حساب موزیلا را تصاحب کند.
+**مشکل (دسکتاپ):** همان اطلاعات به‌صورت JSON خوانا در `config.json` بود.
+**رفع (اندروید):** همهٔ رازها با AES-256-GCM و کلیدی که از Android Keystore خارج نمی‌شود مهر و موم می‌شوند (نام مستعار `gozar.session.v1`، IV تصادفی برای هر مقدار، AAD وابسته به پکیج). اگر دستگاهی Keystore قابل‌استفاده نداشته باشد، به کلید مخصوص همان نصب در `noBackupFilesDir` برمی‌گردد که هرگز داخل بکاپ نمی‌رود. نشست‌های قدیمی متن‌خام در اولین نوشتن به‌صورت خودکار مهاجرت می‌کنند، پس کسی با این آپدیت بیرون نمی‌افتد. مقدار دست‌کاری‌شده «بسته» شکست می‌خورد و به نشست خالی تبدیل می‌شود، نه به دادهٔ نامعتبر.
+**رفع (دسکتاپ):** در ویندوز از DPAPI (محدود به همان کاربر و همان ماشین، با یک بلاب آنتروپی مخصوص Gozar) و در لینوکس و مک از AES-256-GCM با کلید `0600` مخصوص نصب استفاده می‌شود. `config.json` دیگر حتی یک توکن خوانا ندارد و فایل‌های قدیمی در اولین ذخیره مهاجرت می‌کنند.
 
-- **Off (default).** Mozilla TCP only. Lowest data and battery use. Nothing
-  changes for ordinary browsing.
-- **Normal.** Web and video calls use the Mozilla relay; game traffic uses WARP.
-  This spends the least WARP quota while still opening your NAT.
-- **Game Mode.** Every UDP port goes through WARP, including ports no relay
-  would carry. This gives the best NAT type and ping on Xbox and PS5, and uses
-  more WARP data.
-- **Mozilla only (emergency).** WARP stays closed and UDP uses just Mozilla's
-  allowed ports. Use this when WARP itself is blocked. Browsing and calls keep
-  working; online games may not.
+### ۳) پورت‌های لوکال بدون احراز هویت
+**مشکل:** پورت‌های ثابت `10810` (SOCKS5)، `10811` (HTTP) و `10812` (DNS) مشتری بدون رمز قبول می‌کردند. هر اپ نصب‌شده روی گوشی می‌توانست از تونل استفاده کند، سهمیهٔ حساب را بسوزاند، split-tunneling را دور بزند یا از IP خروجی کاربر عبور کند.
+**رفع:** سه شنونده حالا روی پورت‌های موقت و تازه در هر نشست بالا می‌آیند و ثابت‌های قدیمی حذف شدند؛ چیزی نمی‌تواند آن‌ها را حدس بزند یا هاردکد کند. شنوندهٔ SOCKS5 احراز هویت RFC 1929 را با یک اعتبار ۱۴۴ بیتی مخصوص هر نشست و مقایسهٔ زمان‌ثابت اجباری می‌کند و به‌جای `0x00` مقدار `0x02` اعلام می‌کند. تعداد اتصال هر شنونده به ۶۴ محدود شد تا یک پروسهٔ محلی نتواند حافظه را تمام کند، همتاهای غیرلوپ‌بک قبل از هر پردازشی رد می‌شوند و خط درخواست HTTP هم به‌صورت دفاعی پارس می‌شود.
 
-## Game, browse and keep your Firefox quota
+### ۴) نبود Kill Switch واقعی در دسکتاپ
+کلاینت دسکتاپ همچنان قوانین WFP یا pf یا nftables نصب نمی‌کند؛ انتشار دستکاری فایروال بدون تست روی هر سه سیستم یعنی ریسک اینکه کاربر کلاً اینترنتش را از دست بدهد. آنچه تغییر کرد شفافیت و دامنهٔ آسیب است: IPv6 حالا مسدود می‌شود نه نشت، کلاینت وضعیت واقعی تونل را گزارش می‌کند و به‌صورت خاموش به مسیر مستقیم برنمی‌گردد، و در اندروید تشخیص Always-on/lockdown همچنان اجباری است (به‌محض دیدن lockdown، مسیر مستقیم غیرفعال می‌شود). Kill switch واقعی در سطح سیستم‌عامل به یک helper امضاشده نیاز دارد و آگاهانه در این نسخه جعل نشده است.
 
-The three paths run at the same time. A console can play on WARP while a browser
-on the same machine uses the Mozilla relay, and Iranian sites still connect
-directly instead of taking a round trip abroad. On Android this lives in the VPN
-service's dial path; on the desktop it lives in the engine, with a side WARP
-tunnel that is only created when the first game datagram needs it.
+### ۵) DLL Hijacking در ویندوز
+**مشکل:** فایل `wintun.dll` کنار فایل اجرایی یا در `%LOCALAPPDATA%/Gozar` نوشته می‌شد و با `SetDllDirectory` سراسری لود می‌شد — نمونهٔ کلاسیک ربایش ترتیب جست‌وجوی DLL.
+**رفع:** DLL قبل از استفاده با SHA-256 باینری امبدشده تطبیق داده می‌شود، با نام وابسته به محتوا (`wintun-<hash>.dll`) داخل پوشهٔ `0700` نصب می‌شود، با فایل موقت و rename اتمیک نوشته می‌شود و بعد از نوشتن دوباره هش آن چک می‌شود، و در نهایت با `LoadLibraryEx(..., LOAD_LIBRARY_SEARCH_SYSTEM32 | LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR)` لود می‌شود. سپس مسیر جست‌وجوی سراسری به `SYSTEM32` محدود می‌شود تا DLL مخربی که هرجای پروفایل کاربر افتاده باشد برنده نشود.
 
-## A warning you will actually see
+### ۶) به‌روزرسانی بدون اعتبارسنجی
+بررسی آپدیت حالا مالک مخزن را پین می‌کند، فقط `https://github.com/bardia049b-stack/{Gozar,Gozar1}/releases/...` را می‌پذیرد، وجود یوزرفو و پورت غیرپیش‌فرض و هر هاست دیگر را رد می‌کند و تگ را قبل از نمایش با الگوی سخت‌گیرانهٔ عددی اعتبارسنجی می‌کند. فقط صفحهٔ ریلیز در مرورگر خود کاربر باز می‌شود، هرگز یک URL دلبخواه از پاسخ API.
 
-If Console / Game Mode is on but **UDP Relay** is off, a yellow warning appears
-in Settings with a one-tap fix: *"To make online games work, you also need to
-turn on UDP Relay."* It is there in both Persian and English, on Android and on
-the desktop.
+### ۷) تک‌نقطه‌ای بودن رزولور
+پروفایل `AUTO` حالا بین سه رزولور مستقل DoH (موزیلا، گوگل، کواد۹) می‌چرخد، با همان اعتبارسنجی سخت‌گیرانهٔ پاسخ، بازبرچسب‌زنی شناسهٔ تراکنش و محافظت از کش منفی. از دست رفتن یک سرویس‌دهنده دیگر کل ترافیک نام دامنه‌ها را متوقف نمی‌کند.
 
-## Battery
+### ۸) سخت‌سازی پشتهٔ بسته
+پشتهٔ TCP فضای کاربر دیگر بی‌مرز رشد نمی‌کند: یک سطل توکن نرخ جریان جدید را روی ۲۵۶ در ثانیه نگه می‌دارد، جدول جریان روی ۵۱۲ ورودی با حذف قدیمی‌ترین‌ها سقف دارد، جدول نام‌ها روی ۴۰۹۶ ورودی محدود است و سیل SYN یا ACK جعلی با RST پاسخ می‌گیرد و حالتی تخصیص نمی‌دهد. سطح حملهٔ پارس بسته هم با تست‌هایی پوشش داده شد که بستهٔ خراب و فریم IPv6 را از پمپ عبور می‌دهند.
 
-Game Mode keeps two tunnels alive, so it costs more battery — the settings
-screen says so plainly. An optional **Battery saver** keeps WARP only for game
-ports even when Game Mode is selected. On Android the tunnel runs in a foreground
-service, as before.
-
-## Sign-ins no longer risk an IP ban
-
-Mozilla account calls are now serialised and backed off. On HTTP 429 or 503
-Gozar waits, honours `Retry-After` in both seconds and HTTP-date form, and retries
-with an exponential delay capped at one minute. If Mozilla still refuses, you
-get a message telling you how long to wait instead of a silent failure.
-
-## Staying connected
-
-WARP is watched, not assumed. If the tunnel dies — a Wi-Fi to mobile-data switch,
-a filtered network, a suspended laptop — Gozar rebuilds it in the background with
-a 1s, 2s, 4s … backoff capped at 30 seconds, and falls back to the Mozilla relay
-in the meantime. A WARP failure never crashes or hangs the app.
-
-## A bug that dropped small game packets
-
-The Android packet parser required a UDP length of at least 20 bytes. The UDP
-header is 8 bytes, so small datagrams — exactly the kind games send — were
-silently discarded. Fixed, with a regression test.
-
-## New look
-
-Every icon is now pure Material 3 on one fixed Material red, with no coloured
-backgrounds and a variety of Material frames instead of one repeated shape. The
-launcher icon is a white **G** on red.
-
-## Verified, not just written
-
-- **Live UDP against the production Cloudflare API:** device registered, QUIC
-  tunnel up, DNS over UDP 53 answered in 8 ms (61 bytes, 2 answers), datagrams
-  sent on UDP 3074 and UDP 443, and Cloudflare's own trace endpoint reported
-  `warp=on` from the tunnel's egress address.
-- **33 Kotlin unit tests** and **Go tests** covering routing for all three modes,
-  config save/load, the small-packet fix, datagram replies, and the 429 backoff.
-- **14 Flutter tests** covering state parsing and the UDP Relay warning.
-- Android APKs built; `go build`, `go vet` and `flutter analyze` all clean.
+### اعتبارسنجی
+`./gradlew :core:test :app:testDebugUnitTest` و `go test ./...` روی هر سه سیستم‌عامل در CI اجرا می‌شوند. تست‌های جدید پوشش می‌دهند: رفت‌وبرگشت مقدار مهروموم و رد دست‌کاری، مهاجرت از متن خام به مهروموم، رد شدن SOCKS بدون رمز، تخصیص پورت موقت، سقف اتصال، دور ریختن فریم IPv6، مهار سیل SYN، جانشینی رزولور و لیست سفید URL. بیلدهای اندروید، ویندوز، لینوکس و مک از همین کامیت ساخته می‌شوند.
 """
 
 

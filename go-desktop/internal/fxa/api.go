@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"strings"
-	"time"
 )
 
 const (
@@ -21,8 +20,6 @@ const (
 )
 
 var client = newHTTPClient()
-
-var limiter = newThrottle()
 
 type Reply struct {
 	Code    int
@@ -40,24 +37,10 @@ type Error struct {
 func (e *Error) Error() string { return e.Message }
 
 func call(method, url, body string, headers map[string]string) (*Reply, error) {
-	account := strings.HasPrefix(url, authBase+"/")
-	request := func() (*Reply, error) { return callOnce(method, url, body, headers) }
 	for attempt := 0; attempt < 3; attempt++ {
-		var reply *Reply
-		var err error
-		if account {
-			reply, err = limiter.run(request)
-		} else {
-			reply, err = request()
-		}
-		if err != nil || reply == nil {
+		reply, err := callOnce(method, url, body, headers)
+		if err != nil || reply.Code != http.StatusNotAcceptable || !strings.HasPrefix(url, authBase+"/") {
 			return reply, err
-		}
-		if retryableStatus(reply.Code) && account {
-			return reply, nil
-		}
-		if reply.Code != http.StatusNotAcceptable || !account {
-			return reply, nil
 		}
 		if err := solveChallenge(); err != nil {
 			return nil, err
@@ -112,12 +95,6 @@ func failure(reply *Reply) error {
 	}
 	if reply.Code == 406 {
 		message = "Mozilla security check was not accepted; try again"
-	}
-	if reply.Code == http.StatusTooManyRequests {
-		message = "Mozilla is rate-limiting sign-ins from this network. Gozar waited and retried; please try again in a minute."
-		if wait := retryAfter(reply, time.Now()); wait > 0 {
-			message = fmt.Sprintf("Mozilla asked us to wait %d seconds before signing in again.", int(wait.Seconds()+0.5))
-		}
 	}
 	return &Error{Message: message, Status: reply.Code, Errno: data.Errno, Email: data.Email}
 }

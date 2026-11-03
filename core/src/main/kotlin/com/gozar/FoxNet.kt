@@ -22,8 +22,6 @@ object FoxNet {
 
     private val jar = FoxJar()
 
-    private val throttle = FoxThrottle()
-
     fun forget() = jar.clear()
 
     fun call(
@@ -33,26 +31,7 @@ object FoxNet {
         headers: Map<String, String> = emptyMap(),
         timeout: Int = 25000
     ): FoxReply {
-        if (url.startsWith(AUTH)) return limited(url, method, body, headers, timeout)
-        return plain(url, method, body, headers, timeout)
-    }
-
-    private fun limited(
-        url: String,
-        method: String,
-        body: String?,
-        headers: Map<String, String>,
-        timeout: Int
-    ): FoxReply = throttle.run { plain(url, method, body, headers, timeout) }
-
-    private fun plain(
-        url: String,
-        method: String,
-        body: String?,
-        headers: Map<String, String>,
-        timeout: Int
-    ): FoxReply {
-        if (jar.header().isEmpty()) FoxShield.solve(jar)
+        if (url.startsWith(AUTH) && jar.header().isEmpty()) FoxShield.solve(jar)
         var reply = once(url, method, body, headers, timeout)
         var round = 0
         while (reply.code == 406 && round < 4) {

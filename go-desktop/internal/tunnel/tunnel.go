@@ -24,10 +24,6 @@ type Target struct {
 	Port     int
 	DialHost string
 	Chain    []Hop
-
-	TrustAnyCertificate bool
-
-	insecureForTests bool
 }
 
 type Dup interface {

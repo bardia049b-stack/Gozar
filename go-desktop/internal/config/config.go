@@ -46,19 +46,6 @@ type Config struct {
 	Bypass          []string  `json:"bypass"`
 	Chain           []string  `json:"chain"`
 	Port            int       `json:"port"`
-	UDPRelay        bool      `json:"udp_relay"`
-	UDPMode         string    `json:"udpMode"`
-	BatterySaver    bool      `json:"battery_saver"`
-	ExtraUDPPorts   []string  `json:"extra_udp_ports,omitempty"`
-	ConsoleMode     bool      `json:"console_mode"`
-	ConsoleKind     string    `json:"console_kind,omitempty"`
-	BridgePort      int       `json:"bridge_port"`
-	BridgeUser      string    `json:"bridge_user,omitempty"`
-	BridgePass      string    `json:"bridge_pass,omitempty"`
-	BridgeAllow     []string  `json:"bridge_allow,omitempty"`
-	WARP            bool      `json:"warp"`
-	WARPMTU         int       `json:"warp_mtu,omitempty"`
-	WARPVia         string    `json:"warp_via,omitempty"`
 }
 
 func Dir() string {
@@ -73,10 +60,8 @@ func Dir() string {
 
 func path() string { return filepath.Join(Dir(), "config.json") }
 
-const schema = 3
-
 func defaults() Config {
-	return Config{FullTunnel: true, Theme: "system", SettingsVersion: schema, Port: 10810, UDPRelay: true, UDPMode: "normal", BridgePort: 8899, BridgeUser: "gozar", ConsoleKind: "playstation"}
+	return Config{FullTunnel: true, Theme: "system", SettingsVersion: 1, Port: 10810}
 }
 
 func (c Config) ActiveAccount() Account {
@@ -171,17 +156,7 @@ func Load() Config {
 		loaded.Chain = nil
 		loaded.Bypass = nil
 		loaded.BypassLAN = false
-	}
-	if loaded.SettingsVersion < 2 {
-		loaded.UDPRelay = true
-	}
-	loaded.UDPMode = NormalizeUDPMode(loaded.UDPMode)
-	loaded.SettingsVersion = schema
-	if loaded.BridgePort == 0 {
-		loaded.BridgePort = fresh.BridgePort
-	}
-	if loaded.BridgeUser == "" {
-		loaded.BridgeUser = fresh.BridgeUser
+		loaded.SettingsVersion = 1
 	}
 	if loaded.Theme != "light" && loaded.Theme != "dark" {
 		loaded.Theme = "system"
@@ -191,8 +166,6 @@ func Load() Config {
 
 func Save(current Config) error {
 	final := current.WithCurrentAccount()
-	final.SettingsVersion = schema
-	final.UDPMode = NormalizeUDPMode(final.UDPMode)
 	final.sealTokens()
 	data, err := json.MarshalIndent(final, "", "  ")
 	if err != nil {
@@ -223,20 +196,3 @@ func Save(current Config) error {
 }
 
 func (c Config) SignedIn() bool { return c.Email != "" && (c.Refresh != "" || c.Access != "") }
-
-const (
-	UDPNormal    = "normal"
-	UDPGame      = "game"
-	UDPRelayOnly = "relay_only"
-)
-
-func NormalizeUDPMode(value string) string {
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case UDPGame:
-		return UDPGame
-	case UDPRelayOnly:
-		return UDPRelayOnly
-	default:
-		return UDPNormal
-	}
-}

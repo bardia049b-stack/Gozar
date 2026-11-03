@@ -11,8 +11,6 @@ import androidx.core.widget.NestedScrollView
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
-import android.widget.RadioButton
 import android.widget.TextView
 import android.text.BidiFormatter
 import android.text.TextDirectionHeuristics
@@ -66,39 +64,6 @@ class SettingsFragment : Fragment() {
         find<View>(R.id.sectionAppearanceButton).setOnClickListener { showSection("appearance") }
         find<View>(R.id.sectionGeneralButton).setOnClickListener { showSection("general") }
         find<View>(R.id.rowKillSwitch).setOnClickListener { explainLockdown() }
-        find<View>(R.id.rowConsoleMaster).setOnClickListener {
-            val toggle = find<MaterialSwitch>(R.id.swConsoleMaster)
-            toggle.isChecked = !toggle.isChecked
-        }
-        find<MaterialSwitch>(R.id.swConsoleMaster).setOnCheckedChangeListener { _, checked ->
-            if (!changingSwitch) setConsoleMaster(checked)
-        }
-        find<View>(R.id.rowUdpNormal).setOnClickListener { chooseUdp(UdpPolicy.NORMAL) }
-        find<View>(R.id.rowUdpGame).setOnClickListener { chooseUdp(UdpPolicy.GAME) }
-        find<View>(R.id.rowUdpRelay).setOnClickListener { chooseUdp(UdpPolicy.RELAY_ONLY) }
-        find<View>(R.id.rowUdpRelayToggle).setOnClickListener {
-            val toggle = find<MaterialSwitch>(R.id.swUdpRelay)
-            toggle.isChecked = !toggle.isChecked
-        }
-        find<MaterialSwitch>(R.id.swUdpRelay).setOnCheckedChangeListener { _, checked ->
-            if (!changingSwitch) setUdpRelay(checked)
-        }
-        find<View>(R.id.btnEnableUdpRelay).setOnClickListener {
-            find<MaterialSwitch>(R.id.swUdpRelay).isChecked = true
-        }
-        find<View>(R.id.rowBatterySaver).setOnClickListener {
-            val toggle = find<MaterialSwitch>(R.id.swBatterySaver)
-            toggle.isChecked = !toggle.isChecked
-        }
-        find<MaterialSwitch>(R.id.swBatterySaver).setOnCheckedChangeListener { _, checked ->
-            if (!changingSwitch) {
-                context?.let { Store.setBatterySaver(it, checked) }
-                paint()
-                context?.let { FoxVpnService.udpSettingsChanged(it) }
-            }
-        }
-        find<View>(R.id.rowWarpVia).setOnClickListener { pickWarpVia() }
-        find<View>(R.id.rowHelp).setOnClickListener { showUdpHelp() }
         find<View>(R.id.rowDns).setOnClickListener { pickDns() }
         find<View>(R.id.rowNotifications).setOnClickListener { openNotificationSettings() }
         find<View>(R.id.rowAds).setOnClickListener { requestAdBlocking(!Store.blockAds(requireContext())) }
@@ -117,7 +82,6 @@ class SettingsFragment : Fragment() {
         find<View>(R.id.rowGithub).setOnClickListener { openProject() }
         find<View>(R.id.rowAbout).setOnClickListener { showLegalNotice() }
         find<View>(R.id.rowRouting).setOnClickListener { changeProtection { pickRouting() } }
-        find<View>(R.id.rowConsole).setOnClickListener { pickConsole() }
         find<View>(R.id.rowChain).setOnClickListener { changeProtection { editChain() } }
         find<View>(R.id.rowApps).setOnClickListener { changeProtection { pickApps() } }
         find<View>(R.id.rowRoot).setOnClickListener { pickRoot() }
@@ -188,89 +152,6 @@ class SettingsFragment : Fragment() {
 
     fun restore(intent: Intent?) {
         if (view != null && !isHidden) paint()
-    }
-
-    private fun paintUdp(context: Context) {
-        val config = Store.config(context)
-        val on = config.consoleMode
-        changingSwitch = true
-        find<MaterialSwitch>(R.id.swConsoleMaster).isChecked = on
-        find<MaterialSwitch>(R.id.swUdpRelay).isChecked = Store.udpRelay(context)
-        find<MaterialSwitch>(R.id.swBatterySaver).isChecked = config.batterySaver
-        changingSwitch = false
-        find<TextView>(R.id.tvConsoleMaster).setText(
-            if (on) R.string.console_master_on else R.string.console_master_desc
-        )
-        val mode = UdpPolicy.normalize(config.udpMode)
-        find<RadioButton>(R.id.rbUdpNormal).isChecked = mode == UdpPolicy.NORMAL
-        find<RadioButton>(R.id.rbUdpGame).isChecked = mode == UdpPolicy.GAME
-        find<RadioButton>(R.id.rbUdpRelay).isChecked = mode == UdpPolicy.RELAY_ONLY
-        val rows = listOf(
-            R.id.rowUdpNormal, R.id.rowUdpGame, R.id.rowUdpRelay,
-            R.id.rowUdpRelayToggle, R.id.rowBatterySaver, R.id.rowWarpVia
-        )
-        for (row in rows) find<View>(row).visibility = if (on) View.VISIBLE else View.GONE
-        find<View>(R.id.cardUdpRelayWarning).visibility =
-            if (UdpWarning.relayNeeded(on, Store.udpRelay(context))) View.VISIBLE else View.GONE
-        find<TextView>(R.id.tvUdpBatteryWarning).visibility =
-            if (on && UdpPolicy.effective(mode, config.batterySaver) == UdpPolicy.GAME) View.VISIBLE else View.GONE
-        find<TextView>(R.id.tvWarpVia).setText(
-            if (config.warpVia == FoxConfig.RELAY) R.string.udp_warp_relay else R.string.udp_warp_direct
-        )
-    }
-
-    private fun chooseUdp(mode: String) {
-        val context = context ?: return
-        Store.setUdpMode(context, mode)
-        paint()
-        FoxVpnService.udpSettingsChanged(context)
-    }
-
-    private fun setConsoleMaster(enabled: Boolean) {
-        val context = context ?: return
-        Store.setConsoleMode(context, enabled)
-        paint()
-        FoxVpnService.udpSettingsChanged(context)
-    }
-
-    private fun setUdpRelay(enabled: Boolean) {
-        val context = context ?: return
-        Store.setUdpRelay(context, enabled)
-        paint()
-        FoxVpnService.udpSettingsChanged(context)
-    }
-
-    private fun pickWarpVia() {
-        val context = context ?: return
-        val labels = arrayOf(getString(R.string.udp_warp_direct), getString(R.string.udp_warp_relay))
-        val current = if (Store.warpVia(context) == FoxConfig.RELAY) 1 else 0
-        MaterialAlertDialogBuilder(context)
-            .setTitle(R.string.udp_warp_via_title)
-            .setSingleChoiceItems(labels, current) { dialog, which ->
-                Store.setWarpVia(context, if (which == 1) FoxConfig.RELAY else FoxConfig.DIRECT)
-                dialog.dismiss()
-                paint()
-                FoxVpnService.udpSettingsChanged(context)
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
-    }
-
-    private fun showUdpHelp() {
-        val context = context ?: return
-        val parts = listOf(
-            R.string.help_browse_title to R.string.help_browse_body,
-            R.string.help_console_title to R.string.help_console_body,
-            R.string.help_blocked_title to R.string.help_blocked_body,
-            R.string.help_battery_title to R.string.help_battery_body,
-            R.string.help_network_title to R.string.help_network_body
-        )
-        val text = parts.joinToString("\n\n") { getString(it.first) + "\n" + getString(it.second) }
-        MaterialAlertDialogBuilder(context)
-            .setTitle(R.string.help_title)
-            .setMessage(text)
-            .setPositiveButton(R.string.close, null)
-            .show()
     }
 
     private fun bind(row: Int, switchId: Int, initial: Boolean, save: (Boolean) -> Unit) {
@@ -344,15 +225,6 @@ class SettingsFragment : Fragment() {
                 }
                 val hops = FoxUpstream.parse(Store.chain(context)).size
                 find<TextView>(R.id.tvChain).text = if (hops > 0) getString(R.string.chain_on, hops) else getString(R.string.chain_off)
-                find<TextView>(R.id.tvConsole).text = when (Store.consoleKind(context)) {
-                    "xbox" -> getString(R.string.console_selected, getString(R.string.console_xbox))
-                    "playstation" -> getString(R.string.console_selected, getString(R.string.console_playstation))
-                    else -> getString(R.string.console_desc)
-                }
-                find<ImageView>(R.id.imgConsole).setImageResource(
-                    if (Store.consoleKind(context) == "xbox") R.drawable.ic_console_xbox
-                    else R.drawable.ic_console_playstation
-                )
                 find<TextView>(R.id.tvRoot).text = getString(when {
                     rootChecking -> R.string.root_checking
                     FoxVpnService.rootActive -> R.string.root_active
@@ -361,7 +233,6 @@ class SettingsFragment : Fragment() {
                 })
                 val only = Store.apps(context)
                 find<TextView>(R.id.tvApps).text = if (only.isEmpty()) getString(R.string.apps_all) else getString(R.string.apps_count, only.size)
-                paintUdp(context)
             }
             "appearance" -> {
                 find<TextView>(R.id.tvLang).text = when (Store.lang(context)) {
@@ -521,47 +392,6 @@ class SettingsFragment : Fragment() {
             }
             .setNeutralButton(R.string.routing_list) { _, _ -> editBypass() }
             .setPositiveButton(R.string.routing_save) { _, _ -> paint() }
-            .show()
-    }
-
-    private fun pickConsole() {
-        val context = requireContext()
-        val current = Store.consoleKind(context)
-        val kinds = arrayOf("none", "playstation", "xbox")
-        val labels = arrayOf(
-            getString(R.string.console_none),
-            getString(R.string.console_playstation),
-            getString(R.string.console_xbox)
-        )
-        var chosen = kinds.indexOf(current).coerceAtLeast(0)
-        MaterialAlertDialogBuilder(context)
-            .setTitle(R.string.console_dialog_title)
-            .setSingleChoiceItems(labels, chosen) { _, which -> chosen = which }
-            .setPositiveButton(R.string.routing_save) { _, _ ->
-                val kind = kinds[chosen]
-                Store.setConsoleKind(context, kind)
-                if (kind != "none") Store.setBypassLan(context, true)
-                showConsoleGuide(kind)
-                paint()
-            }
-            .setNeutralButton(R.string.cancel, null)
-            .show()
-    }
-
-    private fun showConsoleGuide(kind: String) {
-        val context = requireContext()
-        if (kind == "none") return
-        val steps = if (kind == "xbox") {
-            getString(R.string.console_xbox_steps)
-        } else {
-            getString(R.string.console_ps_steps)
-        }
-        MaterialAlertDialogBuilder(context)
-            .setTitle(
-                if (kind == "xbox") R.string.console_xbox else R.string.console_playstation
-            )
-            .setMessage("$steps\n\n${getString(R.string.console_note)}\n\n${getString(R.string.console_lan_note)}")
-            .setPositiveButton(R.string.close, null)
             .show()
     }
 

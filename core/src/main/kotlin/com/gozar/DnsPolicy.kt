@@ -25,12 +25,6 @@ object DnsPolicy {
         }
     }
 
-    fun datagramServer(profile: String, blockAds: Boolean): String = when {
-        blockAds -> "94.140.14.14"
-        profile == QUAD9 -> "9.9.9.9"
-        else -> "1.1.1.1"
-    }
-
     fun endpoints(profile: String, custom: String, blockAds: Boolean): List<String> {
         if (blockAds) return listOf(ADGUARD)
         return when (profile) {

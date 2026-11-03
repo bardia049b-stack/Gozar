@@ -1,5 +1,6 @@
 //go:build windows
 
+
 package sysproxy
 
 import (

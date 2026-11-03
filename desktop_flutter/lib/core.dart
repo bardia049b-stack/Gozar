@@ -51,67 +51,6 @@ class SavedAccount {
       );
 }
 
-class GatewayState {
-  const GatewayState({
-    this.running = false,
-    this.address = '',
-    this.port = 0,
-    this.clients = 0,
-    this.total = 0,
-    this.up = 0,
-    this.down = 0,
-    this.requires = false,
-    this.allow = const [],
-    this.dns = '',
-  });
-
-  final bool running;
-  final String address;
-  final int port;
-  final int clients;
-  final int total;
-  final int up;
-  final int down;
-  final bool requires;
-  final List<String> allow;
-  final String dns;
-
-  String get endpoint => address.isEmpty || port == 0 ? '' : '$address:$port';
-
-  factory GatewayState.fromJson(Map<String, dynamic> json) {
-    final allow = json['allow'] as List<dynamic>? ?? const [];
-    return GatewayState(
-      running: json['running'] as bool? ?? false,
-      address: json['address'] as String? ?? '',
-      port: (json['port'] as num?)?.toInt() ?? 0,
-      clients: (json['clients'] as num?)?.toInt() ?? 0,
-      total: (json['total'] as num?)?.toInt() ?? 0,
-      up: (json['up'] as num?)?.toInt() ?? 0,
-      down: (json['down'] as num?)?.toInt() ?? 0,
-      requires: json['requiresAuth'] as bool? ?? false,
-      allow: allow.whereType<String>().toList(growable: false),
-      dns: json['dns'] as String? ?? '',
-    );
-  }
-}
-
-bool _flag(Object? raw, [bool fallback = false]) {
-  if (raw is bool) return raw;
-  if (raw is num) return raw != 0;
-  if (raw is String) {
-    if (raw == 'true' || raw == '1') return true;
-    if (raw == 'false' || raw == '0') return false;
-  }
-  return fallback;
-}
-
-String _udpMode(Object? raw) {
-  final value = raw is String ? raw : 'normal';
-  return const ['normal', 'game', 'relay_only'].contains(value) ? value : 'normal';
-}
-
-bool udpRelayWarningNeeded(CoreState state) => state.consoleOn && !state.udpRelay;
-
 class CoreState {
   const CoreState({
     this.signedIn = false,
@@ -138,15 +77,6 @@ class CoreState {
     this.version = '',
     this.server,
     this.servers = const [],
-    this.udpRelay = true,
-    this.udpMode = 'normal',
-    this.batterySaver = false,
-    this.warp = false,
-    this.warpVia = 'direct',
-    this.udpPorts = const [],
-    this.console = 'playstation',
-    this.consoleOn = false,
-    this.gateway = const GatewayState(),
   });
 
   final bool signedIn;
@@ -173,15 +103,6 @@ class CoreState {
   final String version;
   final Place? server;
   final List<Place> servers;
-  final bool udpRelay;
-  final String udpMode;
-  final bool batterySaver;
-  final bool warp;
-  final String warpVia;
-  final List<String> udpPorts;
-  final String console;
-  final bool consoleOn;
-  final GatewayState gateway;
 
   factory CoreState.fromJson(Map<String, dynamic> json) {
     final rawServers = json['servers'] as List<dynamic>? ?? const [];
@@ -216,19 +137,6 @@ class CoreState {
       version: json['version'] as String? ?? '',
       server:
           rawServer is Map<String, dynamic> ? Place.fromJson(rawServer) : null,
-      udpRelay: _flag(json['udp_relay'], true),
-      udpMode: _udpMode(json['udpMode']),
-      batterySaver: _flag(json['battery_saver']),
-      warp: json['warp'] as bool? ?? false,
-      warpVia: json['warp_via'] as String? ?? 'direct',
-      udpPorts: (json['udp_ports'] as List<dynamic>? ?? const [])
-          .whereType<String>()
-          .toList(growable: false),
-      console: json['console'] as String? ?? 'playstation',
-      consoleOn: _flag(json['console_on']),
-      gateway: json['gateway'] is Map<String, dynamic>
-          ? GatewayState.fromJson(json['gateway'] as Map<String, dynamic>)
-          : const GatewayState(),
       servers: rawServers
           .whereType<Map<String, dynamic>>()
           .map(Place.fromJson)

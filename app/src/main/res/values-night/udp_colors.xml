@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <color name="udp_warning_stroke">#FFB300</color>
-    <color name="udp_warning_background">#26FFB300</color>
-    <color name="udp_warning_text">#FFD54F</color>
-</resources>

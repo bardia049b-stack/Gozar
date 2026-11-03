@@ -8,8 +8,7 @@ internal class RootPlan(
     private val suffix: String,
     private val table: Int,
     private val priority: Int,
-    private val bypassLan: Boolean,
-    private val allUdp: Boolean = false
+    private val bypassLan: Boolean
 ) {
     init {
         require(interfaceName.matches(Regex("[A-Za-z0-9_.-]{1,15}")))
@@ -23,11 +22,6 @@ internal class RootPlan(
 
     fun commands(): String {
         val chain = "GZR$suffix"
-        val udp = if (allUdp) {
-            """iptables -t mangle -A "${'$'}CHAIN" -p udp -j MARK --set-xmark "${'$'}MARK""""
-        } else {
-            """iptables -t mangle -A "${'$'}CHAIN" -p udp --dport 53 -j MARK --set-xmark "${'$'}MARK""""
-        }
         val lan = if (bypassLan) """
             iptables -t mangle -A "${'$'}CHAIN" -d 10.111.0.53/32 -p udp --dport 53 -j MARK --set-xmark "${'$'}MARK"
             iptables -t mangle -A "${'$'}CHAIN" -d 10.111.0.53/32 -p tcp --dport 53 -j MARK --set-xmark "${'$'}MARK"
@@ -81,7 +75,7 @@ internal class RootPlan(
             iptables -t mangle -A "${'$'}CHAIN" -m addrtype --dst-type LOCAL -j RETURN
             $lan
             iptables -t mangle -A "${'$'}CHAIN" -p tcp -j MARK --set-xmark "${'$'}MARK"
-            $udp
+            iptables -t mangle -A "${'$'}CHAIN" -p udp --dport 53 -j MARK --set-xmark "${'$'}MARK"
             iptables -t nat -I POSTROUTING 1 -m owner --uid-owner 0 -m mark --mark "${'$'}MARK" -o "${'$'}IFACE" -j SNAT --to-source 10.111.0.2
             nat=1
             iptables -t mangle -I OUTPUT 1 -m owner --uid-owner 0 -j "${'$'}CHAIN"
