@@ -145,6 +145,14 @@
                 </LinearLayout>
                 <ImageView style="@style/Gozar.Row.Chevron" android:tint="?attr/colorOnSurfaceVariant" />
             </LinearLayout>
+            <LinearLayout android:id="@+id/rowConsole" style="@style/Gozar.Row" android:layout_marginTop="@dimen/stack_gap" android:background="@drawable/settings_group_middle">
+                <ImageView android:id="@+id/imgConsole" style="@style/Gozar.Tile" android:background="@drawable/settings_frame_arch" android:backgroundTint="@color/settings_sage_container" android:contentDescription="@string/console_title" android:src="@drawable/ic_console_playstation" />
+                <LinearLayout style="@style/Gozar.Row.Text">
+                    <TextView style="@style/Gozar.Row.Title" android:text="@string/console_title" />
+                    <TextView android:id="@+id/tvConsole" style="@style/Gozar.Row.Subtitle" android:text="@string/console_desc" />
+                </LinearLayout>
+                <ImageView style="@style/Gozar.Row.Chevron" android:tint="?attr/colorOnSurfaceVariant" />
+            </LinearLayout>
             <LinearLayout android:id="@+id/rowChain" style="@style/Gozar.Row" android:layout_marginTop="@dimen/stack_gap" android:background="@drawable/settings_group_middle">
                 <ImageView style="@style/Gozar.Tile" android:background="@drawable/settings_frame_cloud" android:backgroundTint="@color/settings_lavender_container" android:contentDescription="@string/chain" android:src="@drawable/ic_link" app:tint="@color/settings_lavender_on_container" />
                 <LinearLayout style="@style/Gozar.Row.Text">

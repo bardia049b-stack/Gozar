@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:window_manager/window_manager.dart';
 
+import 'console_icons.dart';
 import 'core.dart';
 import 'strings.dart';
 import 'theme.dart';
@@ -1029,6 +1030,7 @@ class _GozarScreenState extends State<GozarScreen> with WindowListener {
     final title = switch (_settingsSection) {
       'account' => words.account,
       'connection' => words.connectionSettings,
+      'console' => words.consoleSettings,
       'display' => words.displaySettings,
       'general' => words.generalSettings,
       _ => words.settings,
@@ -1103,6 +1105,11 @@ class _GozarScreenState extends State<GozarScreen> with WindowListener {
             words.connectionSectionDetail,
             () => setState(() => _settingsSection = 'connection')),
         _settingTile(
+            Icons.sports_esports_outlined,
+            words.consoleSettings,
+            words.consoleSectionDetail,
+            () => setState(() => _settingsSection = 'console')),
+        _settingTile(
             Icons.palette_outlined,
             words.displaySettings,
             words.displaySectionDetail,
@@ -1175,6 +1182,9 @@ class _GozarScreenState extends State<GozarScreen> with WindowListener {
             words.desktopRoutingLimits, null),
       ]);
     }
+    if (_settingsSection == 'console') {
+      return _consoleSettings();
+    }
     return Column(children: [
       _settingTile(Icons.system_update_alt, words.updates, '',
           () => unawaited(_checkUpdates())),
@@ -1187,6 +1197,218 @@ class _GozarScreenState extends State<GozarScreen> with WindowListener {
       _settingTile(Icons.favorite_outline, words.donate, 'TON',
           () => unawaited(_showDonation())),
     ]);
+  }
+
+  Widget _consoleCard(String kind, String title, String steps) {
+    final selected = _state.console == kind;
+    final accent = kind == 'xbox'
+        ? const Color(0xFF107C10)
+        : const Color(0xFF003791);
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: _busy
+            ? null
+            : () => unawaited(_requestSetting('console', {'kind': kind})),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              kind == 'xbox'
+                  ? const XboxMark(size: 40)
+                  : const PlayStationMark(size: 40),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(title,
+                    style: Theme.of(context).textTheme.titleMedium),
+              ),
+              Icon(selected ? Icons.check_circle : Icons.circle_outlined,
+                  color: selected ? accent : soft),
+            ]),
+            const SizedBox(height: 10),
+            Text(steps,
+                style: TextStyle(
+                    color: muted(context), fontSize: 12, height: 1.55)),
+            const SizedBox(height: 8),
+            Row(children: [
+              Icon(Icons.info_outline, size: 14, color: soft),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(words.consoleUdpNotice,
+                    style: TextStyle(
+                        color: muted(context), fontSize: 11, height: 1.4)),
+              ),
+            ]),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  Widget _gatewayTile() {
+    final gateway = _state.gateway;
+    final ready = gateway.running;
+    final detail = ready
+        ? '${words.consoleGatewayOn} · ${gateway.endpoint}'
+        : _state.live
+            ? words.consoleGatewayOff
+            : words.consoleGatewayNeedsTunnel;
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: SwitchListTile(
+        secondary: Icon(Icons.router_outlined,
+            color: ready ? const Color(0xFF1E88E5) : soft),
+        title: Text(words.consoleGateway),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(detail),
+            if (ready)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  '${words.gatewayClients}: ${gateway.clients} · '
+                  '${_bytes(gateway.down + gateway.up)}',
+                  style: TextStyle(color: muted(context), fontSize: 12),
+                ),
+              ),
+          ],
+        ),
+        value: _state.consoleOn && ready,
+        onChanged: _busy || !_state.live
+            ? null
+            : (value) => unawaited(
+                _requestSetting('console', {'mode': value})),
+      ),
+    );
+  }
+
+  Widget _consoleSettings() {
+    final gateway = _state.gateway;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      _consoleCard('playstation', words.consolePlaystation,
+          words.playstationSteps),
+      _consoleCard('xbox', words.consoleXbox, words.xboxSteps),
+      const SizedBox(height: 4),
+      _gatewayTile(),
+      if (gateway.running) ...[
+        _settingTile(
+            Icons.link,
+            words.gatewayEndpoint,
+            gateway.endpoint,
+            () => unawaited(_copyText(gateway.endpoint, words.addressCopied))),
+        _settingTile(
+            Icons.key_outlined,
+            words.gatewayRotate,
+            '',
+            () => unawaited(_rotateGatewaySecret())),
+        _settingTile(
+            Icons.shield_outlined,
+            words.gatewayAllow,
+            gateway.allow.isEmpty
+                ? '${words.gatewayAllow}: —'
+                : gateway.allow.join(', '),
+            () => unawaited(_editGatewayAllow())),
+      ],
+      const SizedBox(height: 4),
+      Card(
+        margin: const EdgeInsets.only(bottom: 8),
+        child: SwitchListTile(
+          secondary: Icon(Icons.swap_vert, color: soft),
+          title: Text(words.udpRelay),
+          subtitle: Text(words.udpRelayDetail),
+          value: _state.udpRelay,
+          onChanged: _busy || _state.live || _state.connecting
+              ? null
+              : (value) => unawaited(_requestSetting('udp', {'relay': value})),
+        ),
+      ),
+      _settingTile(
+          Icons.tune,
+          words.udpPorts,
+          _state.udpPorts.isEmpty ? words.udpPortsHint : _state.udpPorts.join(', '),
+          _state.live ? null : () => unawaited(_editUDPPorts())),
+    ]);
+  }
+
+  Future<void> _copyText(String value, String note) async {
+    if (value.isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: value));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(note)));
+  }
+
+  Future<void> _rotateGatewaySecret() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(words.gatewayRotate),
+        content: Text(words.consoleGatewayDetail),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(words.cancel)),
+          FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(words.save)),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    final ok = await _requestSetting('gateway', {'rotate': true});
+    if (ok && mounted) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(words.gatewayRotated)));
+    }
+  }
+
+  Future<void> _editGatewayAllow() async {
+    final value = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => _TextListDialog(
+        title: words.gatewayAllow,
+        hint: words.gatewayAllowHint,
+        initial: _state.gateway.allow.join('\n'),
+        words: words,
+      ),
+    );
+    if (value == null) return;
+    final allow = value
+        .split(RegExp(r'[\n,]'))
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .toList();
+    await _requestSetting('gateway', {'allow': allow});
+  }
+
+  Future<void> _editUDPPorts() async {
+    final value = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => _TextListDialog(
+        title: words.udpPorts,
+        hint: words.udpPortsHint,
+        initial: _state.udpPorts.join(', '),
+        words: words,
+      ),
+    );
+    if (value == null) return;
+    final ports = value
+        .split(RegExp(r'[\n,]'))
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .toList();
+    await _requestSetting('udp', {'ports': ports});
+  }
+
+  String _bytes(int value) {
+    if (value < 1024) return '$value B';
+    if (value < 1024 * 1024) return '${(value / 1024).toStringAsFixed(1)} KB';
+    if (value < 1024 * 1024 * 1024) {
+      return '${(value / (1024 * 1024)).toStringAsFixed(1)} MB';
+    }
+    return '${(value / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
   }
 
   @override
@@ -1977,3 +2199,52 @@ String _size(int value) {
 }
 
 String _speed(int bytes) => '${_size(math.max(0, bytes))}/s';
+
+class _TextListDialog extends StatefulWidget {
+  const _TextListDialog(
+      {required this.title,
+      required this.hint,
+      required this.initial,
+      required this.words});
+
+  final String title;
+  final String hint;
+  final String initial;
+  final Words words;
+
+  @override
+  State<_TextListDialog> createState() => _TextListDialogState();
+}
+
+class _TextListDialogState extends State<_TextListDialog> {
+  late final TextEditingController field =
+      TextEditingController(text: widget.initial);
+
+  @override
+  void dispose() {
+    field.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+        title: Text(widget.title),
+        content: SizedBox(
+          width: 380,
+          child: TextField(
+            controller: field,
+            minLines: 3,
+            maxLines: 6,
+            decoration: InputDecoration(hintText: widget.hint),
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(widget.words.cancel)),
+          FilledButton(
+              onPressed: () => Navigator.pop(context, field.text),
+              child: Text(widget.words.save)),
+        ],
+      );
+}

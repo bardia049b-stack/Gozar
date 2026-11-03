@@ -30,14 +30,15 @@ type resolver interface {
 }
 
 type Engine struct {
-	stack  *stack.Stack
-	device *tundev.Device
-	config tundev.Config
-	dial   Dialer
-	dns    resolver
-	down   atomic.Int64
-	up     atomic.Int64
-	once   sync.Once
+	stack   *stack.Stack
+	device  *tundev.Device
+	config  tundev.Config
+	dial    Dialer
+	udpDial DatagramDialer
+	dns     resolver
+	down    atomic.Int64
+	up      atomic.Int64
+	once    sync.Once
 }
 
 func Start(proxyHost string, dial Dialer, protect []netip.Addr) (*Engine, error) {
@@ -140,14 +141,38 @@ func (e *Engine) handleTCP(request *tcp.ForwarderRequest) {
 func (e *Engine) listenUDP(created *stack.Stack) {
 	forwarder := udp.NewForwarder(created, e.handleUDP)
 	created.SetTransportProtocolHandler(udp.ProtocolNumber, func(id stack.TransportEndpointID, packet *stack.PacketBuffer) bool {
-		if id.LocalPort != 53 {
+		if id.LocalPort != 53 && !e.relayable(int(id.LocalPort)) {
 			return false
 		}
 		return forwarder.HandlePacket(id, packet)
 	})
 }
 
+// SetUDPDialer installs the datagram tunnel used for every UDP flow that is not DNS.
+// When it is nil, or the destination port is not carried by the relay, the stack
+// answers with ICMP port unreachable so applications fail over to TCP immediately.
+func (e *Engine) SetUDPDialer(dial DatagramDialer) {
+	e.udpDial = dial
+	resetUDPDenials()
+}
+
+func (e *Engine) UDPEnabled() bool {
+	return e.udpDial != nil
+}
+
+func (e *Engine) relayable(port int) bool {
+	return e.udpDial != nil && udpAllowed(port)
+}
+
 func (e *Engine) handleUDP(request *udp.ForwarderRequest) {
+	id := request.ID()
+	if id.LocalPort != 53 {
+		if !e.relayable(int(id.LocalPort)) {
+			return
+		}
+		go e.handleDataUDP(forwardAdapter{request: request, id: id})
+		return
+	}
 	go func() {
 		queue := &waiter.Queue{}
 		endpoint, terr := request.CreateEndpoint(queue)
@@ -234,6 +259,10 @@ func (e *Engine) relayDuplex(local, remote io.ReadWriteCloser) {
 	<-done
 	local.Close()
 	remote.Close()
+}
+
+func (e *Engine) Resolver() interface{ Resolve([]byte) ([]byte, error) } {
+	return e.dns
 }
 
 func (e *Engine) Counters() (int64, int64) {

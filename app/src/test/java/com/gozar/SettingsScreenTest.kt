@@ -116,6 +116,8 @@ class SettingsScreenTest {
             assertTrue(activity.findViewById<View>(R.id.rowRouting).isClickable)
             assertTrue(activity.findViewById<View>(R.id.rowApps).isClickable)
             assertTrue(activity.findViewById<View>(R.id.rowChain).isClickable)
+            assertTrue(activity.findViewById<View>(R.id.rowConsole).isClickable)
+            assertEquals(View.VISIBLE, activity.findViewById<View>(R.id.settingsConnection).visibility)
             assertTrue(activity.findViewById<View>(R.id.rowRoot).isClickable)
             activity.findViewById<View>(R.id.btnBack).performClick()
             activity.findViewById<View>(R.id.sectionAppearanceButton).performClick()

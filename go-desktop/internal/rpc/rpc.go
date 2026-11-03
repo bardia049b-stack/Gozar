@@ -169,6 +169,62 @@ func (s *Server) handle(request Request) Response {
 		if err := s.app.SetMode(body.Tunnel); err != nil {
 			response.Error = err.Error()
 		}
+	case "udp":
+		var body struct {
+			Relay *bool    `json:"relay"`
+			Ports []string `json:"ports"`
+		}
+		json.Unmarshal(request.Params, &body)
+		if body.Ports != nil {
+			if err := s.app.SetExtraUDPPorts(body.Ports); err != nil {
+				response.Error = err.Error()
+			}
+		}
+		if body.Relay != nil {
+			if err := s.app.SetUDPRelay(*body.Relay); err != nil {
+				response.Error = err.Error()
+			}
+		}
+	case "console":
+		var body struct {
+			Mode *bool  `json:"mode"`
+			Kind string `json:"kind"`
+		}
+		json.Unmarshal(request.Params, &body)
+		if body.Kind != "" {
+			if err := s.app.SetConsoleKind(body.Kind); err != nil {
+				response.Error = err.Error()
+			}
+		}
+		if body.Mode != nil {
+			if err := s.app.SetConsoleMode(*body.Mode); err != nil {
+				response.Error = err.Error()
+			}
+		}
+	case "gateway":
+		var body struct {
+			Port   *int     `json:"port"`
+			Allow  []string `json:"allow"`
+			Rotate bool     `json:"rotate"`
+			Stats  bool     `json:"stats"`
+		}
+		json.Unmarshal(request.Params, &body)
+		if body.Allow != nil {
+			if err := s.app.SetBridgeAllow(body.Allow); err != nil {
+				response.Error = err.Error()
+			}
+		}
+		if body.Port != nil {
+			if err := s.app.SetBridgePort(*body.Port); err != nil {
+				response.Error = err.Error()
+			}
+		}
+		if body.Rotate {
+			if err := s.app.RotateBridgeSecret(); err != nil {
+				response.Error = err.Error()
+			}
+		}
+		response.Reply = s.app.BridgeState()
 	case "quit":
 		s.app.Close()
 		response.State = statePointer(s.app.State())

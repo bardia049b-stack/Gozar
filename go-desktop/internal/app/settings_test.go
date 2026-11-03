@@ -70,7 +70,10 @@ func TestOldInactiveNetworkFieldsDoNotTurnOnDuringMigration(t *testing.T) {
 		t.Fatal(err)
 	}
 	loaded := config.Load()
-	if loaded.Language != "fa" || loaded.BypassLAN || len(loaded.Chain) != 0 || loaded.SettingsVersion != 1 {
+	if loaded.Language != "fa" || loaded.BypassLAN || len(loaded.Chain) != 0 || loaded.SettingsVersion != 2 {
 		t.Fatalf("unsafe migration: %#v", loaded)
+	}
+	if !loaded.UDPRelay {
+		t.Fatal("the datagram relay must stay on for upgraded profiles")
 	}
 }

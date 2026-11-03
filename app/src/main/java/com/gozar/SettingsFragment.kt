@@ -11,6 +11,7 @@ import androidx.core.widget.NestedScrollView
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
 import android.text.BidiFormatter
 import android.text.TextDirectionHeuristics
@@ -82,6 +83,7 @@ class SettingsFragment : Fragment() {
         find<View>(R.id.rowGithub).setOnClickListener { openProject() }
         find<View>(R.id.rowAbout).setOnClickListener { showLegalNotice() }
         find<View>(R.id.rowRouting).setOnClickListener { changeProtection { pickRouting() } }
+        find<View>(R.id.rowConsole).setOnClickListener { pickConsole() }
         find<View>(R.id.rowChain).setOnClickListener { changeProtection { editChain() } }
         find<View>(R.id.rowApps).setOnClickListener { changeProtection { pickApps() } }
         find<View>(R.id.rowRoot).setOnClickListener { pickRoot() }
@@ -225,6 +227,15 @@ class SettingsFragment : Fragment() {
                 }
                 val hops = FoxUpstream.parse(Store.chain(context)).size
                 find<TextView>(R.id.tvChain).text = if (hops > 0) getString(R.string.chain_on, hops) else getString(R.string.chain_off)
+                find<TextView>(R.id.tvConsole).text = when (Store.consoleKind(context)) {
+                    "xbox" -> getString(R.string.console_selected, getString(R.string.console_xbox))
+                    "playstation" -> getString(R.string.console_selected, getString(R.string.console_playstation))
+                    else -> getString(R.string.console_desc)
+                }
+                find<ImageView>(R.id.imgConsole).setImageResource(
+                    if (Store.consoleKind(context) == "xbox") R.drawable.ic_console_xbox
+                    else R.drawable.ic_console_playstation
+                )
                 find<TextView>(R.id.tvRoot).text = getString(when {
                     rootChecking -> R.string.root_checking
                     FoxVpnService.rootActive -> R.string.root_active
@@ -392,6 +403,47 @@ class SettingsFragment : Fragment() {
             }
             .setNeutralButton(R.string.routing_list) { _, _ -> editBypass() }
             .setPositiveButton(R.string.routing_save) { _, _ -> paint() }
+            .show()
+    }
+
+    private fun pickConsole() {
+        val context = requireContext()
+        val current = Store.consoleKind(context)
+        val kinds = arrayOf("none", "playstation", "xbox")
+        val labels = arrayOf(
+            getString(R.string.console_none),
+            getString(R.string.console_playstation),
+            getString(R.string.console_xbox)
+        )
+        var chosen = kinds.indexOf(current).coerceAtLeast(0)
+        MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.console_dialog_title)
+            .setSingleChoiceItems(labels, chosen) { _, which -> chosen = which }
+            .setPositiveButton(R.string.routing_save) { _, _ ->
+                val kind = kinds[chosen]
+                Store.setConsoleKind(context, kind)
+                if (kind != "none") Store.setBypassLan(context, true)
+                showConsoleGuide(kind)
+                paint()
+            }
+            .setNeutralButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun showConsoleGuide(kind: String) {
+        val context = requireContext()
+        if (kind == "none") return
+        val steps = if (kind == "xbox") {
+            getString(R.string.console_xbox_steps)
+        } else {
+            getString(R.string.console_ps_steps)
+        }
+        MaterialAlertDialogBuilder(context)
+            .setTitle(
+                if (kind == "xbox") R.string.console_xbox else R.string.console_playstation
+            )
+            .setMessage("$steps\n\n${getString(R.string.console_note)}\n\n${getString(R.string.console_lan_note)}")
+            .setPositiveButton(R.string.close, null)
             .show()
     }
 

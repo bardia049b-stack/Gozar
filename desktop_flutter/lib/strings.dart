@@ -188,4 +188,76 @@ class Words {
   String get copyAddress => pick('کپی نشانی', 'Copy address');
   String get addressCopied => pick('نشانی کپی شد.', 'Address copied.');
   String get sourceCode => pick('کد منبع', 'Source code');
+
+  String get consoleSettings => pick('کنسول و گیمینگ', 'Console and gaming');
+  String get consoleSectionDetail => pick(
+      'درگاه اتصال کنسول، UDP و پروفایل Xbox / PlayStation',
+      'Console gateway, datagram relay and Xbox / PlayStation profile');
+  String get consoleProfile => pick('پروفایل کنسول', 'Console profile');
+  String get consoleProfileDetail => pick(
+      'تنظیمات پیشنهادی مسیر و DNS با توجه به نوع کنسول.',
+      'Routing and DNS defaults tuned for the selected console.');
+  String get consoleGateway => pick('درگاه کنسول', 'Console gateway');
+  String get consoleGatewayDetail => pick(
+      'کنسول را با همین رایانه به اینترنت وصل می‌کند.',
+      'Connects the console to the internet through this computer.');
+  String get consoleGatewayOn => pick('درگاه فعال است', 'Gateway is running');
+  String get consoleGatewayOff => pick('درگاه خاموش است', 'Gateway is off');
+  String get consoleGatewayNeedsTunnel => pick(
+      'برای روشن‌کردن درگاه ابتدا وصل شوید.',
+      'Connect first before starting the gateway.');
+  String get gatewayEndpoint => pick('نشانی درگاه', 'Gateway endpoint');
+  String get gatewayLogin => pick('نام کاربری', 'Username');
+  String get gatewayPassword => pick('گذرواژه', 'Password');
+  String get gatewayRotate => pick('ساخت گذرواژهٔ تازه', 'Rotate password');
+  String get gatewayRotated => pick(
+      'گذرواژهٔ تازه ساخته شد؛ گذرواژهٔ قبلی دیگر کار نمی‌کند.',
+      'A new password was created. The old one no longer works.');
+  String get gatewayClients =>
+      pick('کنسول‌های متصل', 'Connected consoles');
+  String get gatewayTraffic =>
+      pick('ترافیک درگاه', 'Gateway traffic');
+  String get gatewayAllow => pick('شبکهٔ مجاز', 'Allowed network');
+  String get gatewayAllowHint => pick(
+      'فقط نشانی‌های همین فهرست می‌توانند از درگاه استفاده کنند.',
+      'Only addresses in this list may use the gateway.');
+  String get udpRelay => pick('انتقال UDP', 'Datagram relay');
+  String get udpRelayDetail => pick(
+      'بازی‌ها، تماس صوتی، QUIC و DNS را روی همان تونل می‌برد.',
+      'Carries games, voice calls, QUIC and DNS over the same tunnel.');
+  String get udpPorts => pick('درگاه‌های اضافی UDP', 'Extra datagram ports');
+  String get udpPortsHint => pick(
+      'فهرست درگاه‌ها با کاما؛ برای نمونه 3074,3479,9295',
+      'Comma-separated ports, for example 3074,3479,9295');
+  String get consoleSteps => pick('راهنمای کنسول', 'Console guide');
+  String get consolePlaystation => 'PlayStation 5';
+  String get consoleXbox => 'Xbox Series X|S';
+  String get playstationSteps => pick(
+      '1) Settings → Network → Settings → Set Up Internet Connection.\n'
+          '2) انتخاب Wi-Fi یا LAN → Advanced Settings.\n'
+          '3) Proxy Server را روی Use بگذارید و نشانی درگاه و درگاه را وارد کنید.\n'
+          '4) DNS Settings را روی Manual بگذارید و DNS را برابر نشانی درگاه قرار دهید.\n'
+          '5) Test Internet Connection را بزنید.',
+      '1) Settings → Network → Settings → Set Up Internet Connection.\n'
+          '2) Pick Wi-Fi or LAN → Advanced Settings.\n'
+          '3) Set Proxy Server to Use and enter the gateway address and port.\n'
+          '4) Set DNS Settings to Manual and use the gateway address as DNS.\n'
+          '5) Run Test Internet Connection.');
+  String get xboxSteps => pick(
+      '1) Settings → General → Network settings → Advanced settings.\n'
+          '2) DNS settings → Manual و نشانی درگاه را وارد کنید.\n'
+          '3) Xbox پراکسی ندارد؛ IP و DNS را دستی روی همین رایانه تنظیم کنید\n'
+          '   و رایانه را به‌عنوان درگاه/شبکهٔ مشترک با کنسول شریک کنید.\n'
+          '4) Test network connection را بزنید.',
+      '1) Settings → General → Network settings → Advanced settings.\n'
+          '2) DNS settings → Manual and enter the gateway address.\n'
+          '3) Xbox has no proxy field; point the console DNS at this computer\n'
+          '   and share the connection so the computer acts as its gateway.\n'
+          '4) Run Test network connection.');
+  String get consoleUdpNotice => pick(
+      'کنسول‌ها فقط TCP را از پراکسی می‌فرستند؛ UDP بازی از درگاه رایانه عبور می‌کند.',
+      'Consoles send only TCP through a proxy; game datagrams flow through the computer gateway.');
+  String get gatewayStatistics => pick('آمار', 'Statistics');
+  String get copyAll => pick('کپی همه', 'Copy all');
+  String get connectionDetails => pick('جزئیات اتصال', 'Connection details');
 }

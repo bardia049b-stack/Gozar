@@ -28,6 +28,8 @@ object Store {
     fun setBypassList(c: Context, v: String) = p(c).edit().putString("bypass_list", v).apply()
     fun chain(c: Context) = p(c).getString("chain", "") ?: ""
     fun setChain(c: Context, v: String) = p(c).edit().putString("chain", v).apply()
+    fun consoleKind(c: Context) = p(c).getString("console_kind", "none") ?: "none"
+    fun setConsoleKind(c: Context, v: String) = p(c).edit().putString("console_kind", v).apply()
     fun rootRouting(c: Context) = p(c).getBoolean("root_routing", false)
     fun setRootRouting(c: Context, v: Boolean) = p(c).edit().putBoolean("root_routing", v).apply()
     fun dnsProfile(c: Context) = p(c).getString("dns_profile", DnsPolicy.AUTO) ?: DnsPolicy.AUTO

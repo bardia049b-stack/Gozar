@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/bridge"
 	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/config"
 	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/engine"
 	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/fxa"
@@ -53,6 +54,11 @@ type State struct {
 	Remaining  int64            `json:"remaining"`
 	Reset      string           `json:"reset"`
 	Port       int              `json:"port"`
+	UDPRelay   bool             `json:"udp_relay"`
+	UDPPorts   []string         `json:"udp_ports"`
+	Console    string           `json:"console"`
+	ConsoleOn  bool             `json:"console_on"`
+	Gateway    bridge.Stats     `json:"gateway"`
 	Device     string           `json:"device"`
 	Version    string           `json:"version"`
 	Admin      bool             `json:"admin"`
@@ -77,6 +83,7 @@ type App struct {
 	unblockFor      string
 	engine          *engine.Engine
 	transport       *tunnel.Manager
+	bridge          *bridge.Server
 	stage           string
 	fault           string
 	live            bool
@@ -126,6 +133,10 @@ func (a *App) State() State {
 		Fault:      a.fault,
 		NeedsAdmin: a.needAdmin,
 		Port:       a.cfg.Port,
+		UDPRelay:   a.cfg.UDPRelay,
+		UDPPorts:   append([]string{}, a.cfg.ExtraUDPPorts...),
+		Console:    a.cfg.ConsoleKind,
+		ConsoleOn:  a.cfg.ConsoleMode,
 		Version:    a.version,
 		Admin:      a.admin,
 		RateDown:   a.rateDown.Load(),
@@ -158,6 +169,17 @@ func (a *App) State() State {
 		state.Down, state.Up = a.engine.Counters()
 		state.Device = a.engine.Device()
 	}
+	if a.bridge != nil {
+		state.Gateway = a.bridge.Stats()
+	}
+	if state.Gateway.Port == 0 {
+		state.Gateway.Port = a.cfg.BridgePort
+	}
+	if state.Gateway.Address == "" {
+		state.Gateway.Address = bridgeAddress(nil)
+	}
+	state.Gateway.Requires = a.cfg.BridgePass != ""
+	state.Gateway.Allow = append([]string{}, a.cfg.BridgeAllow...)
 	return state
 }
 
@@ -738,6 +760,29 @@ func (a *App) connect() error {
 		return err
 	}
 	a.mu.Lock()
+	udpEnabled := a.cfg.UDPRelay
+	extraPorts := append([]string(nil), a.cfg.ExtraUDPPorts...)
+	consoleMode := a.cfg.ConsoleMode
+	a.mu.Unlock()
+	engine.SetRelayPorts(engine.NormalizePorts(extraPorts))
+	if udpEnabled && len(hops) == 0 {
+		udpTarget := target
+		created.SetUDPDialer(func(host string, remotePort int) (engine.Datagram, error) {
+			current, err := a.currentPass()
+			if err != nil {
+				return nil, err
+			}
+			session, err := tunnel.OpenUDP(udpTarget, host, remotePort, current, 10*time.Second)
+			if err != nil {
+				if errors.Is(err, tunnel.ErrUDPRefused) || errors.Is(err, tunnel.ErrUDPUnsupported) {
+					return nil, engine.ErrUDPDenied
+				}
+				return nil, err
+			}
+			return session, nil
+		})
+	}
+	a.mu.Lock()
 	a.engine = created
 	a.transport = transport
 	for _, place := range servers {
@@ -757,6 +802,13 @@ func (a *App) connect() error {
 	a.stage = ""
 	a.mu.Unlock()
 	go a.watchTunnel(created)
+	if consoleMode {
+		if err := a.startBridge(); err != nil {
+			a.mu.Lock()
+			a.fault = "The console gateway could not start: " + err.Error()
+			a.mu.Unlock()
+		}
+	}
 	a.startRenewal()
 	if ip, err := transport.Probe(pass.Token, 12*time.Second); err == nil {
 		a.mu.Lock()
@@ -794,10 +846,15 @@ func (a *App) teardown() {
 	a.renewCancel = nil
 	a.engine = nil
 	a.live = false
+	gateway := a.bridge
+	a.bridge = nil
 	a.activeServer = fxa.Location{}
 	a.exit = ""
 	a.since = 0
 	a.mu.Unlock()
+	if gateway != nil {
+		gateway.Stop()
+	}
 	if cancel != nil {
 		cancel()
 	}

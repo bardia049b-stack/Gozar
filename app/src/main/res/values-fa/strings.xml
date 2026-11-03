@@ -435,4 +435,16 @@ AGPL-3.0-or-later</string>
     <string name="fox_usage_pending">اطلاعات مصرف در دسترس نیست</string>
     <string name="settings_group_protection">امنیت و اتصال</string>
     <string name="settings_group_app">ظاهر و برنامه</string>
+
+    <string name="console_title">کنسول</string>
+    <string name="console_desc">پروفایل Xbox و PlayStation همراه با مسیر دقیق منوها</string>
+    <string name="console_dialog_title">پروفایل کنسول</string>
+    <string name="console_playstation">PlayStation 5</string>
+    <string name="console_xbox">Xbox Series X|S</string>
+    <string name="console_none">بدون کنسول</string>
+    <string name="console_ps_steps">Settings ← Network ← Settings ← Set Up Internet Connection، سپس Wi-Fi یا LAN را انتخاب کنید و Advanced Settings را باز کنید. Proxy Server را روی Use با نشانی و درگاه رایانه بگذارید و DNS Settings را Manual با همان نشانی کنید. در پایان Test Internet Connection را بزنید.</string>
+    <string name="console_xbox_steps">Settings ← General ← Network settings ← Advanced settings. ایکس‌باکس فیلد پراکسی ندارد: DNS settings را Manual با نشانی رایانه کنید و اجازه دهید رایانه اتصال را به اشتراک بگذارد. در پایان Test network connection را بزنید.</string>
+    <string name="console_note">کنسول از پراکسی فقط TCP می‌فرستد؛ دیتاگرام بازی‌ها از درگاه رایانه عبور می‌کند. حالت کنسول را در نسخهٔ دسکتاپ روشن کنید و کنسول را به نشانی آن وصل کنید.</string>
+    <string name="console_selected">پروفایل کنسول: %1$s</string>
+    <string name="console_lan_note">عبور از شبکهٔ محلی روشن می‌شود تا استریم محلی و درگاه کنسول کار کند.</string>
 </resources>

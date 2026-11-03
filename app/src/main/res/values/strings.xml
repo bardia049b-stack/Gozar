@@ -435,4 +435,16 @@ AGPL-3.0-or-later</string>
     <string name="fox_usage_pending">Usage information unavailable</string>
     <string name="settings_group_protection">Protection &amp; connection</string>
     <string name="settings_group_app">Appearance &amp; app</string>
+
+    <string name="console_title">Console</string>
+    <string name="console_desc">Xbox and PlayStation profiles with the exact menu paths</string>
+    <string name="console_dialog_title">Console profile</string>
+    <string name="console_playstation">PlayStation 5</string>
+    <string name="console_xbox">Xbox Series X|S</string>
+    <string name="console_none">No console</string>
+    <string name="console_ps_steps">Settings → Network → Settings → Set Up Internet Connection, then pick Wi-Fi or LAN and open Advanced Settings. Proxy Server must be set to Use with the gateway address and port, and DNS Settings to Manual with the same address. Test Internet Connection at the end.</string>
+    <string name="console_xbox_steps">Settings → General → Network settings → Advanced settings. Xbox has no proxy field: set DNS settings to Manual with the gateway address and let the computer share its connection. Test network connection at the end.</string>
+    <string name="console_note">A console sends only TCP through a proxy; game datagrams travel through the computer gateway. Turn on Console mode on the desktop app and point the console at its address.</string>
+    <string name="console_selected">Console profile: %1$s</string>
+    <string name="console_lan_note">LAN bypass is enabled so local streaming and the console gateway keep working.</string>
 </resources>

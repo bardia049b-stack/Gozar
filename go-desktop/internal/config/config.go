@@ -46,6 +46,14 @@ type Config struct {
 	Bypass          []string  `json:"bypass"`
 	Chain           []string  `json:"chain"`
 	Port            int       `json:"port"`
+	UDPRelay        bool      `json:"udp_relay"`
+	ExtraUDPPorts   []string  `json:"extra_udp_ports,omitempty"`
+	ConsoleMode     bool      `json:"console_mode"`
+	ConsoleKind     string    `json:"console_kind,omitempty"`
+	BridgePort      int       `json:"bridge_port"`
+	BridgeUser      string    `json:"bridge_user,omitempty"`
+	BridgePass      string    `json:"bridge_pass,omitempty"`
+	BridgeAllow     []string  `json:"bridge_allow,omitempty"`
 }
 
 func Dir() string {
@@ -60,8 +68,10 @@ func Dir() string {
 
 func path() string { return filepath.Join(Dir(), "config.json") }
 
+const schema = 2
+
 func defaults() Config {
-	return Config{FullTunnel: true, Theme: "system", SettingsVersion: 1, Port: 10810}
+	return Config{FullTunnel: true, Theme: "system", SettingsVersion: schema, Port: 10810, UDPRelay: true, BridgePort: 8899, BridgeUser: "gozar", ConsoleKind: "playstation"}
 }
 
 func (c Config) ActiveAccount() Account {
@@ -156,7 +166,16 @@ func Load() Config {
 		loaded.Chain = nil
 		loaded.Bypass = nil
 		loaded.BypassLAN = false
-		loaded.SettingsVersion = 1
+	}
+	if loaded.SettingsVersion < 2 {
+		loaded.UDPRelay = true
+	}
+	loaded.SettingsVersion = schema
+	if loaded.BridgePort == 0 {
+		loaded.BridgePort = fresh.BridgePort
+	}
+	if loaded.BridgeUser == "" {
+		loaded.BridgeUser = fresh.BridgeUser
 	}
 	if loaded.Theme != "light" && loaded.Theme != "dark" {
 		loaded.Theme = "system"
@@ -166,6 +185,7 @@ func Load() Config {
 
 func Save(current Config) error {
 	final := current.WithCurrentAccount()
+	final.SettingsVersion = schema
 	final.sealTokens()
 	data, err := json.MarshalIndent(final, "", "  ")
 	if err != nil {

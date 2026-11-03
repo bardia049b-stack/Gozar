@@ -265,3 +265,80 @@ func TestTCPPort53ForAnyDestination(t *testing.T) {
 		t.Fatalf("wanted 2 queries, got %d", r.queries.Load())
 	}
 }
+
+type echoDatagram struct {
+	outbox chan []byte
+	done   chan struct{}
+	once   atomic.Bool
+}
+
+func (e *echoDatagram) Send(payload []byte) error {
+	select {
+	case e.outbox <- append([]byte("echo:"), payload...):
+		return nil
+	case <-e.done:
+		return errors.New("closed")
+	}
+}
+
+func (e *echoDatagram) Receive(ctx context.Context) ([]byte, error) {
+	select {
+	case payload := <-e.outbox:
+		return payload, nil
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-e.done:
+		return nil, errors.New("closed")
+	}
+}
+
+func (e *echoDatagram) Close() {
+	if e.once.CompareAndSwap(false, true) {
+		close(e.done)
+	}
+}
+
+func TestUDTRelayReachesTheDatagramTunnel(t *testing.T) {
+	resetUDPDenials()
+	SetRelayPorts(nil)
+	r := &mockResolver{}
+	client, e, _ := virtualNetwork(t, r)
+	hosts := make(chan string, 4)
+	e.SetUDPDialer(func(host string, port int) (Datagram, error) {
+		if port != 443 {
+			t.Errorf("unexpected destination port %d", port)
+		}
+		hosts <- host
+		return &echoDatagram{outbox: make(chan []byte, 8), done: make(chan struct{})}, nil
+	})
+	remote := &tcpip.FullAddress{NIC: 1, Addr: tcpip.AddrFrom4([4]byte{142, 250, 80, 1}), Port: 443}
+	conn, err := gonet.DialUDP(client, nil, remote, ipv4.ProtocolNumber)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	_ = conn.SetDeadline(time.Now().Add(4 * time.Second))
+	if _, err := conn.Write([]byte("quic-initial")); err != nil {
+		t.Fatal(err)
+	}
+	reply := make([]byte, 512)
+	count, err := conn.Read(reply)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(reply[:count]) != "echo:quic-initial" {
+		t.Fatalf("unexpected reply %q", reply[:count])
+	}
+	select {
+	case host := <-hosts:
+		if host != "142.250.80.1" {
+			t.Fatalf("tunnel opened to %s", host)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("the tunnel was never opened")
+	}
+	up, down := e.Counters()
+	if up == 0 || down == 0 {
+		t.Fatalf("counters up=%d down=%d", up, down)
+	}
+}
