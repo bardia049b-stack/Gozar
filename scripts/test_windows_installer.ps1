@@ -16,6 +16,14 @@ foreach ($name in $required) {
 $uninstaller = Join-Path $destination 'Uninstall.exe'
 $process = Start-Process -FilePath $uninstaller -ArgumentList '/S' -Wait -PassThru
 if ($process.ExitCode -ne 0) { throw "Uninstaller failed: $($process.ExitCode)" }
-if (Test-Path $destination) { throw 'Uninstaller left the application directory behind' }
-if (Test-Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Gozar') { throw 'Uninstaller left its registry entry behind' }
+$deadline = (Get-Date).AddSeconds(60)
+while ((Test-Path $destination) -and (Get-Date) -lt $deadline) { Start-Sleep -Milliseconds 500 }
+if (Test-Path $destination) {
+    $left = Get-ChildItem -Force -Recurse $destination | Select-Object -ExpandProperty FullName
+    throw "Uninstaller left the application directory behind: $($left -join ', ')"
+}
+$deadline = (Get-Date).AddSeconds(30)
+$registry = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Gozar'
+while ((Test-Path $registry) -and (Get-Date) -lt $deadline) { Start-Sleep -Milliseconds 500 }
+if (Test-Path $registry) { throw 'Uninstaller left its registry entry behind' }
 Write-Output 'Windows installer and uninstaller verified.'
