@@ -2,89 +2,87 @@ import base64
 import sys
 from urllib.parse import urlencode
 
-SECURITY = r"""# Gozar 1.10.5 — a real WARP tunnel, every port, verified end to end
+SECURITY = r"""# Gozar 1.10.6 — UDP that games can actually use, on every platform
 
-This release adds the path the previous one could not offer: Gozar now registers
-its own Cloudflare WARP device and carries full IP traffic through a connect-ip
-tunnel (RFC 9484). It is added next to the existing Mozilla relay, not instead of
-it: the relay path is still there, still works, and is still what you get when the
-new path is off.
+This release fixes the reason online games kept failing. Gozar now decides, per
+datagram, whether traffic should go through Cloudflare WARP, stay direct, or
+spend your Mozilla quota — and it does the same on Android, Windows, Linux and
+macOS.
 
-## What is new
+## Three UDP modes
 
-**A real WARP tunnel.** Gozar registers a free WARP device with a P-256 key,
-dials `162.159.198.2:443` over QUIC with TLS 1.3 and a self-signed client
-certificate pinned to the registered peer key, and asks for an IP flow with
-`cf-connect-ip`. WARP assigns `172.16.0.2` and a `2606:4700:110:…` address, and
-from that moment every IP packet is carried in HTTP datagrams.
+A new **UDP Mode** section sits in Settings → Connection, under a single
+**Console / Game Mode** master switch.
 
-**Every port, in both directions.** This is the point of the change. The relay
-path carries datagrams on a handful of ports (80, 443, 3478, 8080, 8443 as
-measured) and refuses the rest, which is why game traffic and console voice chat
-kept failing. A connect-ip tunnel carries packets, not flows, so the port set
-stops existing. The desktop engine and the console gateway both dial through the
-new stack, and UDP is no longer filtered by a list.
+- **Off (default).** Mozilla TCP only. Lowest data and battery use. Nothing
+  changes for ordinary browsing.
+- **Normal.** Web and video calls use the Mozilla relay; game traffic uses WARP.
+  This spends the least WARP quota while still opening your NAT.
+- **Game Mode.** Every UDP port goes through WARP, including ports no relay
+  would carry. This gives the best NAT type and ping on Xbox and PS5, and uses
+  more WARP data.
+- **Mozilla only (emergency).** WARP stays closed and UDP uses just Mozilla's
+  allowed ports. Use this when WARP itself is blocked. Browsing and calls keep
+  working; online games may not.
 
-**Two carriers, one tunnel.** Direct QUIC is the default because it is fastest
-(handshake in well under a second). The second carrier wraps the same tunnel in a
-TCP CONNECT to the Mozilla relay, for networks where UDP 443 is filtered. You can
-switch between them in Settings; the tunnel code is identical.
+## Game, browse and keep your Firefox quota
 
-**An honest MTU.** The netstack runs at 1180 bytes. The limit was measured
-against the live service, not guessed: 1184 works, 1188 stalls, and the failure
-looks exactly like a slow site because the certificate chain is the first burst
-that has to be split. Fixed at the safe value.
+The three paths run at the same time. A console can play on WARP while a browser
+on the same machine uses the Mozilla relay, and Iranian sites still connect
+directly instead of taking a round trip abroad. On Android this lives in the VPN
+service's dial path; on the desktop it lives in the engine, with a side WARP
+tunnel that is only created when the first game datagram needs it.
 
-**New icons.** The launcher icon is now the official Material shield on the single
-red the app already uses, generated from the official Material source instead of a
-hand-drawn glyph. The PlayStation and Xbox marks are the official marks, rendered
-in that same single red instead of approximated shapes in brand colours.
+## A warning you will actually see
 
-## What was verified
+If Console / Game Mode is on but **UDP Relay** is off, a yellow warning appears
+in Settings with a one-tap fix: *"To make online games work, you also need to
+turn on UDP Relay."* It is there in both Persian and English, on Android and on
+the desktop.
 
-Live, against the real service, before this release was built:
+## Battery
 
-* Device registration through the production API, including the P-256 key type and
-  the PEM peer key the edge actually returns.
-* QUIC handshake to Cloudflare with the registered certificate, `200` on the
-  connect-ip request, `Cf-Warp-Colo` naming the colo.
-* A real DNS query from the assigned address, answered with a real datagram.
-* TCP 80 and TCP 443 through the tunnel, with a full TLS handshake and a real
-  egress address reported by Cloudflare.
-* UDP on a port outside the relay set.
-* A 1 MB download through the tunnel, about 1 MB/s, with DNS resolved over TCP
-  inside the same tunnel.
-* The whole thing again through the Mozilla relay: connect-ip over HTTP/2 inside a
-  relay TCP flow, then TLS and UDP through the nested netstack, reported as
-  `warp=on` by Cloudflare.
+Game Mode keeps two tunnels alive, so it costs more battery — the settings
+screen says so plainly. An optional **Battery saver** keeps WARP only for game
+ports even when Game Mode is selected. On Android the tunnel runs in a foreground
+service, as before.
 
-## What is not in this release
+## Sign-ins no longer risk an IP ban
 
-**The Android app keeps its current transport.** Its core is a separate Kotlin
-implementation with a TCP-only userspace stack, so the new tunnel is not wired
-into it yet. The Android build in this release has the new icons and the same
-relay path it had before. Saying otherwise would be a lie, and this project does
-not ship lies in release notes.
+Mozilla account calls are now serialised and backed off. On HTTP 429 or 503
+Gozar waits, honours `Retry-After` in both seconds and HTTP-date form, and retries
+with an exponential delay capped at one minute. If Mozilla still refuses, you
+get a message telling you how long to wait instead of a silent failure.
 
-**No fake numbers.** The new path reports the real egress address that Cloudflare
-returns, and if the tunnel does not come up, the connection fails with the real
-error instead of a spinner.
+## Staying connected
 
-## Changes worth knowing
+WARP is watched, not assumed. If the tunnel dies — a Wi-Fi to mobile-data switch,
+a filtered network, a suspended laptop — Gozar rebuilds it in the background with
+a 1s, 2s, 4s … backoff capped at 30 seconds, and falls back to the Mozilla relay
+in the meantime. A WARP failure never crashes or hangs the app.
 
-* `warp.json` appears next to the configuration file and holds the registered
-  device. It is created mode 0600. Delete it to force a new registration.
-* The WARP switch requires a disconnect first, like the other tunnel settings.
-* The console gateway uses the active path automatically: with WARP on, a console
-  pointed at the gateway gets the full port range.
+## A bug that dropped small game packets
 
-## Upgrading
+The Android packet parser required a UDP length of at least 20 bytes. The UDP
+header is 8 bytes, so small datagrams — exactly the kind games send — were
+silently discarded. Fixed, with a regression test.
 
-Nothing to do. Existing settings, accounts, servers and the relay path carry over
-unchanged. The new path is off until you turn it on in Settings.
+## New look
 
----
+Every icon is now pure Material 3 on one fixed Material red, with no coloured
+backgrounds and a variety of Material frames instead of one repeated shape. The
+launcher icon is a white **G** on red.
 
+## Verified, not just written
+
+- **Live UDP against the production Cloudflare API:** device registered, QUIC
+  tunnel up, DNS over UDP 53 answered in 8 ms (61 bytes, 2 answers), datagrams
+  sent on UDP 3074 and UDP 443, and Cloudflare's own trace endpoint reported
+  `warp=on` from the tunnel's egress address.
+- **33 Kotlin unit tests** and **Go tests** covering routing for all three modes,
+  config save/load, the small-packet fix, datagram replies, and the 429 backoff.
+- **14 Flutter tests** covering state parsing and the UDP Relay warning.
+- Android APKs built; `go build`, `go vet` and `flutter analyze` all clean.
 """
 
 
