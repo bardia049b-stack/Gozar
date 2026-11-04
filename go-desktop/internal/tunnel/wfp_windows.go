@@ -19,6 +19,7 @@ const (
 	fwpMatchEqual      = 0
 	fwpActionBlock     = 0x1001
 	fwpActionPermit    = 0x1002
+	fwpUint8           = 1
 	fwpUint16          = 2
 	fwpUint32          = 3
 	fwpUint64          = 4
@@ -234,6 +235,10 @@ func (w *WFP) addFilter(layer windows.GUID, action uint32, weight uint64, condit
 	return nil
 }
 
+func uint8Condition(field windows.GUID, value uint8) wfpFilterCondition {
+	return wfpFilterCondition{FieldKey: field, MatchType: fwpMatchEqual, ConditionValue: wfpValue{Type: fwpUint8, Value: uint64(value)}}
+}
+
 func uint16Condition(field windows.GUID, value uint16) wfpFilterCondition {
 	return wfpFilterCondition{FieldKey: field, MatchType: fwpMatchEqual, ConditionValue: wfpValue{Type: fwpUint16, Value: uint64(value)}}
 }
@@ -255,7 +260,7 @@ func (w *WFP) addDNSFilters() error {
 	for _, protocol := range []uint16{17, 6} {
 		permit := []wfpFilterCondition{
 			uint16Condition(condIPRemotePort, 53),
-			uint16Condition(condIPProtocol, protocol),
+			uint8Condition(condIPProtocol, protocol),
 			uint32Condition(condIPRemoteAddress, address),
 		}
 		if err := w.addFilter(layerAleAuthConnectV4, fwpActionPermit, 300, permit, "Gozar permit internal DNS"); err != nil {
@@ -263,7 +268,7 @@ func (w *WFP) addDNSFilters() error {
 		}
 		block := []wfpFilterCondition{
 			uint16Condition(condIPRemotePort, 53),
-			uint16Condition(condIPProtocol, protocol),
+			uint8Condition(condIPProtocol, protocol),
 		}
 		if err := w.addFilter(layerAleAuthConnectV4, fwpActionBlock, 200, block, "Gozar block external DNS"); err != nil {
 			return err
