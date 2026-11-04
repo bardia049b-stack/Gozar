@@ -132,9 +132,36 @@ jobs:
         working-directory: go-desktop
         run: go test -count=1 -v ./internal/bypass ./internal/tunnel ./internal/dnsproxy ./internal/warp
 
+  dpi-toxiproxy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go-desktop/go.mod
+          cache-dependency-path: go-desktop/go.sum
+      - name: Start toxiproxy
+        run: |
+          docker run -d --name toxiproxy --network host shopify/toxiproxy:latest
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8474/version >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          docker logs toxiproxy
+          exit 1
+      - name: DPI/toxiproxy transport test
+        working-directory: go-desktop
+        env:
+          GOZAR_TOXIPROXY_API: http://127.0.0.1:8474
+        run: go test -count=1 -v ./internal/bypass -run Toxiproxy
+      - name: Stop toxiproxy
+        if: always()
+        run: docker rm -f toxiproxy || true
+
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [linux, windows, macos, android, openwrt, bypass]
+    needs: [linux, windows, macos, android, openwrt, bypass, dpi-toxiproxy]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:

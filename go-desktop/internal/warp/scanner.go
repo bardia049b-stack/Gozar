@@ -217,12 +217,17 @@ func (s *Scanner) Best(ctx context.Context) (string, bool) {
 }
 
 func bestOf(results []EndpointResult) (string, bool) {
+	best := ""
+	var bestLatency time.Duration
 	for _, result := range results {
-		if result.OK {
-			return result.Endpoint, true
+		if !result.OK {
+			continue
+		}
+		if best == "" || result.Latency < bestLatency {
+			best, bestLatency = result.Endpoint, result.Latency
 		}
 	}
-	return "", false
+	return best, best != ""
 }
 
 // Report is the persisted warp_endpoints.json document.
