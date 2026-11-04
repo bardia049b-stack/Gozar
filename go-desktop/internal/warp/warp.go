@@ -285,7 +285,7 @@ func (c *Client) DialH3(ctx context.Context) (*connectip.Conn, error) {
 			return nil, err
 		}
 		c.h3 = conn
-		c.h3Client = (&http3.Transport{DisableCompression: true}).NewClientConn(conn)
+		c.h3Client = (&http3.Transport{DisableCompression: true, EnableDatagrams: true}).NewClientConn(conn)
 	}
 	template := uritemplate.MustNew(ConnectURI)
 	headers := http.Header{"User-Agent": []string{""}}

@@ -140,7 +140,7 @@ func TestUTLSFingerprintsAgainstDPI(t *testing.T) {
 
 func TestHTTP2MultiplexAgainstDPI(t *testing.T) {
 	cert, roots := dpiCertificate(t)
-	listener, err := tls.Listen("tcp", "127.0.0.1:0", &tls.Config{Certificates: []tls.Certificate{cert}, NextProtos: []string{"h2"}})
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -151,11 +151,17 @@ func TestHTTP2MultiplexAgainstDPI(t *testing.T) {
 	})
 	go func() {
 		for {
-			conn, err := listener.Accept()
+			raw, err := listener.Accept()
 			if err != nil {
 				return
 			}
-			go (&http2.Server{}).ServeConn(conn, &http2.ServeConnOpts{Handler: handler})
+			go func(raw net.Conn) {
+				conn := tls.Server(raw, &tls.Config{Certificates: []tls.Certificate{cert}, NextProtos: []string{"h2"}})
+				defer conn.Close()
+				if conn.Handshake() == nil {
+					(&http2.Server{}).ServeConn(conn, &http2.ServeConnOpts{Handler: handler})
+				}
+			}(raw)
 		}
 	}()
 	transport := &http2.Transport{
