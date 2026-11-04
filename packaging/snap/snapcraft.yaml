@@ -28,7 +28,7 @@ parts:
       set -e
       version="$(craftctl get version)"
       curl -fsSL -o "$CRAFT_PART_INSTALL/gozar.tar.xz" \
-        "https://github.com/bardia049b-stack/Gozar1/releases/download/v${version}-desktop/Gozar-Linux-amd64.tar.xz"
+        "https://github.com/bardia049b-stack/Gozar/releases/download/v${version}-desktop/Gozar-Linux-amd64.tar.xz"
       mkdir -p "$CRAFT_PART_INSTALL/usr/lib"
       tar -xJf "$CRAFT_PART_INSTALL/gozar.tar.xz" -C "$CRAFT_PART_INSTALL/usr/lib"
       rm -f "$CRAFT_PART_INSTALL/gozar.tar.xz"
