@@ -44,6 +44,11 @@ jobs:
         working-directory: go-desktop
         shell: bash
         run: go test ./...
+      - name: Iran UDP WARP settings policy tests
+        if: matrix.goos == 'linux' && matrix.goarch == 'amd64'
+        working-directory: go-desktop
+        shell: bash
+        run: go test -count=1 -v ./internal/config ./internal/geo ./internal/warp ./internal/settings
       - name: Cross compile
         working-directory: go-desktop
         shell: bash
