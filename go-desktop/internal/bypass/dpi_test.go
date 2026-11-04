@@ -170,7 +170,7 @@ func TestHTTP2MultiplexAgainstDPI(t *testing.T) {
 		go func(i int) {
 			defer wg.Done()
 			payload := fmt.Sprintf("stream-%d", i)
-			response, err := client.Post("https://localhost/echo", "text/plain", bytes.NewBufferString(payload))
+			response, err := client.Post("https://"+listener.Addr().String()+"/echo", "text/plain", bytes.NewBufferString(payload))
 			if err != nil {
 				failures.Add(1)
 				return

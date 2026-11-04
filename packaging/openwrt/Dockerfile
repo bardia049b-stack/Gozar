@@ -1,4 +1,4 @@
-ARG ROOTFS=openwrt/rootfs:x86-64-openwrt-25.12
+ARG ROOTFS=openwrt/rootfs:x86-64-openwrt-24.10
 FROM ${ROOTFS}
 COPY out/Gozar-OpenWrt-x86_64.ipk /tmp/gozar.ipk
 RUN opkg install --force-depends /tmp/gozar.ipk
