@@ -5,6 +5,8 @@ RUN mkdir -p /var/lock /var/run /tmp \
     && cat /etc/opkg.conf \
     && opkg print-architecture \
     && (grep -q '^arch x86_64 ' /etc/opkg.conf || echo 'arch x86_64 10' >> /etc/opkg.conf) \
-    && opkg install --nodeps /tmp/gozar.ipk
+    && opkg update \
+    && opkg install kmod-tun \
+    && opkg install /tmp/gozar.ipk
 RUN /usr/bin/gozar-core --version && sh -n /etc/init.d/gozar && test -f /etc/config/gozar
 CMD ["/bin/sh", "-c", "mkdir -p /var/lock /var/run; service gozar start || true; service gozar status || true; ubus call gozar status || true; /usr/bin/gozar-core --version; ping -c 1 -W 3 8.8.8.8"]
