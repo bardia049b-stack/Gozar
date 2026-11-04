@@ -3,6 +3,8 @@ package main
 import (
 	"os"
 	"os/exec"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -27,7 +29,11 @@ func TestVersionFlagOutput(t *testing.T) {
 	if testing.Short() {
 		t.Skip("builds the core binary")
 	}
-	exe := t.TempDir() + "/gozar-core"
+	name := "gozar-core"
+	if runtime.GOOS == "windows" {
+		name += ".exe"
+	}
+	exe := filepath.Join(t.TempDir(), name)
 	build := exec.Command("go", "build", "-o", exe, ".")
 	if out, err := build.CombinedOutput(); err != nil {
 		t.Fatalf("build: %v\n%s", err, out)
