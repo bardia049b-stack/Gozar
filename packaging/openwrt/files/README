@@ -46,3 +46,12 @@ the routes and the DNS settings it changed.
 
 This package carries the core only. The graphical application is a desktop
 Flutter build and is not part of the OpenWrt package.
+
+CI limitation
+-------------
+
+The OpenWrt package is installed and started in the official rootfs container,
+and the smoke test checks that /etc/init.d/gozar starts the gozar-core process.
+However, a live-tunnel test is NOT performed in CI. Users must test the package
+in a real environment: connect, verify the exit IP, and verify teardown/route
+restoration on their own router.

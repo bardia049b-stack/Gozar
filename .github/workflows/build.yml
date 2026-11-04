@@ -318,6 +318,7 @@ jobs:
           codesign --force --deep --sign - "$APP"
           mkdir -p out "$RUNNER_TEMP/gozar-extracted"
           python3 ../scripts/archive_macos.py "$APP" "out/Gozar-$ARTIFACT_NAME.tar.xz"
+          hdiutil create -volname "Gozar" -srcfolder "$APP" -ov -format UDZO "out/Gozar-$ARTIFACT_NAME.dmg"
           tar -xJf "out/Gozar-$ARTIFACT_NAME.tar.xz" -C "$RUNNER_TEMP/gozar-extracted"
           codesign --verify --deep --strict "$RUNNER_TEMP/gozar-extracted/Gozar.app"
           EXTRACTED="$RUNNER_TEMP/gozar-extracted/Gozar.app"
@@ -503,7 +504,7 @@ jobs:
           DESKTOP_VERSION: ${{ steps.version.outputs.desktop }}
         run: |
           set -e
-          for f in "Gozar_${ANDROID_VERSION}_universal.apk" "Gozar_${ANDROID_VERSION}_arm64-v8a.apk" "Gozar_${ANDROID_VERSION}_armeabi-v7a.apk" "Gozar_${ANDROID_VERSION}_x86.apk" "Gozar_${ANDROID_VERSION}_x86_64.apk" Gozar-Windows-x64-Setup.exe Gozar-Windows-x64.zip Gozar-Linux-amd64.deb Gozar-Linux-amd64.tar.xz Gozar-macOS-ARM.tar.xz Gozar-macOS-Intel.tar.xz Gozar-Core-Linux-amd64.tar.xz Gozar-Core-Linux-arm64.tar.xz Gozar-Core-Windows-x64.zip Gozar-Core-Windows-arm64.zip Gozar-Core-macOS-Intel.tar.xz Gozar-Core-macOS-ARM.tar.xz "Gozar-${DESKTOP_VERSION}-x86_64.AppImage" "Gozar-${DESKTOP_VERSION}-x86_64.flatpak" "Gozar-${DESKTOP_VERSION}-x86_64.pkg.tar.zst" "Gozar_${DESKTOP_VERSION}_amd64.snap" Gozar-Fedora-x86_64.rpm Gozar-RHEL-x86_64.rpm Gozar-OpenWrt-mips_24kc.ipk Gozar-OpenWrt-mipsel_24kc.ipk Gozar-OpenWrt-armv7.ipk Gozar-OpenWrt-aarch64.ipk LuCI-Gozar-all.ipk Gozar-RaspberryPi-arm64.tar.xz Gozar-RaspberryPi-armv7.tar.xz Gozar-FreeBSD-amd64.pkg Gozar-FreeBSD-arm64.pkg; do
+          for f in "Gozar_${ANDROID_VERSION}_universal.apk" "Gozar_${ANDROID_VERSION}_arm64-v8a.apk" "Gozar_${ANDROID_VERSION}_armeabi-v7a.apk" "Gozar_${ANDROID_VERSION}_x86.apk" "Gozar_${ANDROID_VERSION}_x86_64.apk" Gozar-Windows-x64-Setup.exe Gozar-Windows-x64.zip Gozar-Linux-amd64.deb Gozar-Linux-amd64.tar.xz Gozar-macOS-ARM.tar.xz Gozar-macOS-Intel.tar.xz Gozar-macOS-ARM.dmg Gozar-macOS-Intel.dmg Gozar-Core-Linux-amd64.tar.xz Gozar-Core-Linux-arm64.tar.xz Gozar-Core-Windows-x64.zip Gozar-Core-Windows-arm64.zip Gozar-Core-macOS-Intel.tar.xz Gozar-Core-macOS-ARM.tar.xz "Gozar-${DESKTOP_VERSION}-x86_64.AppImage" "Gozar-${DESKTOP_VERSION}-x86_64.flatpak" "Gozar-${DESKTOP_VERSION}-x86_64.pkg.tar.zst" "Gozar_${DESKTOP_VERSION}_amd64.snap" Gozar-Fedora-x86_64.rpm Gozar-RHEL-x86_64.rpm Gozar-OpenWrt-mips_24kc.ipk Gozar-OpenWrt-mipsel_24kc.ipk Gozar-OpenWrt-armv7.ipk Gozar-OpenWrt-aarch64.ipk LuCI-Gozar-all.ipk Gozar-RaspberryPi-arm64.tar.xz Gozar-RaspberryPi-armv7.tar.xz Gozar-FreeBSD-amd64.pkg Gozar-FreeBSD-arm64.pkg; do
             test -s "collected/$f" || { echo "::error::Missing release file: $f"; exit 1; }
           done
       - name: Import signing key
@@ -527,7 +528,7 @@ jobs:
         run: |
           set -e
           cd collected
-          for f in *.apk *.exe *.deb *.zip *.tar.xz *.rpm *.AppImage *.snap *.flatpak *.pkg.tar.zst *.ipk *.pkg; do
+          for f in *.apk *.exe *.deb *.zip *.tar.xz *.dmg *.rpm *.AppImage *.snap *.flatpak *.pkg.tar.zst *.ipk *.pkg; do
             [ -e "$f" ] || continue
             gpg --batch --yes --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" --detach-sign --output "$f.sig" "$f"
           done
@@ -537,19 +538,30 @@ jobs:
           mkdir -m 700 "$RUNNER_TEMP/verify-keyring"
           gpg --homedir "$RUNNER_TEMP/verify-keyring" --batch --import collected/gozar-public-key.asc
           cd collected
-          for f in *.apk *.exe *.deb *.zip *.tar.xz *.rpm *.AppImage *.snap *.flatpak *.pkg.tar.zst *.ipk *.pkg; do
+          for f in *.apk *.exe *.deb *.zip *.tar.xz *.dmg *.rpm *.AppImage *.snap *.flatpak *.pkg.tar.zst *.ipk *.pkg; do
             [ -e "$f" ] || continue
             test -s "$f.sig"
             gpg --homedir "$RUNNER_TEMP/verify-keyring" --batch --verify "$f.sig" "$f"
           done
+      - name: Generate and sign SHA256SUMS
+        env:
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          set -e
+          cd collected
+          find . -maxdepth 1 -type f ! -name 'SHA256SUMS.txt' ! -name 'SHA256SUMS.txt.sig' ! -name '*.sig' -print | sed 's|^\./||' | sort | xargs -d '\n' sha256sum > SHA256SUMS.txt
+          gpg --batch --yes --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" --detach-sign --output SHA256SUMS.txt.sig SHA256SUMS.txt
+          gpg --homedir "$RUNNER_TEMP/verify-keyring" --batch --verify SHA256SUMS.txt.sig SHA256SUMS.txt
       - name: Notes
-        run: python3 scripts/notes.py "${{ steps.version.outputs.desktop }}" "${{ github.repository }}" "${{ steps.version.outputs.android }}" "${{ github.ref_name }}" > "$RUNNER_TEMP/notes.md"
+        run: |
+          python3 scripts/notes.py "${{ steps.version.outputs.desktop }}" "${{ github.repository }}" "${{ steps.version.outputs.android }}" "${{ github.ref_name }}" > "$RUNNER_TEMP/notes.md"
+          cat RELEASE_NOTES.md "$RUNNER_TEMP/notes.md" > "$RUNNER_TEMP/release-body.md"
       - name: Publish
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: ${{ format('Gozar Android {0} / Desktop {1}', steps.version.outputs.android, steps.version.outputs.desktop) }}
-          body_path: ${{ runner.temp }}/notes.md
+          body_path: ${{ runner.temp }}/release-body.md
           make_latest: true
           files: collected/*
           fail_on_unmatched_files: true
@@ -561,11 +573,13 @@ jobs:
         run: |
           set -e
           assets=$(gh release view "$GITHUB_REF_NAME" --json assets --jq '.assets[].name')
-          for f in "Gozar_${ANDROID_VERSION}_universal.apk" "Gozar_${ANDROID_VERSION}_arm64-v8a.apk" "Gozar_${ANDROID_VERSION}_armeabi-v7a.apk" "Gozar_${ANDROID_VERSION}_x86.apk" "Gozar_${ANDROID_VERSION}_x86_64.apk" Gozar-Windows-x64-Setup.exe Gozar-Windows-x64.zip Gozar-Linux-amd64.deb Gozar-Linux-amd64.tar.xz Gozar-macOS-ARM.tar.xz Gozar-macOS-Intel.tar.xz Gozar-Core-Linux-amd64.tar.xz Gozar-Core-Linux-arm64.tar.xz Gozar-Core-Windows-x64.zip Gozar-Core-Windows-arm64.zip Gozar-Core-macOS-Intel.tar.xz Gozar-Core-macOS-ARM.tar.xz "Gozar-${DESKTOP_VERSION}-x86_64.AppImage" "Gozar-${DESKTOP_VERSION}-x86_64.flatpak" "Gozar-${DESKTOP_VERSION}-x86_64.pkg.tar.zst" "Gozar_${DESKTOP_VERSION}_amd64.snap" Gozar-Fedora-x86_64.rpm Gozar-RHEL-x86_64.rpm Gozar-OpenWrt-mips_24kc.ipk Gozar-OpenWrt-mipsel_24kc.ipk Gozar-OpenWrt-armv7.ipk Gozar-OpenWrt-aarch64.ipk LuCI-Gozar-all.ipk Gozar-RaspberryPi-arm64.tar.xz Gozar-RaspberryPi-armv7.tar.xz Gozar-FreeBSD-amd64.pkg Gozar-FreeBSD-arm64.pkg; do
+          for f in "Gozar_${ANDROID_VERSION}_universal.apk" "Gozar_${ANDROID_VERSION}_arm64-v8a.apk" "Gozar_${ANDROID_VERSION}_armeabi-v7a.apk" "Gozar_${ANDROID_VERSION}_x86.apk" "Gozar_${ANDROID_VERSION}_x86_64.apk" Gozar-Windows-x64-Setup.exe Gozar-Windows-x64.zip Gozar-Linux-amd64.deb Gozar-Linux-amd64.tar.xz Gozar-macOS-ARM.tar.xz Gozar-macOS-Intel.tar.xz Gozar-macOS-ARM.dmg Gozar-macOS-Intel.dmg Gozar-Core-Linux-amd64.tar.xz Gozar-Core-Linux-arm64.tar.xz Gozar-Core-Windows-x64.zip Gozar-Core-Windows-arm64.zip Gozar-Core-macOS-Intel.tar.xz Gozar-Core-macOS-ARM.tar.xz "Gozar-${DESKTOP_VERSION}-x86_64.AppImage" "Gozar-${DESKTOP_VERSION}-x86_64.flatpak" "Gozar-${DESKTOP_VERSION}-x86_64.pkg.tar.zst" "Gozar_${DESKTOP_VERSION}_amd64.snap" Gozar-Fedora-x86_64.rpm Gozar-RHEL-x86_64.rpm Gozar-OpenWrt-mips_24kc.ipk Gozar-OpenWrt-mipsel_24kc.ipk Gozar-OpenWrt-armv7.ipk Gozar-OpenWrt-aarch64.ipk LuCI-Gozar-all.ipk Gozar-RaspberryPi-arm64.tar.xz Gozar-RaspberryPi-armv7.tar.xz Gozar-FreeBSD-amd64.pkg Gozar-FreeBSD-arm64.pkg; do
             printf '%s\n' "$assets" | grep -Fx "$f" >/dev/null
             printf '%s\n' "$assets" | grep -Fx "$f.sig" >/dev/null
           done
           printf '%s\n' "$assets" | grep -Fx gozar-public-key.asc >/dev/null
+          printf '%s\n' "$assets" | grep -Fx SHA256SUMS.txt >/dev/null
+          printf '%s\n' "$assets" | grep -Fx SHA256SUMS.txt.sig >/dev/null
           mkdir -p "$RUNNER_TEMP/published"
           gh release download "$GITHUB_REF_NAME" --dir "$RUNNER_TEMP/published"
           for f in collected/*; do
