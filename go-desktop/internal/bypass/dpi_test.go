@@ -8,7 +8,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"encoding/binary"
 	"fmt"
 	"io"
 	"math/big"
@@ -31,14 +30,14 @@ func dpiCertificate(t *testing.T) (tls.Certificate, *x509.CertPool) {
 		t.Fatal(err)
 	}
 	template := &x509.Certificate{
-		SerialNumber: big.NewInt(1),
-		Subject:      pkix.Name{CommonName: "localhost"},
-		DNSNames:     []string{"localhost"},
-		NotBefore:    time.Now().Add(-time.Hour),
-		NotAfter:     time.Now().Add(time.Hour),
-		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
-		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-		IsCA:         true,
+		SerialNumber:          big.NewInt(1),
+		Subject:               pkix.Name{CommonName: "localhost"},
+		DNSNames:              []string{"localhost"},
+		NotBefore:             time.Now().Add(-time.Hour),
+		NotAfter:              time.Now().Add(time.Hour),
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		IsCA:                  true,
 		BasicConstraintsValid: true,
 	}
 	der, err := x509.CreateCertificate(rand.Reader, template, template, &key.PublicKey, key)
@@ -52,32 +51,6 @@ func dpiCertificate(t *testing.T) (tls.Certificate, *x509.CertPool) {
 	roots := x509.NewCertPool()
 	roots.AddCert(parsed)
 	return tls.Certificate{Certificate: [][]byte{der}, PrivateKey: key}, roots
-}
-
-type dpiFragmentConn struct {
-	net.Conn
-	once  sync.Once
-	chunk int
-}
-
-func (c *dpiFragmentConn) Write(p []byte) (int, error) {
-	written := 0
-	c.once.Do(func() {})
-	if len(p) < 256 || c.chunk <= 0 {
-		return c.Conn.Write(p)
-	}
-	for written < len(p) {
-		end := written + c.chunk
-		if end > len(p) {
-			end = len(p)
-		}
-		n, err := c.Conn.Write(p[written:end])
-		written += n
-		if err != nil {
-			return written, err
-		}
-	}
-	return written, nil
 }
 
 func TestTLSFragmentationAgainstDPI(t *testing.T) {
@@ -105,7 +78,7 @@ func TestTLSFragmentationAgainstDPI(t *testing.T) {
 			t.Fatal(err)
 		}
 		started := time.Now()
-		conn := tls.Client(&dpiFragmentConn{Conn: raw, chunk: chunk}, &tls.Config{RootCAs: roots, ServerName: "localhost"})
+		conn := tls.Client(&FragmentConn{Conn: raw, Chunk: chunk}, &tls.Config{RootCAs: roots, ServerName: "localhost"})
 		if err := conn.Handshake(); err != nil {
 			t.Fatalf("chunk %d handshake failed: %v", chunk, err)
 		}
@@ -253,14 +226,16 @@ func TestDoHFallbackAgainstDPI(t *testing.T) {
 
 func TestPaddingAndJitterBounds(t *testing.T) {
 	payload := []byte("hello")
-	padded := make([]byte, 2+len(payload))
-	binary.BigEndian.PutUint16(padded[0:2], uint16(len(payload)))
-	copy(padded[2:], payload)
-	if len(padded) <= len(payload) {
-		t.Fatal("padding did not add overhead")
+	padded := Pad(payload, 16)
+	if len(padded)%16 != 0 {
+		t.Fatalf("padding not aligned: %d", len(padded))
+	}
+	unpadded, ok := Unpad(padded)
+	if !ok || !bytes.Equal(unpadded, payload) {
+		t.Fatal("unpad failed")
 	}
 	for i := 0; i < 20; i++ {
-		delay := time.Duration(i%5) * time.Millisecond
+		delay := Jitter(5 * time.Millisecond)
 		if delay < 0 || delay > 5*time.Millisecond {
 			t.Fatalf("jitter out of bounds: %s", delay)
 		}

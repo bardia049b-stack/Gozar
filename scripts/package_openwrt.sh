@@ -4,9 +4,10 @@ set -eu
 version=$1
 out=$2
 root=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
+mkdir -p "$out"
+out=$(CDPATH='' cd -- "$out" && pwd)
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT HUP INT TERM
-mkdir -p "$out"
 
 build_core() {
 	goos=$1

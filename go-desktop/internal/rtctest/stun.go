@@ -39,8 +39,8 @@ func ServeBinding(conn *net.UDPConn) error {
 		if n < 20 || binary.BigEndian.Uint16(buf[0:2]) != 0x0001 || binary.BigEndian.Uint32(buf[4:8]) != magicCookie {
 			continue
 		}
-		udpAddr, ok := addr.AddrPort()
-		if !ok || !udpAddr.Addr().Is4() {
+		udpAddr := addr.AddrPort()
+		if !udpAddr.Addr().Is4() {
 			continue
 		}
 		response := make([]byte, 32)
