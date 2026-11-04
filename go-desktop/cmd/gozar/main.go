@@ -17,9 +17,8 @@ import (
 	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/rpc"
 	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/sysproxy"
 	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/tundev"
+	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/version"
 )
-
-const version = "1.10.1"
 
 func main() {
 	log.SetOutput(io.Discard)
@@ -38,7 +37,7 @@ func main() {
 
 	switch {
 	case *showVersion:
-		fmt.Println("Gozar " + version)
+		fmt.Println(versionLine())
 	case *selftest:
 		fmt.Println(report(*headless))
 	case *clearProxy:
@@ -58,14 +57,16 @@ func main() {
 	}
 }
 
+func versionLine() string { return "Gozar " + version.Version }
+
 func runRPC() {
-	current := app.New(version)
+	current := app.New(version.Version)
 	rpc.Run(current)
 	current.Close()
 }
 
 func runControl(path string) {
-	current := app.New(version)
+	current := app.New(version.Version)
 	defer current.Close()
 	listener, err := rpc.Listen(current, path)
 	if err != nil {
@@ -80,7 +81,7 @@ func runControl(path string) {
 }
 
 func runHeadless() {
-	current := app.New(version)
+	current := app.New(version.Version)
 	defer current.Close()
 	if err := current.Connect(); err != nil {
 		fmt.Println("failed: " + err.Error())
@@ -106,7 +107,7 @@ func printServers() {
 
 func signIn(email, password, code string) {
 	reader := bufio.NewReader(os.Stdin)
-	current := app.New(version)
+	current := app.New(version.Version)
 	defer current.Close()
 	err := current.SignIn(email, password, code)
 	if app.NeedsCode(err) {
@@ -130,9 +131,9 @@ func clearProxyState() string {
 
 func report(headless bool) string {
 	var out strings.Builder
-	out.WriteString("Gozar " + version + "\n")
+	out.WriteString(versionLine() + "\n")
 	out.WriteString("admin    : " + yesNo(tundev.Privileged()) + "\n")
-	current := app.New(version)
+	current := app.New(version.Version)
 	defer current.Close()
 	state := current.State()
 	out.WriteString("signed in: " + yesNo(state.SignedIn) + "\n")

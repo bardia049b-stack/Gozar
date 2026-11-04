@@ -17,7 +17,7 @@ import (
 	"golang.org/x/net/dns/dnsmessage"
 )
 
-const Address = "1.1.1.1"
+const Address = "10.111.0.53"
 const maxMessageSize = 65535
 
 var servers = []string{

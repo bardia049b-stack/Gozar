@@ -863,7 +863,7 @@ class _GozarScreenState extends State<GozarScreen> with WindowListener {
           as Map<String, dynamic>;
       final tag = data['tag_name'] as String? ?? '';
       final url = data['html_url'] as String? ?? '';
-      const current = '1.10.1';
+      const current = '1.10.3';
       List<int> version(String value) => RegExp(r'\d+')
           .allMatches(value)
           .take(3)
