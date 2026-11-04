@@ -7,7 +7,7 @@
 
 ```sh
 sudo apt-get install flatpak flatpak-builder
-scripts/package_flatpak.sh ../../pkgsrc/out 1.10.3
+scripts/package_flatpak.sh out 1.10.3
 ```
 
 The script installs the freedesktop 25.08 runtime and SDK the first time it
