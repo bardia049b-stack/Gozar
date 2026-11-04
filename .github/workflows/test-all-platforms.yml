@@ -159,9 +159,28 @@ jobs:
         if: always()
         run: docker rm -f toxiproxy || true
 
+  flutter:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.5'
+          channel: stable
+          cache: true
+      - name: Inspect Flutter code
+        working-directory: desktop_flutter
+        run: |
+          flutter pub get
+          flutter analyze
+      - name: Interface tests
+        working-directory: desktop_flutter
+        run: flutter test --reporter expanded
+
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [linux, windows, macos, android, openwrt, bypass, dpi-toxiproxy]
+    needs: [linux, windows, macos, android, openwrt, bypass, dpi-toxiproxy, flutter]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:

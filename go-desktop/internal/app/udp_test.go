@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -50,7 +51,9 @@ func TestWarpIdentityIsSealedAtRestAndReused(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if info.Mode().Perm() != 0o600 {
+	// Windows has no Unix permission bits: the file is protected by DPAPI and
+	// the profile ACL there, so the 0600 assertion only applies to Unix.
+	if runtime.GOOS != "windows" && info.Mode().Perm() != 0o600 {
 		t.Fatalf("identity file permissions are %v, want 0600", info.Mode().Perm())
 	}
 	second, err := loadWarpIdentity(ctx, path, register)

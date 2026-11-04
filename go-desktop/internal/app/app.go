@@ -96,6 +96,8 @@ type App struct {
 	version         string
 	admin           bool
 	rotationCancel  context.CancelFunc
+	pathCancel      context.CancelFunc
+	reconnectWanted bool
 	rotationWorker  *rotation.Worker
 	settingsUpdate  *settings.Fetcher
 	geoRoutes       *geo.Router
@@ -644,6 +646,7 @@ func (a *App) Connect() error {
 		return nil
 	}
 	a.connecting = true
+	a.reconnectWanted = true
 	a.fault = ""
 	a.needAdmin = false
 	a.stage = "در حال اتصال…"
@@ -726,6 +729,35 @@ func (a *App) connect() error {
 		return errors.New("could not resolve the first proxy to IPv4 before starting the tunnel")
 	}
 	transport := tunnel.NewManager(target)
+	// Automatic failover: two more locations are resolved up front so a dead
+	// primary can be replaced without ending the session. Their addresses are
+	// protected from the tunnel route exactly like the primary's.
+	var backups []tunnel.Target
+	for _, place := range servers {
+		if len(backups) == 2 {
+			break
+		}
+		if strings.EqualFold(place.Host, target.Host) || place.Host == "" {
+			continue
+		}
+		backup := target
+		backup.Host = place.Host
+		backup.DialHost = ""
+		for _, address := range tundev.Neighbours(place.Host) {
+			if address.Is4() {
+				backup.DialHost = address.String()
+				if !address.IsLoopback() {
+					keep = append(keep, address)
+				}
+				break
+			}
+		}
+		if backup.DialHost == "" {
+			continue
+		}
+		backups = append(backups, backup)
+	}
+	transport.SetBackups(backups)
 	dial := func(host string, remotePort int) (io.ReadWriteCloser, error) {
 		current, err := a.currentPass()
 		if err != nil {
@@ -777,6 +809,11 @@ func (a *App) connect() error {
 	a.stage = ""
 	a.mu.Unlock()
 	go a.watchTunnel(created)
+	pathCtx, pathCancel := context.WithCancel(context.Background())
+	a.mu.Lock()
+	a.pathCancel = pathCancel
+	a.mu.Unlock()
+	a.watchPath(pathCtx, created)
 	a.startRenewal()
 	if ip, err := transport.Probe(pass.Token, 12*time.Second); err == nil {
 		a.mu.Lock()
@@ -802,7 +839,13 @@ func (a *App) watchTunnel(current *engine.Engine) {
 	a.teardown()
 	a.mu.Lock()
 	a.fault = "The tunnel device stopped: " + err.Error()
+	wanted := a.reconnectWanted
 	a.mu.Unlock()
+	if wanted {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		a.rebuildPath(ctx, current)
+	}
 }
 
 func (a *App) teardown() {
@@ -814,6 +857,8 @@ func (a *App) teardown() {
 	a.transport = nil
 	cancel := a.renewCancel
 	a.renewCancel = nil
+	pathCancel := a.pathCancel
+	a.pathCancel = nil
 	a.engine = nil
 	a.live = false
 	a.activeServer = fxa.Location{}
@@ -822,6 +867,9 @@ func (a *App) teardown() {
 	a.mu.Unlock()
 	if cancel != nil {
 		cancel()
+	}
+	if pathCancel != nil {
+		pathCancel()
 	}
 	if guard != nil {
 		guard.Close()
@@ -837,6 +885,9 @@ func (a *App) teardown() {
 func (a *App) Disconnect() {
 	a.connectionMu.Lock()
 	defer a.connectionMu.Unlock()
+	a.mu.Lock()
+	a.reconnectWanted = false
+	a.mu.Unlock()
 	a.teardown()
 	a.mu.Lock()
 	a.fault = ""
@@ -847,6 +898,9 @@ func (a *App) Disconnect() {
 func (a *App) Close() {
 	a.connectionMu.Lock()
 	defer a.connectionMu.Unlock()
+	a.mu.Lock()
+	a.reconnectWanted = false
+	a.mu.Unlock()
 	if a.rotationCancel != nil {
 		a.rotationCancel()
 		a.rotationCancel = nil

@@ -49,6 +49,9 @@ type Manager struct {
 	testTLS   *tls.Config
 
 	advancedPath string
+
+	backups []*Manager
+	active  int
 }
 
 func NewManager(target Target) *Manager {
@@ -57,7 +60,18 @@ func NewManager(target Target) *Manager {
 	return manager
 }
 
+// Open dials through the active proxy, falling back to the configured backups
+// when the active one cannot be reached.
 func (m *Manager) Open(host string, port int, pass string, timeout time.Duration) (Dup, error) {
+	if timeout <= 0 {
+		timeout = 15 * time.Second
+	}
+	return m.openWithFailover(host, port, pass, timeout)
+}
+
+// openOnce is the original single-proxy dial: advanced transports, then
+// HTTP/3, HTTP/2 and finally HTTP/1.1.
+func (m *Manager) openOnce(host string, port int, pass string, timeout time.Duration) (Dup, error) {
 	if timeout <= 0 {
 		timeout = 15 * time.Second
 	}
@@ -469,6 +483,8 @@ func (m *Manager) Close() error {
 		return nil
 	}
 	m.closed = true
+	backups := m.backups
+	m.backups = nil
 	sessions := m.h2
 	h3 := m.h3
 	streams := make([]*trackedStream, 0, len(m.streams))
@@ -486,6 +502,9 @@ func (m *Manager) Close() error {
 	}
 	if h3 != nil {
 		_ = h3.conn.CloseWithError(0, "")
+	}
+	for _, backup := range backups {
+		_ = backup.Close()
 	}
 	return nil
 }
