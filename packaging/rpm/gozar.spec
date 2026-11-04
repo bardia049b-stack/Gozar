@@ -26,8 +26,8 @@ Requires:       glibc >= 2.34
 %description
 Gozar connects the desktop to the Firefox Private Network proxy. The package
 carries the Flutter application and the separate Go core that builds the tunnel.
-The tunnel needs the rights to create a TUN interface, so the first connection
-asks for them through the desktop's own privilege prompt.
+The tunnel creates a TUN interface and rewrites the routing table, which needs
+administrator rights, so start Gozar with sudo: sudo gozar
 
 %prep
 %setup -q -c -T -n %{name}-%{version}
