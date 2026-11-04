@@ -29,6 +29,8 @@ type DoQServer struct {
 	once     sync.Once
 	queries  int
 	mu       sync.Mutex
+	conns    map[*quic.Conn]struct{}
+	closed   bool
 }
 
 func StartDoQ(config *tls.Config, handler func([]byte) ([]byte, error)) (*DoQServer, error) {
@@ -39,7 +41,7 @@ func StartDoQ(config *tls.Config, handler func([]byte) ([]byte, error)) (*DoQSer
 	if err != nil {
 		return nil, err
 	}
-	server := &DoQServer{Addr: listener.Addr().String(), Handler: handler, TLS: config, listener: listener}
+	server := &DoQServer{Addr: listener.Addr().String(), Handler: handler, TLS: config, listener: listener, conns: make(map[*quic.Conn]struct{})}
 	go server.serve()
 	return server, nil
 }
@@ -56,6 +58,14 @@ func (s *DoQServer) serve() {
 		if err != nil {
 			return
 		}
+		s.mu.Lock()
+		if s.closed {
+			s.mu.Unlock()
+			conn.CloseWithError(0, "")
+			return
+		}
+		s.conns[conn] = struct{}{}
+		s.mu.Unlock()
 		go s.serveConn(conn)
 	}
 }
@@ -109,7 +119,20 @@ func (s *DoQServer) serveStream(stream *quic.Stream) {
 
 func (s *DoQServer) Close() error {
 	var err error
-	s.once.Do(func() { err = s.listener.Close() })
+	s.once.Do(func() {
+		err = s.listener.Close()
+		s.mu.Lock()
+		s.closed = true
+		conns := make([]*quic.Conn, 0, len(s.conns))
+		for conn := range s.conns {
+			conns = append(conns, conn)
+		}
+		s.conns = make(map[*quic.Conn]struct{})
+		s.mu.Unlock()
+		for _, conn := range conns {
+			conn.CloseWithError(0, "server shutdown")
+		}
+	})
 	return err
 }
 
@@ -123,13 +146,14 @@ type WSSServer struct {
 	Pass      string
 	FrontName string
 
-	listener net.Listener
-	once     sync.Once
-	mu       sync.Mutex
-	upgrades int
-	lastSNI  string
-	lastHost string
-	lastAuth string
+	listener   net.Listener
+	once       sync.Once
+	mu         sync.Mutex
+	upgrades   int
+	lastSNI    string
+	lastHost   string
+	lastAuth   string
+	lastTarget string
 }
 
 func StartWSS(config *tls.Config, target, path, pass string) (*WSSServer, error) {
@@ -140,6 +164,13 @@ func StartWSS(config *tls.Config, target, path, pass string) (*WSSServer, error)
 	server := &WSSServer{Addr: listener.Addr().String(), TLS: config, Target: target, Path: path, Pass: pass, listener: listener}
 	go server.serve()
 	return server, nil
+}
+
+// RequestedTarget returns the X-Gozar-Target value the client asked for.
+func (s *WSSServer) RequestedTarget() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.lastTarget
 }
 
 func (s *WSSServer) Stats() (int, string, string, string) {
@@ -187,9 +218,16 @@ func (s *WSSServer) handle(conn net.Conn) {
 		_, _ = conn.Write([]byte("HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n"))
 		return
 	}
-	target := request.Header.Get(advanced.TargetHeader)
+	// The mock always dials its own loopback upstream; the requested target is
+	// only recorded, so a test can prove the client sent it without the mock
+	// ever touching the public Internet.
+	requested := request.Header.Get(advanced.TargetHeader)
+	s.mu.Lock()
+	s.lastTarget = requested
+	s.mu.Unlock()
+	target := s.Target
 	if target == "" {
-		target = s.Target
+		target = requested
 	}
 	upstream, err := net.DialTimeout("tcp", target, 5*time.Second)
 	if err != nil {
@@ -226,6 +264,9 @@ func (s *WSSServer) handle(conn net.Conn) {
 		}
 		done <- struct{}{}
 	}()
+	// Both directions must finish: closing after the first one would cut the
+	// response short while the peer is still sending.
+	<-done
 	<-done
 }
 

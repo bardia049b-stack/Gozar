@@ -32,15 +32,15 @@ func certificate(t *testing.T, names ...string) (tls.Certificate, *x509.CertPool
 		t.Fatal(err)
 	}
 	template := x509.Certificate{
-		SerialNumber: big.NewInt(time.Now().UnixNano()),
-		Subject:      pkix.Name{CommonName: names[0]},
-		NotBefore:    time.Now().Add(-time.Hour),
-		NotAfter:     time.Now().Add(24 * time.Hour),
-		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
-		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-		DNSNames:     names,
-		IPAddresses:  []net.IP{net.ParseIP("127.0.0.1")},
-		IsCA:         true,
+		SerialNumber:          big.NewInt(time.Now().UnixNano()),
+		Subject:               pkix.Name{CommonName: names[0]},
+		NotBefore:             time.Now().Add(-time.Hour),
+		NotAfter:              time.Now().Add(24 * time.Hour),
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		DNSNames:              names,
+		IPAddresses:           []net.IP{net.ParseIP("127.0.0.1")},
+		IsCA:                  true,
 		BasicConstraintsValid: true,
 	}
 	der, err := x509.CreateCertificate(rand.Reader, &template, &template, &key.PublicKey, key)

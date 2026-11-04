@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	connectip "github.com/Diniboy1123/connect-ip-go"
@@ -27,6 +28,12 @@ import (
 )
 
 type Server struct {
+	// SwapUDP makes the mock behave like a real UDP responder: it answers
+	// from the destination address/port back to the client address/port.
+	// Plain Start() echoes packets byte for byte, which is what the older
+	// packet tests expect.
+	SwapUDP atomic.Bool
+
 	Identity *warp.Identity
 	Addr     string
 	Port     int
@@ -124,6 +131,32 @@ func Start() (*Server, error) {
 	return mock, nil
 }
 
+// StartUDPEcho starts the mock WARP server in UDP responder mode.
+func StartUDPEcho() (*Server, error) {
+	server, err := Start()
+	if err != nil {
+		return nil, err
+	}
+	server.SwapUDP.Store(true)
+	return server, nil
+}
+
+// respond rewrites an echoed packet so it looks like a real answer.
+func (s *Server) respond(whole []byte) []byte {
+	if !s.SwapUDP.Load() {
+		return whole
+	}
+	src, dst, srcPort, dstPort, payload, err := packet.ParseUDP(whole)
+	if err != nil {
+		return whole
+	}
+	answer := packet.BuildUDP(dst, src, dstPort, srcPort, payload)
+	if answer == nil {
+		return whole
+	}
+	return answer
+}
+
 func (s *Server) Close() error {
 	var err error
 	s.once.Do(func() {
@@ -167,7 +200,7 @@ func (s *Server) handleH3(w http.ResponseWriter, r *http.Request) {
 		if !ok {
 			continue
 		}
-		for _, fragment := range packet.Fragment(whole, warp.MTU) {
+		for _, fragment := range packet.Fragment(s.respond(whole), warp.MTU) {
 			if _, err := conn.WritePacket(fragment); err != nil {
 				return
 			}
@@ -196,7 +229,7 @@ func (s *Server) handleH2(w http.ResponseWriter, r *http.Request) {
 		if !ok {
 			continue
 		}
-		for _, fragment := range packet.Fragment(whole, warp.MTU) {
+		for _, fragment := range packet.Fragment(s.respond(whole), warp.MTU) {
 			if err := writeCapsule(w, fragment); err != nil {
 				return
 			}

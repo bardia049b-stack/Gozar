@@ -32,29 +32,29 @@ func (a Account) ID() string {
 }
 
 type Config struct {
-	Email           string    `json:"email"`
-	UID             string    `json:"uid"`
-	Access          string    `json:"access"`
-	Refresh         string    `json:"refresh"`
-	ExpiresAt       int64     `json:"expires_at"`
-	Accounts        []Account `json:"accounts,omitempty"`
-	Server          string    `json:"server"`
-	Language        string    `json:"language"`
-	Theme           string    `json:"theme"`
-	Recents         bool      `json:"recents"`
-	LastServer      string    `json:"last_server"`
-	SettingsVersion int       `json:"settings_version"`
-	FullTunnel      bool      `json:"full_tunnel"`
-	BypassLAN       bool      `json:"bypass_lan"`
-	Bypass          []string  `json:"bypass"`
-	Chain           []string  `json:"chain"`
-	Port            int       `json:"port"`
-	DNSEndpoints    []string  `json:"dns_endpoints,omitempty"`
-	Fragment        bool      `json:"fragment,omitempty"`
-	UDP             bool      `json:"udp,omitempty"`
-	GameMode        bool      `json:"game_mode,omitempty"`
-	Warp            bool      `json:"warp,omitempty"`
-	KillSwitch      bool      `json:"kill_switch,omitempty"`
+	Email           string          `json:"email"`
+	UID             string          `json:"uid"`
+	Access          string          `json:"access"`
+	Refresh         string          `json:"refresh"`
+	ExpiresAt       int64           `json:"expires_at"`
+	Accounts        []Account       `json:"accounts,omitempty"`
+	Server          string          `json:"server"`
+	Language        string          `json:"language"`
+	Theme           string          `json:"theme"`
+	Recents         bool            `json:"recents"`
+	LastServer      string          `json:"last_server"`
+	SettingsVersion int             `json:"settings_version"`
+	FullTunnel      bool            `json:"full_tunnel"`
+	BypassLAN       bool            `json:"bypass_lan"`
+	Bypass          []string        `json:"bypass"`
+	Chain           []string        `json:"chain"`
+	Port            int             `json:"port"`
+	DNSEndpoints    []string        `json:"dns_endpoints,omitempty"`
+	Fragment        bool            `json:"fragment,omitempty"`
+	UDP             bool            `json:"udp,omitempty"`
+	GameMode        bool            `json:"game_mode,omitempty"`
+	Warp            bool            `json:"warp,omitempty"`
+	KillSwitch      bool            `json:"kill_switch,omitempty"`
 	Advanced        bypass.Options  `json:"advanced,omitempty"`
 	AdvancedParams  advanced.Params `json:"advanced_params,omitempty"`
 }
@@ -207,3 +207,11 @@ func Save(current Config) error {
 }
 
 func (c Config) SignedIn() bool { return c.Email != "" && (c.Refresh != "" || c.Access != "") }
+
+// SealSecret encrypts a secret for storage at rest: DPAPI on Windows and
+// AES-256-GCM with the machine key elsewhere. It is the same protection the
+// account tokens use, so the WARP private key is never written in the clear.
+func SealSecret(plain []byte) (string, error) { return protect(plain) }
+
+// UnsealSecret reverses SealSecret.
+func UnsealSecret(text string) ([]byte, error) { return unprotect(text) }

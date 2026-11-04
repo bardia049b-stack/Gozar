@@ -11,7 +11,7 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"errors"
-		"net"
+	"net"
 	"strings"
 	"syscall"
 	"time"
@@ -123,7 +123,7 @@ func DialTCP(ctx context.Context, address string, options bypass.Options, timeou
 		timeout = 15 * time.Second
 	}
 	type attempt struct {
-		name         string
+		name            string
 		mptcp, fastopen bool
 	}
 	var order []attempt

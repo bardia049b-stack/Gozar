@@ -742,7 +742,7 @@ func (a *App) connect() error {
 		transport.Close()
 		return err
 	}
-	created, err := engine.Start(target.Host, dial, keep)
+	created, err := engine.StartWithOptions(target.Host, dial, keep, engine.Options{Packets: a.packetDialer()})
 	if err != nil {
 		transport.Close()
 		return err

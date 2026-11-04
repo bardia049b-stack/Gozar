@@ -100,11 +100,20 @@ func virtualStack(t *testing.T, address [4]byte, permissive bool) (*stack.Stack,
 
 func virtualNetwork(t *testing.T, resolver *mockResolver) (*stack.Stack, *Engine, <-chan []byte) {
 	t.Helper()
+	return virtualNetworkWithPackets(t, resolver, nil)
+}
+
+func virtualNetworkWithPackets(t *testing.T, resolver *mockResolver, dial PacketDialer) (*stack.Stack, *Engine, <-chan []byte) {
+	t.Helper()
 	client, clientLink := virtualStack(t, [4]byte{10, 111, 0, 2}, false)
 	server, serverLink := virtualStack(t, [4]byte{10, 111, 0, 1}, true)
 	e := &Engine{stack: server, dns: resolver, dial: func(host string, port int) (io.ReadWriteCloser, error) {
 		return nil, errors.New("unexpected upstream connection")
 	}}
+	if dial != nil {
+		e.packets = newUDPRelay(e, dial)
+		t.Cleanup(func() { e.packets.close() })
+	}
 	tcpForwarder := tcp.NewForwarder(server, 0, 64, e.handleTCP)
 	server.SetTransportProtocolHandler(tcp.ProtocolNumber, tcpForwarder.HandlePacket)
 	e.listenUDP(server)

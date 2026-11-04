@@ -30,6 +30,17 @@ type resolver interface {
 	Close()
 }
 
+// tunnelAddress is the address the userspace stack owns inside the tunnel.
+var tunnelAddress = netip.MustParseAddr("10.111.0.2")
+
+// Options carries the optional capabilities of a tunnel session.
+type Options struct {
+	// Packets enables UDP relaying (WebRTC, STUN and online games) over a
+	// datagram tunnel such as WARP. When nil, only DNS UDP is served, exactly
+	// like before.
+	Packets PacketDialer
+}
+
 type Engine struct {
 	stack  *stack.Stack
 	device *tundev.Device
@@ -39,13 +50,25 @@ type Engine struct {
 	down   atomic.Int64
 	up     atomic.Int64
 	once   sync.Once
+
+	packets *udpRelay
 }
 
 func Start(proxyHost string, dial Dialer, protect []netip.Addr) (*Engine, error) {
-	return start(proxyHost, dial, protect, nil)
+	return startWithOptions(proxyHost, dial, protect, nil, Options{})
+}
+
+// StartWithOptions starts the tunnel with optional capabilities such as the
+// UDP datagram relay used by games and WebRTC.
+func StartWithOptions(proxyHost string, dial Dialer, protect []netip.Addr, options Options) (*Engine, error) {
+	return startWithOptions(proxyHost, dial, protect, nil, options)
 }
 
 func start(proxyHost string, dial Dialer, protect []netip.Addr, testResolver resolver) (*Engine, error) {
+	return startWithOptions(proxyHost, dial, protect, testResolver, Options{})
+}
+
+func startWithOptions(proxyHost string, dial Dialer, protect []netip.Addr, testResolver resolver, options Options) (*Engine, error) {
 	if !tundev.Privileged() {
 		return nil, errors.New("the tunnel needs administrator rights")
 	}
@@ -86,6 +109,9 @@ func start(proxyHost string, dial Dialer, protect []netip.Addr, testResolver res
 	engine := &Engine{stack: created, device: device, dial: dial, dns: testResolver}
 	if engine.dns == nil {
 		engine.dns = dnsproxy.New(dial)
+	}
+	if options.Packets != nil {
+		engine.packets = newUDPRelay(engine, options.Packets)
 	}
 
 	tcpForwarder := tcp.NewForwarder(created, 0, 4096, engine.handleTCP)
@@ -141,7 +167,7 @@ func (e *Engine) handleTCP(request *tcp.ForwarderRequest) {
 func (e *Engine) listenUDP(created *stack.Stack) {
 	forwarder := udp.NewForwarder(created, e.handleUDP)
 	created.SetTransportProtocolHandler(udp.ProtocolNumber, func(id stack.TransportEndpointID, packet *stack.PacketBuffer) bool {
-		if id.LocalPort != 53 {
+		if id.LocalPort != 53 && e.packets == nil {
 			return false
 		}
 		return forwarder.HandlePacket(id, packet)
@@ -149,6 +175,10 @@ func (e *Engine) listenUDP(created *stack.Stack) {
 }
 
 func (e *Engine) handleUDP(request *udp.ForwarderRequest) {
+	if request.ID().LocalPort != 53 && e.packets != nil {
+		go e.serveUDP(request)
+		return
+	}
 	go func() {
 		queue := &waiter.Queue{}
 		endpoint, terr := request.CreateEndpoint(queue)
@@ -259,6 +289,9 @@ func (e *Engine) Failures() <-chan error {
 
 func (e *Engine) Stop() {
 	e.once.Do(func() {
+		if e.packets != nil {
+			e.packets.close()
+		}
 		tundev.Restore(&e.config)
 		if e.dns != nil {
 			e.dns.Close()
