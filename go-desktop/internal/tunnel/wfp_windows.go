@@ -257,7 +257,7 @@ func (w *WFP) addDNSFilters() error {
 		return errors.New("invalid internal DNS address")
 	}
 	address := uint32(internalDNS[0])<<24 | uint32(internalDNS[1])<<16 | uint32(internalDNS[2])<<8 | uint32(internalDNS[3])
-	for _, protocol := range []uint16{17, 6} {
+	for _, protocol := range []uint8{17, 6} {
 		permit := []wfpFilterCondition{
 			uint16Condition(condIPRemotePort, 53),
 			uint8Condition(condIPProtocol, protocol),
