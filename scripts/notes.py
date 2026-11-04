@@ -91,8 +91,8 @@ rows = [
     ('**Arch Linux**', stack(
         badge('Pkg', 'x86__64', '1793d1', 'archlinux', f'Gozar-{version}-x86_64.pkg.tar.zst'))),
     ('**AUR**', stack(
-        badge('PKGBUILD', 'gozar-bin', '1793d1', 'archlinux', 'PKGBUILD',
-              prefix=f'https://github.com/{repo}/tree/main/packaging/aur/'))),
+        badge('AUR', 'PKGBUILD', '2D5A8C', 'archlinux', '',
+              prefix=f'https://github.com/{repo}/tree/main/packaging/aur'))),
     ('**OpenWrt**', stack(
         badge('IPK', 'mips', '00a3e0', 'openwrt', 'Gozar-OpenWrt-mips_24kc.ipk'),
         badge('IPK', 'mipsel', '00a3e0', 'openwrt', 'Gozar-OpenWrt-mipsel_24kc.ipk'),
