@@ -1,6 +1,7 @@
 import hashlib
 import io
 import json
+import os
 import pathlib
 import subprocess
 import sys
@@ -127,6 +128,16 @@ def main() -> None:
     with tempfile.TemporaryDirectory() as work:
         for arch in ('amd64', 'arm64'):
             binary = pathlib.Path(work) / f'gozar-core-{arch}'
+            env = dict(os.environ)
+            env.update({
+                'GOOS': 'freebsd',
+                'GOARCH': arch,
+                'CGO_ENABLED': '0',
+                'GOFLAGS': '-mod=mod',
+            })
+            local_go = pathlib.Path.home() / '.cache/tools/go/bin'
+            if (local_go / 'go').exists():
+                env['PATH'] = str(local_go) + ':' + env.get('PATH', '/usr/local/bin:/usr/bin:/bin')
             subprocess.run(
                 [
                     'go', 'build', '-trimpath', '-buildvcs=false', '-ldflags=-s -w',
@@ -134,14 +145,7 @@ def main() -> None:
                 ],
                 cwd=ROOT / 'go-desktop',
                 check=True,
-                env={
-                    'PATH': str(pathlib.Path.home() / '.cache/tools/go/bin') + ':' + '/usr/local/bin:/usr/bin:/bin',
-                    'HOME': str(pathlib.Path.home()),
-                    'GOOS': 'freebsd',
-                    'GOARCH': arch,
-                    'CGO_ENABLED': '0',
-                    'GOFLAGS': '-mod=mod',
-                },
+                env=env,
             )
             build(binary, arch, OUTPUT / names[arch])
             print(OUTPUT / names[arch])
