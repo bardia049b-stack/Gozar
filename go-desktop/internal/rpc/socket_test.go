@@ -1,16 +1,22 @@
 package rpc
 
 import (
+	"fmt"
+	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/app"
 )
 
-func TestUnixControlSocket(t *testing.T) {
+func TestControlSocket(t *testing.T) {
 	current := app.New("test")
 	defer current.Close()
 	path := filepath.Join(t.TempDir(), "control.sock")
+	if runtime.GOOS == "windows" {
+		path = fmt.Sprintf(`\\.\pipe\gozar-test-%d`, os.Getpid())
+	}
 	listener, err := Listen(current, path)
 	if err != nil {
 		t.Fatal(err)
