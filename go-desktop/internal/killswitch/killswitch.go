@@ -108,12 +108,8 @@ func cgroupPath() (string, error) {
 
 func (g *Guard) DarwinRules() string {
 	var b strings.Builder
-	b.WriteString("set persist {\n")
-	fmt.Fprintf(&b, "  %s\n", g.Interface)
-	b.WriteString("}\n")
-	b.WriteString("block drop out quick\n")
-	b.WriteString("pass out quick on lo0\n")
-	fmt.Fprintf(&b, "pass out quick on $%s\n", g.Interface)
+	b.WriteString("set skip on lo0\n")
+	fmt.Fprintf(&b, "pass out quick on %s\n", g.Interface)
 	for _, address := range g.Keep {
 		fmt.Fprintf(&b, "pass out quick to %s\n", address)
 	}
@@ -121,6 +117,7 @@ func (g *Guard) DarwinRules() string {
 	b.WriteString("block drop out quick proto udp to any port 53\n")
 	b.WriteString("block drop out quick proto tcp to any port 53\n")
 	b.WriteString("block drop out quick inet6\n")
+	b.WriteString("block drop out quick\n")
 	return b.String()
 }
 

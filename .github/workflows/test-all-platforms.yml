@@ -1,0 +1,150 @@
+name: Test All Platforms
+
+on:
+  push:
+    branches: [main, 'feat/**']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: test-all-platforms-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go-desktop/go.mod
+          cache-dependency-path: go-desktop/go.sum
+      - name: Vet
+        working-directory: go-desktop
+        run: go vet ./...
+      - name: Core tests
+        working-directory: go-desktop
+        run: go test ./...
+      - name: Isolated UDP WARP WebRTC gaming geo tests
+        working-directory: go-desktop
+        run: go test -count=1 -v ./internal/packet ./internal/warp ./internal/warptest ./internal/rtctest ./internal/geo ./internal/bypass
+      - name: Iran settings policy
+        working-directory: go-desktop
+        run: go test -count=1 -v ./internal/config ./internal/settings
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: linux-test-logs
+          path: go-desktop/**/*.log
+          if-no-files-found: ignore
+
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go-desktop/go.mod
+          cache-dependency-path: go-desktop/go.sum
+      - name: Core tests
+        working-directory: go-desktop
+        run: go test ./...
+      - name: WFP tests
+        working-directory: go-desktop
+        env:
+          GOZAR_LIVE_WFP: '1'
+        run: go test -count=1 -v ./internal/tunnel/... -run TestWFP
+
+  macos:
+    runs-on: macos-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go-desktop/go.mod
+          cache-dependency-path: go-desktop/go.sum
+      - name: Core tests
+        working-directory: go-desktop
+        run: go test ./...
+      - name: PF tests
+        working-directory: go-desktop
+        run: go test -count=1 -v ./internal/killswitch/... -run TestPF
+
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install SDK
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" "platform-tools"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Core and app tests
+        run: bash ./gradlew :core:test :app:testDebugUnitTest --no-daemon --max-workers=2
+
+  openwrt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go-desktop/go.mod
+          cache-dependency-path: go-desktop/go.sum
+      - name: Cross compile and package OpenWrt
+        env:
+          GOZAR_OPENWRT_X86_64: '1'
+        run: |
+          mkdir -p packaging/openwrt/out
+          bash scripts/package_openwrt.sh 1.10.3 packaging/openwrt/out
+      - name: Official OpenWrt rootfs Docker test
+        run: |
+          docker build -f packaging/openwrt/Dockerfile -t gozar-openwrt-test packaging/openwrt
+          docker run --rm gozar-openwrt-test
+      - uses: actions/upload-artifact@v4
+        with:
+          name: openwrt-ipk
+          path: packaging/openwrt/out/*.ipk
+          if-no-files-found: error
+
+  bypass:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go-desktop/go.mod
+          cache-dependency-path: go-desktop/go.sum
+      - name: DPI simulation and advanced bypass tests
+        working-directory: go-desktop
+        run: go test -count=1 -v ./internal/bypass ./internal/tunnel ./internal/dnsproxy ./internal/warp
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [linux, windows, macos, android, openwrt, bypass]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: openwrt-ipk
+          path: out
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: out/*.ipk
+          generate_release_notes: true

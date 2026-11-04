@@ -99,4 +99,9 @@ pack_core arm_cortex-a7_neon-vfpv4 "$work/gozar-armv7" "$out/Gozar-OpenWrt-armv7
 pack_core aarch64_cortex-a53 "$work/gozar-aarch64" "$out/Gozar-OpenWrt-aarch64.ipk"
 pack_luci "$out/LuCI-Gozar-all.ipk"
 
+if [ "${GOZAR_OPENWRT_X86_64:-0}" = 1 ]; then
+	build_core linux amd64 "" "" "$work/gozar-x86_64"
+	pack_core x86_64 "$work/gozar-x86_64" "$out/Gozar-OpenWrt-x86_64.ipk"
+fi
+
 ls -l "$out"/Gozar-OpenWrt-*.ipk "$out"/LuCI-Gozar-all.ipk

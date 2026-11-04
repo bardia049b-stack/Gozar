@@ -6,11 +6,6 @@ import (
 	"strings"
 )
 
-type Router struct {
-	DirectSuffixes []string
-	DirectCIDRs    []netip.Prefix
-}
-
 func DefaultIranRouter() *Router {
 	return &Router{
 		DirectSuffixes: []string{".ir", "ایران.", "ایران"},
@@ -39,7 +34,11 @@ func (r *Router) Direct(host string) bool {
 	if address, err := netip.ParseAddr(name); err == nil {
 		return r.DirectIP(address)
 	}
-	addresses, err := net.LookupIP(name)
+	lookup := net.LookupIP
+	if r.LookupIP != nil {
+		lookup = r.LookupIP
+	}
+	addresses, err := lookup(name)
 	if err != nil {
 		return false
 	}

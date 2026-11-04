@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/bypass"
 )
 
 type Account struct {
@@ -52,6 +54,7 @@ type Config struct {
 	GameMode        bool      `json:"game_mode,omitempty"`
 	Warp            bool      `json:"warp,omitempty"`
 	KillSwitch      bool      `json:"kill_switch,omitempty"`
+	Advanced        bypass.Options `json:"advanced,omitempty"`
 }
 
 func Dir() string {
@@ -67,7 +70,7 @@ func Dir() string {
 func path() string { return filepath.Join(Dir(), "config.json") }
 
 func defaults() Config {
-	return Config{FullTunnel: true, Theme: "system", SettingsVersion: 1, Port: 10810, UDP: false, GameMode: false, Warp: false, KillSwitch: false}
+	return Config{FullTunnel: true, Theme: "system", SettingsVersion: 1, Port: 10810, UDP: false, GameMode: false, Warp: false, KillSwitch: false, Advanced: bypass.Default()}
 }
 
 func (c Config) ActiveAccount() Account {
