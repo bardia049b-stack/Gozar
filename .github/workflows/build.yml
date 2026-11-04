@@ -221,6 +221,12 @@ jobs:
           $compiler = Join-Path ${env:ProgramFiles(x86)} 'NSIS\makensis.exe'
           if (!(Test-Path $compiler)) { choco install nsis --no-progress -y }
           if (!(Test-Path $compiler)) { throw 'NSIS compiler was not installed' }
+      - name: Install Windows binary compressor
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          choco install upx --no-progress -y
+          upx --version
       - name: Build Windows
         if: matrix.platform == 'windows'
         working-directory: desktop_flutter
@@ -233,6 +239,7 @@ jobs:
           pwsh -NoProfile -File ../scripts/check-windows-manifest.ps1 -Exe "$RUNNER"
           FOLDER=$(dirname "$RUNNER")
           (cd ../go-desktop && CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags='-s -w -H=windowsgui' -o "../desktop_flutter/$FOLDER/gozar-core.exe" ./cmd/gozar)
+          upx --best --lzma "$FOLDER/gozar-core.exe"
           mkdir -p "$RUNNER_TEMP/gozar-ipc"
           printf '%s\n' '{"id":1,"method":"state"}' '{"id":2,"method":"language","params":{"language":"en"}}' '{"id":3,"method":"quit"}' | APPDATA="$RUNNER_TEMP/gozar-ipc" "$FOLDER/gozar-core.exe" --rpc > "$RUNNER_TEMP/gozar-ipc.jsonl"
           python -c "import json,os; r=[json.loads(x) for x in open(os.path.join(os.environ['RUNNER_TEMP'],'gozar-ipc.jsonl'))]; assert [x['id'] for x in r]==[1,2,3] and r[1]['state']['language']=='en'"
