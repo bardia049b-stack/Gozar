@@ -47,6 +47,8 @@ type Manager struct {
 	h2Score   measure
 	h3Score   measure
 	testTLS   *tls.Config
+
+	advancedPath string
 }
 
 func NewManager(target Target) *Manager {
@@ -58,6 +60,18 @@ func NewManager(target Target) *Manager {
 func (m *Manager) Open(host string, port int, pass string, timeout time.Duration) (Dup, error) {
 	if timeout <= 0 {
 		timeout = 15 * time.Second
+	}
+	if m.advancedEnabled() && !m.isClosed() {
+		if conn, path, err := m.openAdvanced(host, port, pass, timeout); err == nil {
+			stream, trackErr := m.track(conn)
+			if trackErr != nil {
+				return nil, trackErr
+			}
+			m.setAdvancedPath(path)
+			return stream, nil
+		}
+		// Automatic fallback: the standard chain below always stays available.
+		m.setAdvancedPath("")
 	}
 	firstH3, canH3 := m.choice()
 	var firstErr error

@@ -8,6 +8,7 @@ import (
 	"os"
 	"sync"
 
+	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/advanced"
 	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/app"
 	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/fxa"
 	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/systemaccounts"
@@ -113,6 +114,29 @@ func (s *Server) handle(request Request) Response {
 		}
 	case "disconnect":
 		s.app.Disconnect()
+	case "advanced":
+		response.Reply = s.app.AdvancedState()
+	case "advanced_set":
+		var body struct {
+			Name    string `json:"name"`
+			Enabled bool   `json:"enabled"`
+		}
+		if err := json.Unmarshal(request.Params, &body); err != nil || body.Name == "" {
+			response.Error = "invalid advanced option"
+		} else if err := s.app.SetAdvanced(body.Name, body.Enabled); err != nil {
+			response.Error = err.Error()
+		} else {
+			response.Reply = s.app.AdvancedState()
+		}
+	case "advanced_params":
+		var body advanced.Params
+		if err := json.Unmarshal(request.Params, &body); err != nil {
+			response.Error = "invalid advanced parameters"
+		} else if err := s.app.SetAdvancedParams(body); err != nil {
+			response.Error = err.Error()
+		} else {
+			response.Reply = s.app.AdvancedState()
+		}
 	case "warp_scan":
 		result, err := s.app.ScanWarpEndpoints()
 		if err != nil {

@@ -705,6 +705,8 @@ func (a *App) connect() error {
 		return err
 	}
 	target.Chain = hops
+	target.Advanced = a.cfg.Advanced
+	target.Params = a.cfg.AdvancedParams.WithDefaults()
 	firstHost := target.Host
 	if len(hops) > 0 {
 		firstHost = hops[0].Host
@@ -744,6 +746,9 @@ func (a *App) connect() error {
 	if err != nil {
 		transport.Close()
 		return err
+	}
+	if a.cfg.Advanced.DoQ {
+		created.EnableDoQ(a.cfg.AdvancedParams.WithDefaults().DoQServer)
 	}
 	guard, err := tunnel.NewWFP(created.Device())
 	if err != nil {

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/advanced"
 	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/bypass"
 )
 
@@ -54,7 +55,8 @@ type Config struct {
 	GameMode        bool      `json:"game_mode,omitempty"`
 	Warp            bool      `json:"warp,omitempty"`
 	KillSwitch      bool      `json:"kill_switch,omitempty"`
-	Advanced        bypass.Options `json:"advanced,omitempty"`
+	Advanced        bypass.Options  `json:"advanced,omitempty"`
+	AdvancedParams  advanced.Params `json:"advanced_params,omitempty"`
 }
 
 func Dir() string {

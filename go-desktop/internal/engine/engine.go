@@ -237,6 +237,14 @@ func (e *Engine) relayDuplex(local, remote io.ReadWriteCloser) {
 	remote.Close()
 }
 
+// EnableDoQ turns the optional DNS-over-QUIC upstream on or off. The DoH
+// upstreams stay configured and take over automatically when DoQ fails.
+func (e *Engine) EnableDoQ(server string) {
+	if resolver, ok := e.dns.(*dnsproxy.Resolver); ok {
+		resolver.EnableDoQ(server, nil)
+	}
+}
+
 func (e *Engine) Counters() (int64, int64) {
 	return e.down.Load(), e.up.Load()
 }

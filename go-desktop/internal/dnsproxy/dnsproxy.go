@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/advanced"
 	"golang.org/x/net/dns/dnsmessage"
 )
 
@@ -34,6 +35,40 @@ type Resolver struct {
 	servers   []string
 	timeout   time.Duration
 	cache     *dnsCache
+
+	doqMu sync.Mutex
+	doq   *advanced.DoQClient
+}
+
+// EnableDoQ turns on DNS-over-QUIC as the preferred upstream. DNS-over-HTTPS
+// stays configured and takes over automatically whenever DoQ fails.
+// Passing an empty server disables DoQ again.
+func (r *Resolver) EnableDoQ(server string, config *tls.Config) {
+	r.doqMu.Lock()
+	defer r.doqMu.Unlock()
+	if r.doq != nil {
+		r.doq.Close()
+		r.doq = nil
+	}
+	if server == "" {
+		return
+	}
+	client := advanced.NewDoQClient(server, config)
+	client.Timeout = r.timeout
+	r.doq = client
+}
+
+// DoQEnabled reports whether the DoQ path is configured.
+func (r *Resolver) DoQEnabled() bool {
+	r.doqMu.Lock()
+	defer r.doqMu.Unlock()
+	return r.doq != nil
+}
+
+func (r *Resolver) doqClient() *advanced.DoQClient {
+	r.doqMu.Lock()
+	defer r.doqMu.Unlock()
+	return r.doq
 }
 
 func New(dial func(host string, port int) (io.ReadWriteCloser, error)) *Resolver {
@@ -87,6 +122,22 @@ func (r *Resolver) Resolve(query []byte) ([]byte, error) {
 
 func (r *Resolver) resolveUncached(query []byte, question dnsmessage.Message) ([]byte, error) {
 	var last error
+	if client := r.doqClient(); client != nil {
+		ctx, cancel := context.WithTimeout(r.ctx, r.timeout)
+		answer, err := client.Resolve(ctx, query)
+		cancel()
+		if err == nil {
+			err = checkAnswer(question, answer)
+		}
+		if err == nil {
+			return answer, nil
+		}
+		last = err
+		if r.ctx.Err() != nil {
+			return nil, r.ctx.Err()
+		}
+		// Automatic fallback: continue with the DoH servers below.
+	}
 	for _, server := range r.servers {
 		answer, err := r.exchange(server, query)
 		if err == nil {
@@ -182,6 +233,7 @@ func (r *Resolver) dial(ctx context.Context, network, address string) (net.Conn,
 }
 
 func (r *Resolver) Close() {
+	r.EnableDoQ("", nil)
 	r.cancel()
 	r.transport.CloseIdleConnections()
 }

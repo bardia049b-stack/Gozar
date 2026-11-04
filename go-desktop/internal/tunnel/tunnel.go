@@ -15,6 +15,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/advanced"
+	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/bypass"
 	utls "github.com/refraction-networking/utls"
 	"golang.org/x/net/http2"
 )
@@ -26,6 +28,11 @@ type Target struct {
 	Port     int
 	DialHost string
 	Chain    []Hop
+
+	// Advanced selects the optional transports. The zero value keeps the
+	// standard HTTP/2 + HTTP/1.1 behaviour byte for byte.
+	Advanced bypass.Options
+	Params   advanced.Params
 }
 
 type Dup interface {
@@ -85,6 +92,11 @@ func dialTLSConfigured(target Target, protocols []string, timeout time.Duration,
 		config.ServerName = override.ServerName
 	}
 	config.ServerName = target.Host
+	if target.Advanced.DomainFronting && target.Params.FrontHost != "" {
+		// SNI shows the cover name; the CONNECT target and Host header stay
+		// the real destination.
+		config.ServerName = target.Params.FrontHost
+	}
 	config.NextProtos = protocols
 	config.MinVersion = tls.VersionTLS12
 	conn := utls.UClient(&fragmentConn{Conn: raw}, config, utls.HelloChrome_Auto)

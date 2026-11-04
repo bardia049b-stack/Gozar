@@ -1,6 +1,7 @@
 package tunnel
 
 import (
+	"context"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -10,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/advanced"
 )
 
 type Hop struct {
@@ -59,7 +62,16 @@ func dialChain(target Target, timeout time.Duration) (net.Conn, error) {
 	if target.DialHost != "" {
 		host = target.DialHost
 	}
-	conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, strconv.Itoa(port)), timeout)
+	address := net.JoinHostPort(host, strconv.Itoa(port))
+	var conn net.Conn
+	var err error
+	if target.Advanced.TFO || target.Advanced.MPTCP {
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		conn, _, err = advanced.DialTCP(ctx, address, target.Advanced, timeout)
+		cancel()
+	} else {
+		conn, err = net.DialTimeout("tcp", address, timeout)
+	}
 	if err != nil {
 		return nil, err
 	}
