@@ -152,6 +152,9 @@ class CoreReply {
     this.needsCode = false,
     this.captchaImage,
     this.systemEmails = const [],
+    this.warpBest = '',
+    this.warpCount = 0,
+    this.warpPath = '',
   });
 
   final CoreState? state;
@@ -159,6 +162,9 @@ class CoreReply {
   final bool needsCode;
   final String? captchaImage;
   final List<String> systemEmails;
+  final String warpBest;
+  final int warpCount;
+  final String warpPath;
 
   factory CoreReply.fromJson(Map<String, dynamic> json) {
     final state = json['state'];
@@ -176,6 +182,15 @@ class CoreReply {
       captchaImage: result is Map && result['captcha_image'] is String
           ? result['captcha_image'] as String
           : null,
+      warpBest: result is Map && result['best'] is String
+          ? result['best'] as String
+          : '',
+      warpCount: result is Map && result['count'] is num
+          ? (result['count'] as num).toInt()
+          : 0,
+      warpPath: result is Map && result['path'] is String
+          ? result['path'] as String
+          : '',
     );
   }
 }

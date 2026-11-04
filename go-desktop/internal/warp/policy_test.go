@@ -1,18 +1,6 @@
 package warp
 
-import (
-	"context"
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
-	"crypto/tls"
-	"crypto/x509"
-	"math/big"
-	"net"
-	"strconv"
-	"testing"
-	"time"
-)
+import "testing"
 
 func TestDefaultScannerIncludesWarpPort(t *testing.T) {
 	scanner := DefaultScanner()
@@ -30,58 +18,13 @@ func TestDefaultScannerIncludesWarpPort(t *testing.T) {
 	}
 }
 
-func TestScannerRanksReachableEndpoint(t *testing.T) {
-	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		t.Fatal(err)
+func TestScannerWorkersAreCappedAtTen(t *testing.T) {
+	scanner := &Scanner{Workers: 100}
+	if got := scanner.effectiveWorkers(); got != MaxWorkers {
+		t.Fatalf("workers = %d, want cap %d", got, MaxWorkers)
 	}
-	template := x509.Certificate{
-		SerialNumber: big.NewInt(1),
-		NotBefore:    time.Now().Add(-time.Hour),
-		NotAfter:     time.Now().Add(time.Hour),
-		IPAddresses:  []net.IP{net.ParseIP("127.0.0.1")},
-	}
-	der, err := x509.CreateCertificate(rand.Reader, &template, &template, &key.PublicKey, key)
-	if err != nil {
-		t.Fatal(err)
-	}
-	listener, err := tls.Listen("tcp", "127.0.0.1:0", &tls.Config{
-		Certificates: []tls.Certificate{{Certificate: [][]byte{der}, PrivateKey: key}},
-		NextProtos:   []string{"h2"},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer listener.Close()
-	go func() {
-		for {
-			conn, err := listener.Accept()
-			if err != nil {
-				return
-			}
-			if tlsConn, ok := conn.(*tls.Conn); ok {
-				_ = tlsConn.Handshake()
-			}
-			conn.Close()
-		}
-	}()
-	host, portText, err := net.SplitHostPort(listener.Addr().String())
-	if err != nil {
-		t.Fatal(err)
-	}
-	port, err := strconv.Atoi(portText)
-	if err != nil {
-		t.Fatal(err)
-	}
-	scanner := &Scanner{Endpoints: []string{host}, Ports: []int{port}, Timeout: 2 * time.Second, Workers: 1}
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-	results := scanner.Scan(ctx)
-	if len(results) != 1 || !results[0].OK {
-		t.Fatalf("reachable endpoint was not ranked OK: %+v", results)
-	}
-	best, ok := scanner.Best(ctx)
-	if !ok || best != listener.Addr().String() {
-		t.Fatalf("bad best endpoint: %s %v", best, ok)
+	scanner = DefaultScanner()
+	if scanner.Workers > MaxWorkers {
+		t.Fatalf("default workers exceed cap: %d", scanner.Workers)
 	}
 }

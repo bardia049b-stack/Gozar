@@ -142,6 +142,14 @@ class Words {
   String get darkTheme => pick('تیره', 'Dark');
   String get rememberServer =>
       pick('به‌خاطر سپردن سرور آخر', 'Remember last server');
+  String get warpScan => pick('اسکن خودکار WARP', 'Auto-scan WARP');
+  String get warpScanDetail => pick(
+      'آزمون handshake واقعی WARP و ذخیرهٔ بهترین endpoint',
+      'Real WARP handshake probe; saves the best endpoint');
+  String get warpScanRunning => pick('در حال اسکن WARP…', 'Scanning WARP…');
+  String get warpScanDone => pick('اسکن WARP پایان یافت', 'WARP scan finished');
+  String get warpScanFailed => pick('اسکن WARP ناموفق بود', 'WARP scan failed');
+  String get warpScanNone => pick('endpoint سالمی پیدا نشد', 'No healthy endpoint found');
   String get proxyChain => pick('زنجیرهٔ پراکسی', 'Proxy chain');
   String get proxyChainHint => pick(
       'هر خط یک پراکسی؛ برای نمونه socks5://127.0.0.1:1080',

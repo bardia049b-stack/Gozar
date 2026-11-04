@@ -140,6 +140,7 @@ class _GozarScreenState extends State<GozarScreen> with WindowListener {
   Timer? _timer;
   bool _starting = true;
   bool _busy = false;
+  bool _warpScanning = false;
   bool _connectionBusy = false;
   bool _refreshing = false;
   bool _loadingServers = false;
@@ -517,6 +518,27 @@ class _GozarScreenState extends State<GozarScreen> with WindowListener {
         },
       ),
     );
+  }
+
+  Future<void> _scanWarp() async {
+    if (_busy || _warpScanning || !_core.running) return;
+    setState(() => _warpScanning = true);
+    try {
+      final reply = await _core.call('warp_scan');
+      if (!mounted) return;
+      final message = reply.error != null
+          ? '${words.warpScanFailed}: ${reply.error}'
+          : reply.warpBest.isEmpty
+              ? words.warpScanNone
+              : '${words.warpScanDone}: ${reply.warpBest} (${reply.warpCount})';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('${words.warpScanFailed}: $error')));
+    } finally {
+      if (mounted) setState(() => _warpScanning = false);
+    }
   }
 
   Future<bool> _requestSetting(
@@ -1173,6 +1195,22 @@ class _GozarScreenState extends State<GozarScreen> with WindowListener {
             () => unawaited(_editChain())),
         _settingTile(Icons.route_outlined, words.routing,
             words.desktopRoutingLimits, null),
+        Card(
+            margin: const EdgeInsets.only(top: 8),
+            child: ListTile(
+              leading: _warpScanning
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.radar, color: soft),
+              title: Text(words.warpScan),
+              subtitle: Text(words.warpScanDetail),
+              trailing: TextButton(
+                onPressed: _busy || _warpScanning ? null : () => unawaited(_scanWarp()),
+                child: Text(_warpScanning ? words.warpScanRunning : words.warpScan),
+              ),
+            )),
       ]);
     }
     return Column(children: [

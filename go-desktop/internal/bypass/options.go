@@ -1,7 +1,5 @@
 package bypass
 
-import "encoding/json"
-
 type Options struct {
 	TLSFragment      bool `json:"tls_fragment,omitempty"`
 	UTLS             bool `json:"utls,omitempty"`
@@ -51,10 +49,9 @@ func (o Options) Enabled() []string {
 	return out
 }
 
-func (o Options) Validate() error {
-	_, err := json.Marshal(o)
-	return err
-}
+// Validate checks the option set. The current options are independent boolean
+// toggles; every enabled advanced path must fall back to the standard tunnel.
+func (o Options) Validate() error { return nil }
 
 func FallbackOrder() []string {
 	return []string{"tls_fragment", "utls", "standard"}

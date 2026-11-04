@@ -113,6 +113,13 @@ func (s *Server) handle(request Request) Response {
 		}
 	case "disconnect":
 		s.app.Disconnect()
+	case "warp_scan":
+		result, err := s.app.ScanWarpEndpoints()
+		if err != nil {
+			response.Error = err.Error()
+		} else {
+			response.Reply = result
+		}
 	case "server":
 		var body struct {
 			Host string `json:"host"`

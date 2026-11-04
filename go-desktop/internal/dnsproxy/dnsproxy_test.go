@@ -358,3 +358,40 @@ func TestLimitUDPUsesEDNSAndSignalsTCPFallback(t *testing.T) {
 		t.Fatalf("safe UDP cap ignored: length %d, err %v", len(short), err)
 	}
 }
+
+func TestConcurrentDuplicateDNSQueriesUseOneUpstreamRequest(t *testing.T) {
+	var requests atomic.Int32
+	r, _, _ := setup(t, http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		body, _ := io.ReadAll(req.Body)
+		requests.Add(1)
+		time.Sleep(50 * time.Millisecond)
+		w.Header().Set("Content-Type", "application/dns-message")
+		_, _ = w.Write(answerFor(t, body))
+	}))
+	wire := query(t, 4242, "dedup.example.", dnsmessage.TypeA)
+	var wg sync.WaitGroup
+	errs := make(chan error, 12)
+	for i := 0; i < 12; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			got, err := r.Resolve(wire)
+			if err != nil {
+				errs <- err
+				return
+			}
+			q, _ := readQuery(wire)
+			if err := checkAnswer(q, got); err != nil {
+				errs <- err
+			}
+		}()
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		t.Fatal(err)
+	}
+	if requests.Load() != 1 {
+		t.Fatalf("duplicate concurrent queries caused %d upstream requests", requests.Load())
+	}
+}
