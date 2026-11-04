@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"runtime"
 	"sync"
 	"syscall"
 	"unsafe"
@@ -18,7 +19,7 @@ const (
 	fwpMatchEqual      = 0
 	fwpActionBlock     = 0x1001
 	fwpActionPermit    = 0x1002
-	fwpUint16          = 1
+	fwpUint16          = 2
 	fwpUint32          = 3
 	fwpUint64          = 4
 )
@@ -83,10 +84,10 @@ type wfpFilter struct {
 type wfpSublayer struct {
 	SubLayerKey  windows.GUID
 	DisplayData  wfpDisplayData
-	Flags        uint16
-	Weight       uint16
+	Flags        uint32
 	ProviderKey  *windows.GUID
 	ProviderData wfpByteBlob
+	Weight       uint16
 }
 
 var (
@@ -169,6 +170,7 @@ func (w *WFP) install(tunInterface string) error {
 	sublayer := &wfpSublayer{
 		SubLayerKey: gozarSublayer,
 		DisplayData: wfpDisplayData{Name: name, Description: name},
+		Flags:       0,
 		Weight:      0xffff,
 	}
 	ret, _, _ = procFwpmSubLayerAdd0.Call(w.handle, uintptr(unsafe.Pointer(sublayer)), 0)
@@ -195,19 +197,37 @@ func (w *WFP) install(tunInterface string) error {
 
 func (w *WFP) addFilter(layer windows.GUID, action uint32, weight uint64, conditions []wfpFilterCondition, label string) error {
 	name := wfpName(label)
+	// FWP_VALUE0 stores UINT64 by pointer, not inline.
+	weightValue := weight
 	filter := &wfpFilter{
 		DisplayData: wfpDisplayData{Name: name, Description: name},
 		LayerKey:    layer,
 		SubLayerKey: gozarSublayer,
-		Weight:      wfpValue{Type: fwpUint64, Value: weight},
+		Weight:      wfpValue{Type: fwpUint64, Value: uint64(uintptr(unsafe.Pointer(&weightValue)))},
 		Action:      wfpAction{Type: action},
 	}
+	var kept []*uint64
+	var conds []wfpFilterCondition
 	if len(conditions) > 0 {
-		filter.NumFilterConditions = uint32(len(conditions))
-		filter.FilterCondition = &conditions[0]
+		conds = make([]wfpFilterCondition, len(conditions))
+		copy(conds, conditions)
+		for i := range conds {
+			if conds[i].ConditionValue.Type == fwpUint64 {
+				v := conds[i].ConditionValue.Value
+				p := &v
+				kept = append(kept, p)
+				conds[i].ConditionValue.Value = uint64(uintptr(unsafe.Pointer(p)))
+			}
+		}
+		filter.NumFilterConditions = uint32(len(conds))
+		filter.FilterCondition = &conds[0]
 	}
 	var id uint64
 	ret, _, _ := procFwpmFilterAdd0.Call(w.handle, uintptr(unsafe.Pointer(filter)), 0, uintptr(unsafe.Pointer(&id)))
+	runtime.KeepAlive(weightValue)
+	runtime.KeepAlive(kept)
+	runtime.KeepAlive(conds)
+	runtime.KeepAlive(filter)
 	if err := wfpResult(ret); err != nil {
 		return fmt.Errorf("FwpmFilterAdd0(%s): %w", label, err)
 	}

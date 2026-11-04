@@ -49,11 +49,12 @@ Description: Firefox Private Network client for OpenWrt
  Gozar ships the headless Go core, a procd service and its settings.
  The tunnel needs the kmod-tun package.
 CONTROL
-	( cd "$stage/data" && tar --owner=0 --group=0 -czf "$work/data.tar.gz" . )
-	( cd "$stage/control" && tar --owner=0 --group=0 -czf "$work/control.tar.gz" . )
+	( cd "$stage/data" && tar --format=gnu --owner=0 --group=0 -czf "$work/data.tar.gz" . )
+	( cd "$stage/control" && tar --format=gnu --owner=0 --group=0 -czf "$work/control.tar.gz" . )
 	printf '2.0\n' > "$work/debian-binary"
 	rm -f "$output"
-	( cd "$work" && ar rc "$output" debian-binary control.tar.gz data.tar.gz )
+	# OpenWrt opkg expects a gzip tar outer (debian-binary, data, control), not Debian ar.
+	( cd "$work" && tar --format=gnu --owner=0 --group=0 -cf - ./debian-binary ./data.tar.gz ./control.tar.gz | gzip -9n > "$output" )
 }
 
 pack_luci() {
@@ -82,11 +83,12 @@ Installed-Size: $(installed_size "$stage/data")
 Description: LuCI support for Gozar
  Configuration and status pages for the Gozar proxy client.
 CONTROL
-	( cd "$stage/data" && tar --owner=0 --group=0 -czf "$work/data.tar.gz" . )
-	( cd "$stage/control" && tar --owner=0 --group=0 -czf "$work/control.tar.gz" . )
+	( cd "$stage/data" && tar --format=gnu --owner=0 --group=0 -czf "$work/data.tar.gz" . )
+	( cd "$stage/control" && tar --format=gnu --owner=0 --group=0 -czf "$work/control.tar.gz" . )
 	printf '2.0\n' > "$work/debian-binary"
 	rm -f "$output"
-	( cd "$work" && ar rc "$output" debian-binary control.tar.gz data.tar.gz )
+	# OpenWrt opkg expects a gzip tar outer (debian-binary, data, control), not Debian ar.
+	( cd "$work" && tar --format=gnu --owner=0 --group=0 -cf - ./debian-binary ./data.tar.gz ./control.tar.gz | gzip -9n > "$output" )
 }
 
 build_core linux mips softfloat 7 "$work/gozar-mips"
