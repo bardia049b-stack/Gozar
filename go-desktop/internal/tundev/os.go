@@ -89,8 +89,3 @@ func mustRun(name string, args ...string) error {
 }
 
 func itoa(value int) string { return strconv.Itoa(value) }
-
-func blackhole6(name string, args ...string) error {
-	_, err := command(name, args...)
-	return err
-}

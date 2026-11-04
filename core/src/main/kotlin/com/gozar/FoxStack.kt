@@ -33,7 +33,7 @@ class FoxStack(
 ) {
 
     companion object {
-        const val MTU = 1400
+        const val MTU = 1280
         private const val MSS = MTU - 40
         private const val FIN = 0x01
         private const val SYN = 0x02
@@ -638,6 +638,9 @@ class FoxResolver(
 
     private val cache = ConcurrentHashMap<String, Entry>()
     private val slots = Semaphore(8)
+    private val flights = ConcurrentHashMap<String, Any>()
+
+    private fun flightLock(key: String): Any = flights.computeIfAbsent(key) { Any() }
 
     fun answer(query: ByteArray): ByteArray? {
         if (query.size < 17 || query[2].toInt() and 0x80 != 0 || short(query, 4) != 1 || question(query) == null) return null
@@ -652,7 +655,11 @@ class FoxResolver(
             if (time < hit.expires) return retag(query, hit.body, (time - hit.storedAt).coerceAtLeast(0) / 1000)
             cache.remove(key, hit)
         }
-        val body = exchange(query) ?: return failure(query)
+        val body = synchronized(flightLock(key)) {
+            val again = cache[key]
+            if (again != null && time < again.expires) return@synchronized again.body
+            exchange(query)?.also { if (valid(query, it)) cache[key] = Entry(it, time, time + ttl(it).coerceAtMost(300000)) }
+        } ?: return failure(query)
         if (!valid(query, body)) return failure(query)
         val ttl = ttl(body)
         if (ttl > 0) {

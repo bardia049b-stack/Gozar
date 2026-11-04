@@ -29,6 +29,8 @@ func main() {
 	password := flag.String("password", "", "")
 	code := flag.String("code", "", "")
 	listServers := flag.Bool("servers", false, "")
+	controlSocket := flag.String("control-socket", "", "")
+	serveControl := flag.Bool("serve-control", false, "")
 	selftest := flag.Bool("selftest", false, "")
 	showVersion := flag.Bool("version", false, "")
 	clearProxy := flag.Bool("clear-proxy", false, "explicitly clear system proxy settings")
@@ -45,6 +47,8 @@ func main() {
 		printServers()
 	case *email != "" && *password != "":
 		signIn(*email, *password, *code)
+	case *serveControl:
+		runControl(*controlSocket)
 	case *rpcMode:
 		runRPC()
 	case *headless:
@@ -58,6 +62,21 @@ func runRPC() {
 	current := app.New(version)
 	rpc.Run(current)
 	current.Close()
+}
+
+func runControl(path string) {
+	current := app.New(version)
+	defer current.Close()
+	listener, err := rpc.Listen(current, path)
+	if err != nil {
+		fmt.Println("failed: " + err.Error())
+		os.Exit(1)
+	}
+	defer listener.Close()
+	go rpc.Serve(current, listener)
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+	<-stop
 }
 
 func runHeadless() {

@@ -15,6 +15,9 @@ import (
 	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/config"
 	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/engine"
 	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/fxa"
+	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/geo"
+	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/rotation"
+	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/settings"
 	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/tundev"
 	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/tunnel"
 	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/wintun"
@@ -77,6 +80,7 @@ type App struct {
 	unblockFor      string
 	engine          *engine.Engine
 	transport       *tunnel.Manager
+	wfp             *tunnel.WFP
 	stage           string
 	fault           string
 	live            bool
@@ -91,6 +95,10 @@ type App struct {
 	lastUp          int64
 	version         string
 	admin           bool
+	rotationCancel  context.CancelFunc
+	rotationWorker  *rotation.Worker
+	settingsUpdate  *settings.Fetcher
+	geoRoutes       *geo.Router
 }
 
 func New(version string) *App {
@@ -101,7 +109,7 @@ func New(version string) *App {
 	} else {
 		cfg.Server = ""
 	}
-	created := &App{cfg: cfg, version: version, admin: tundev.Privileged(), refreshToken: fxa.Refresh, requestPass: fxa.PassToken}
+	created := &App{cfg: cfg, version: version, admin: tundev.Privileged(), refreshToken: fxa.Refresh, requestPass: fxa.PassToken, geoRoutes: geo.DefaultIranRouter(), settingsUpdate: settings.NewFetcher(nil)}
 	go created.sampler()
 	return created
 }
@@ -737,9 +745,16 @@ func (a *App) connect() error {
 		transport.Close()
 		return err
 	}
+	guard, err := tunnel.NewWFP(created.Device())
+	if err != nil {
+		created.Stop()
+		transport.Close()
+		return err
+	}
 	a.mu.Lock()
 	a.engine = created
 	a.transport = transport
+	a.wfp = guard
 	for _, place := range servers {
 		if strings.EqualFold(place.Host, target.Host) {
 			a.activeServer = place
@@ -789,6 +804,8 @@ func (a *App) teardown() {
 	a.mu.Lock()
 	engineNow := a.engine
 	transport := a.transport
+	guard := a.wfp
+	a.wfp = nil
 	a.transport = nil
 	cancel := a.renewCancel
 	a.renewCancel = nil
@@ -800,6 +817,9 @@ func (a *App) teardown() {
 	a.mu.Unlock()
 	if cancel != nil {
 		cancel()
+	}
+	if guard != nil {
+		guard.Close()
 	}
 	if transport != nil {
 		transport.Close()
@@ -822,6 +842,11 @@ func (a *App) Disconnect() {
 func (a *App) Close() {
 	a.connectionMu.Lock()
 	defer a.connectionMu.Unlock()
+	if a.rotationCancel != nil {
+		a.rotationCancel()
+		a.rotationCancel = nil
+		a.rotationWorker = nil
+	}
 	a.teardown()
 }
 

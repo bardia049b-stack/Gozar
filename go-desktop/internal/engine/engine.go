@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/dnsproxy"
+	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/mtu"
 	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/tundev"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
@@ -20,7 +21,7 @@ import (
 	"gvisor.dev/gvisor/pkg/waiter"
 )
 
-const mtu = 1500
+const defaultMTU = mtu.DefaultMTU
 
 type Dialer func(host string, port int) (io.ReadWriteCloser, error)
 
@@ -48,7 +49,7 @@ func start(proxyHost string, dial Dialer, protect []netip.Addr, testResolver res
 	if !tundev.Privileged() {
 		return nil, errors.New("the tunnel needs administrator rights")
 	}
-	device, err := tundev.Open(mtu)
+	device, err := tundev.Open(defaultMTU)
 	if err != nil {
 		return nil, err
 	}

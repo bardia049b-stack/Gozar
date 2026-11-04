@@ -33,6 +33,7 @@ type Resolver struct {
 	client    *http.Client
 	servers   []string
 	timeout   time.Duration
+	cache     *dnsCache
 }
 
 func New(dial func(host string, port int) (io.ReadWriteCloser, error)) *Resolver {
@@ -43,6 +44,7 @@ func New(dial func(host string, port int) (io.ReadWriteCloser, error)) *Resolver
 		cancel:  cancel,
 		servers: append([]string(nil), servers...),
 		timeout: 8 * time.Second,
+		cache:   newDNSCache(),
 	}
 	r.transport = &http.Transport{
 		DialContext:           r.dial,
@@ -69,6 +71,21 @@ func (r *Resolver) Resolve(query []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	key := cacheKey(question)
+	if answer, ok := r.cache.get(key, question.ID); ok {
+		return answer, nil
+	}
+	answer, err := r.cache.do(key, func() ([]byte, error) {
+		return r.resolveUncached(query, question)
+	})
+	if err == nil {
+		r.cache.put(key, answer)
+		return retag(answer, question.ID), nil
+	}
+	return nil, err
+}
+
+func (r *Resolver) resolveUncached(query []byte, question dnsmessage.Message) ([]byte, error) {
 	var last error
 	for _, server := range r.servers {
 		answer, err := r.exchange(server, query)

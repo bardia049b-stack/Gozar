@@ -113,8 +113,8 @@ func TestResolveUsesTLSOverTheProvidedDialer(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if requests.Load() != 2 {
-		t.Fatalf("wanted two uncached queries, got %d", requests.Load())
+	if requests.Load() != 1 {
+		t.Fatalf("wanted one upstream query after caching, got %d", requests.Load())
 	}
 	if len(*calls) == 0 {
 		t.Fatal("the provided tunnel dialer was not called")

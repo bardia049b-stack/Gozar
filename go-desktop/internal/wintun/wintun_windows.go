@@ -29,17 +29,7 @@ func Ensure() error {
 	if _, err := windows.LoadLibraryEx(target, 0, windows.LOAD_LIBRARY_SEARCH_SYSTEM32|windows.LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR); err != nil {
 		return err
 	}
-	if err := windows.SetDefaultDllDirectories(windows.LOAD_LIBRARY_SEARCH_SYSTEM32 | windows.LOAD_LIBRARY_SEARCH_USER_DIRS); err != nil {
-		return err
-	}
-	wide, err := windows.UTF16PtrFromString(folder)
-	if err != nil {
-		return err
-	}
-	if _, err := windows.AddDllDirectory(wide); err != nil {
-		return err
-	}
-	return nil
+	return windows.SetDefaultDllDirectories(windows.LOAD_LIBRARY_SEARCH_SYSTEM32)
 }
 
 func install(target string, want []byte) error {

@@ -46,6 +46,12 @@ type Config struct {
 	Bypass          []string  `json:"bypass"`
 	Chain           []string  `json:"chain"`
 	Port            int       `json:"port"`
+	DNSEndpoints    []string  `json:"dns_endpoints,omitempty"`
+	Fragment        bool      `json:"fragment,omitempty"`
+	UDP             bool      `json:"udp,omitempty"`
+	GameMode        bool      `json:"game_mode,omitempty"`
+	Warp            bool      `json:"warp,omitempty"`
+	KillSwitch      bool      `json:"kill_switch,omitempty"`
 }
 
 func Dir() string {
@@ -61,7 +67,7 @@ func Dir() string {
 func path() string { return filepath.Join(Dir(), "config.json") }
 
 func defaults() Config {
-	return Config{FullTunnel: true, Theme: "system", SettingsVersion: 1, Port: 10810}
+	return Config{FullTunnel: true, Theme: "system", SettingsVersion: 1, Port: 10810, UDP: false, GameMode: false, Warp: false, KillSwitch: false}
 }
 
 func (c Config) ActiveAccount() Account {

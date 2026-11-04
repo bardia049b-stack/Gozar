@@ -11,6 +11,7 @@ import android.net.ProxyInfo
 import android.net.VpnService
 import android.os.Build
 import android.os.ParcelFileDescriptor
+import android.os.PowerManager
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -24,6 +25,7 @@ import java.io.IOException
 class FoxVpnService : VpnService() {
 
     private var descriptor: ParcelFileDescriptor? = null
+    private var wakeLock: PowerManager.WakeLock? = null
 
     private var stack: FoxStack? = null
     @Volatile private var resolver: FoxResolver? = null
@@ -80,7 +82,7 @@ class FoxVpnService : VpnService() {
             .addRoute("0.0.0.0", 0)
             .addRoute(DNS_ADDRESS, 32)
             .addRoute("::", 0)
-            .setMtu(FoxStack.MTU)
+            .setMtu(1280)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             builder.setMetered(false)
             builder.setHttpProxy(ProxyInfo.buildDirectProxy("127.0.0.1", FoxLink.webPort))
@@ -105,6 +107,11 @@ class FoxVpnService : VpnService() {
             return
         }
         descriptor = fd
+        val power = getSystemService(PowerManager::class.java)
+        wakeLock = power?.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Gozar::tunnel")?.apply {
+            setReferenceCounted(false)
+            acquire()
+        }
         val app = applicationContext
         val resolver = FoxResolver(
             FoxLink.dnsPort,
@@ -163,6 +170,11 @@ class FoxVpnService : VpnService() {
     }
 
     private fun release() {
+        try {
+            wakeLock?.takeIf { it.isHeld }?.release()
+        } catch (_: Exception) {
+        }
+        wakeLock = null
         val root = synchronized(this) {
             val current = rootSession
             rootSession = null

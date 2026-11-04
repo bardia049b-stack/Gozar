@@ -12,8 +12,10 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
+	utls "github.com/refraction-networking/utls"
 	"golang.org/x/net/http2"
 )
 
@@ -67,23 +69,25 @@ func markH2Broken() {
 	h2Mu.Unlock()
 }
 
-func dialTLS(target Target, protocols []string, timeout time.Duration) (*tls.Conn, error) {
+func dialTLS(target Target, protocols []string, timeout time.Duration) (*utls.UConn, error) {
 	return dialTLSConfigured(target, protocols, timeout, nil)
 }
 
-func dialTLSConfigured(target Target, protocols []string, timeout time.Duration, override *tls.Config) (*tls.Conn, error) {
+func dialTLSConfigured(target Target, protocols []string, timeout time.Duration, override *tls.Config) (*utls.UConn, error) {
 	raw, err := dialChain(target, timeout)
 	if err != nil {
 		return nil, err
 	}
-	config := &tls.Config{}
+	config := &utls.Config{}
 	if override != nil {
-		config = override.Clone()
+		config.RootCAs = override.RootCAs
+		config.InsecureSkipVerify = override.InsecureSkipVerify
+		config.ServerName = override.ServerName
 	}
 	config.ServerName = target.Host
 	config.NextProtos = protocols
 	config.MinVersion = tls.VersionTLS12
-	conn := tls.Client(raw, config)
+	conn := utls.UClient(&fragmentConn{Conn: raw}, config, utls.HelloChrome_Auto)
 	conn.SetDeadline(time.Now().Add(timeout))
 	if err := conn.Handshake(); err != nil {
 		raw.Close()
@@ -91,6 +95,37 @@ func dialTLSConfigured(target Target, protocols []string, timeout time.Duration,
 	}
 	conn.SetDeadline(time.Time{})
 	return conn, nil
+}
+
+type fragmentConn struct {
+	net.Conn
+	first atomic.Bool
+}
+
+func (c *fragmentConn) Write(p []byte) (int, error) {
+	if !c.first.CompareAndSwap(false, true) || len(p) < 256 {
+		return c.Conn.Write(p)
+	}
+	total := len(p)
+	offset := 0
+	for offset < total {
+		size := 96 + (offset % 64)
+		if size > total-offset {
+			size = total - offset
+		}
+		n, err := c.Conn.Write(p[offset : offset+size])
+		offset += n
+		if err != nil {
+			return offset, err
+		}
+		if n != size {
+			return offset, io.ErrShortWrite
+		}
+		if offset < total {
+			time.Sleep(time.Millisecond)
+		}
+	}
+	return total, nil
 }
 
 func openH1(target Target, host string, port int, pass string, timeout time.Duration) (Dup, error) {
@@ -137,7 +172,7 @@ func openH1(target Target, host string, port int, pass string, timeout time.Dura
 }
 
 type stream struct {
-	conn   *tls.Conn
+	conn   *utls.UConn
 	reader *bufio.Reader
 }
 

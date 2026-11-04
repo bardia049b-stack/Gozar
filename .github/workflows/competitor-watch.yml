@@ -1,0 +1,23 @@
+name: Competitor watch
+
+on:
+  schedule:
+    - cron: '17 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - name: Snapshot
+        run: python3 scripts/competitor_watch.py > competitor-report.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: competitor-report
+          path: competitor-report.json

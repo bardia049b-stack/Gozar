@@ -45,7 +45,7 @@ func configure(cfg *Config) error {
 	}
 	cfg.Routes[1] = true
 	for index, prefix := range [2]string{"::/1", "8000::/1"} {
-		if err := blackhole6("route", "-n", "add", "-net", prefix, "-interface", cfg.Interface); err == nil {
+		if err := mustRun("route", "-n", "add", "-net", prefix, "-interface", cfg.Interface); err == nil {
 			cfg.RoutesV6[index] = true
 		}
 	}

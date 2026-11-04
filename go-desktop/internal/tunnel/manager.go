@@ -29,7 +29,7 @@ type h2Session struct {
 }
 
 type h3Session struct {
-	conn   quic.Connection
+	conn   *quic.Conn
 	client *http3.ClientConn
 }
 

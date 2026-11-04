@@ -6,6 +6,7 @@ import (
 	"runtime"
 	"sync"
 
+	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/mtu"
 	wtun "golang.zx2c4.com/wireguard/tun"
 	"gvisor.dev/gvisor/pkg/buffer"
 	"gvisor.dev/gvisor/pkg/tcpip"
@@ -100,6 +101,7 @@ func (d *Device) readLoop() {
 			if len(packet) == 0 {
 				continue
 			}
+			mtu.ClampSYN(packet, d.mtu)
 			proto := header.IPv4ProtocolNumber
 			if packet[0]>>4 == 6 {
 				proto = header.IPv6ProtocolNumber
