@@ -141,6 +141,8 @@ class _GozarScreenState extends State<GozarScreen> with WindowListener {
   bool _starting = true;
   bool _busy = false;
   bool _warpScanning = false;
+  AdvancedSettings _advanced = const AdvancedSettings();
+  bool _advancedBusy = false;
   bool _connectionBusy = false;
   bool _refreshing = false;
   bool _loadingServers = false;
@@ -518,6 +520,106 @@ class _GozarScreenState extends State<GozarScreen> with WindowListener {
         },
       ),
     );
+  }
+
+  Future<void> _loadAdvanced() async {
+    if (!_core.running) return;
+    try {
+      final reply = await _core.call('advanced');
+      if (!mounted || reply.advanced == null) return;
+      setState(() => _advanced = reply.advanced!);
+    } catch (_) {
+      // The core may be restarting; the section simply keeps the last values.
+    }
+  }
+
+  Future<void> _setAdvanced(String name, bool enabled) async {
+    if (_advancedBusy) return;
+    setState(() => _advancedBusy = true);
+    try {
+      final reply =
+          await _core.call('advanced_set', {'name': name, 'enabled': enabled});
+      if (!mounted) return;
+      if (reply.advanced != null) {
+        setState(() => _advanced = reply.advanced!);
+      }
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(reply.error == null
+              ? words.advancedSaved
+              : '${words.advancedFailed}: ${reply.error}')));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${words.advancedFailed}: $error')));
+    } finally {
+      if (mounted) setState(() => _advancedBusy = false);
+    }
+  }
+
+  Future<void> _editAdvancedParams() async {
+    final doq = TextEditingController(text: _advanced.doqServer);
+    final ech = TextEditingController(text: _advanced.echConfigList);
+    final front = TextEditingController(text: _advanced.frontHost);
+    final wss = TextEditingController(text: _advanced.wssPath);
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(words.advancedParams),
+        content: SizedBox(
+          width: 420,
+          child: SingleChildScrollView(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              TextField(
+                  controller: doq,
+                  decoration: InputDecoration(labelText: words.doqServerLabel)),
+              TextField(
+                  controller: front,
+                  decoration:
+                      InputDecoration(labelText: words.frontHostLabel)),
+              TextField(
+                  controller: wss,
+                  decoration: InputDecoration(labelText: words.wssPathLabel)),
+              TextField(
+                  controller: ech,
+                  maxLines: 3,
+                  decoration: InputDecoration(labelText: words.echConfigLabel)),
+            ]),
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(words.cancel)),
+          FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(words.save)),
+        ],
+      ),
+    );
+    if (saved != true || !mounted) return;
+    setState(() => _advancedBusy = true);
+    try {
+      final reply = await _core.call('advanced_params', {
+        'doq_server': doq.text.trim(),
+        'ech_config_list': ech.text.trim(),
+        'front_host': front.text.trim(),
+        'wss_path': wss.text.trim(),
+      });
+      if (!mounted) return;
+      if (reply.advanced != null) {
+        setState(() => _advanced = reply.advanced!);
+      }
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(reply.error == null
+              ? words.advancedSaved
+              : '${words.advancedFailed}: ${reply.error}')));
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${words.advancedFailed}: $error')));
+    } finally {
+      if (mounted) setState(() => _advancedBusy = false);
+    }
   }
 
   Future<void> _scanWarp() async {
@@ -1051,6 +1153,7 @@ class _GozarScreenState extends State<GozarScreen> with WindowListener {
     final title = switch (_settingsSection) {
       'account' => words.account,
       'connection' => words.connectionSettings,
+      'advanced' => words.advancedSettings,
       'display' => words.displaySettings,
       'general' => words.generalSettings,
       _ => words.settings,
@@ -1124,6 +1227,11 @@ class _GozarScreenState extends State<GozarScreen> with WindowListener {
             words.connectionSettings,
             words.connectionSectionDetail,
             () => setState(() => _settingsSection = 'connection')),
+        _settingTile(Icons.tune, words.advancedSettings,
+            words.advancedSectionDetail, () {
+          setState(() => _settingsSection = 'advanced');
+          unawaited(_loadAdvanced());
+        }),
         _settingTile(
             Icons.palette_outlined,
             words.displaySettings,
@@ -1149,6 +1257,38 @@ class _GozarScreenState extends State<GozarScreen> with WindowListener {
           icon: const Icon(Icons.logout),
           label: Text(words.signOut),
         ),
+      ]);
+    }
+    if (_settingsSection == 'advanced') {
+      const order = ['doq', 'ech', 'domain_fronting', 'tfo', 'mptcp', 'wss'];
+      return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Padding(
+            padding: const EdgeInsets.fromLTRB(4, 8, 4, 12),
+            child: Text(words.advancedNote,
+                style: TextStyle(color: muted(context)))),
+        for (final name in order)
+          Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: SwitchListTile(
+                secondary: const Icon(Icons.shield_outlined, color: soft),
+                title: Text(words.advancedName(name)),
+                subtitle: Text(
+                    (_advanced.option(name)?.ready ?? true)
+                        ? (_advanced.option(name)?.path ?? '')
+                        : words.advancedNeedsParams,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis),
+                value: _advanced.enabled(name),
+                onChanged: _advancedBusy
+                    ? null
+                    : (value) => unawaited(_setAdvanced(name, value)),
+              )),
+        _settingTile(Icons.settings_ethernet, words.advancedParams,
+            '${words.doqServerLabel}: ${_advanced.doqServer}',
+            () => unawaited(_editAdvancedParams())),
+        if (_advanced.livePath.isNotEmpty)
+          _settingTile(Icons.route_outlined, words.advancedLivePath,
+              _advanced.livePath, null),
       ]);
     }
     if (_settingsSection == 'display') {

@@ -142,6 +142,44 @@ class Words {
   String get darkTheme => pick('تیره', 'Dark');
   String get rememberServer =>
       pick('به‌خاطر سپردن سرور آخر', 'Remember last server');
+  String get advancedSettings => pick('اتصال پیشرفته', 'Advanced connection');
+  String get advancedSectionDetail => pick(
+      'ترنسپورت‌های پایدار با بازگشت خودکار',
+      'Stable transports with automatic fallback');
+  String get advancedNote => pick(
+      'همهٔ گزینه‌ها به‌صورت پیش‌فرض خاموش‌اند. هر گزینه اگر کار نکند، خودکار به مسیر استاندارد برمی‌گردد.',
+      'Every option is off by default. If one fails, the standard path takes over automatically.');
+  String get advancedParams => pick('پارامترهای ترنسپورت', 'Transport parameters');
+  String get advancedNeedsParams => pick(
+      'برای اجرا به پارامتر نیاز دارد', 'Needs parameters before it can run');
+  String get advancedSaved => pick(
+      'ذخیره شد؛ اتصال بعدی از آن استفاده می‌کند',
+      'Saved; the next connection uses it');
+  String get advancedFailed => pick('ذخیره نشد', 'Could not be saved');
+  String get advancedLivePath => pick('مسیر فعلی', 'Current path');
+  String get doqServerLabel => pick('سرور DoQ', 'DoQ server');
+  String get echConfigLabel => pick('فهرست ECH (base64)', 'ECH config list (base64)');
+  String get frontHostLabel => pick('دامنهٔ پوششی', 'Cover domain');
+  String get wssPathLabel => pick('مسیر WebSocket', 'WebSocket path');
+
+  String advancedName(String name) {
+    switch (name) {
+      case 'doq':
+        return 'DNS over QUIC';
+      case 'ech':
+        return 'Encrypted Client Hello';
+      case 'domain_fronting':
+        return pick('دامنهٔ پوششی (Fronting)', 'Domain fronting');
+      case 'tfo':
+        return 'TCP Fast Open';
+      case 'mptcp':
+        return 'Multipath TCP';
+      case 'wss':
+        return 'WebSocket Secure';
+    }
+    return name;
+  }
+
   String get warpScan => pick('اسکن خودکار WARP', 'Auto-scan WARP');
   String get warpScanDetail => pick(
       'آزمون handshake واقعی WARP و ذخیرهٔ بهترین endpoint',

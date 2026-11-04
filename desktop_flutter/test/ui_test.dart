@@ -43,6 +43,42 @@ class FakeCore extends Core {
   bool isRunning = false;
   String? selectedHost;
   final requests = <String>[];
+  final advancedFlags = <String, bool>{
+    'doq': false,
+    'ech': false,
+    'domain_fronting': false,
+    'tfo': false,
+    'mptcp': false,
+    'wss': false,
+  };
+  final advancedParams = <String, String>{
+    'doq_server': 'dns.adguard-dns.com:853',
+    'ech_config_list': '',
+    'front_host': '',
+    'wss_path': '/gozar-tunnel',
+  };
+  int warpScans = 0;
+
+  AdvancedSettings get advancedState => AdvancedSettings(
+        options: advancedFlags.entries
+            .map((entry) => AdvancedOption(
+                  name: entry.key,
+                  enabled: entry.value,
+                  ready: entry.key != 'ech' && entry.key != 'domain_fronting'
+                      ? true
+                      : (entry.key == 'ech'
+                          ? advancedParams['ech_config_list']!.isNotEmpty
+                          : advancedParams['front_host']!.isNotEmpty),
+                  path: '${entry.key} → standard',
+                  needsParams:
+                      entry.key == 'ech' || entry.key == 'domain_fronting',
+                ))
+            .toList(growable: false),
+        doqServer: advancedParams['doq_server']!,
+        echConfigList: advancedParams['ech_config_list']!,
+        frontHost: advancedParams['front_host']!,
+        wssPath: advancedParams['wss_path']!,
+      );
 
   static const places = [
     Place(
@@ -115,6 +151,27 @@ class FakeCore extends Core {
         return CoreReply(state: current, error: 'disconnect failed');
       }
       live = false;
+    }
+    if (method == 'advanced') {
+      return CoreReply(state: current, advanced: advancedState);
+    }
+    if (method == 'advanced_set') {
+      advancedFlags[params!['name'] as String] = params['enabled'] as bool;
+      return CoreReply(state: current, advanced: advancedState);
+    }
+    if (method == 'advanced_params') {
+      params!.forEach((key, value) {
+        advancedParams[key] = value as String;
+      });
+      return CoreReply(state: current, advanced: advancedState);
+    }
+    if (method == 'warp_scan') {
+      warpScans++;
+      return CoreReply(
+          state: current,
+          warpBest: '162.159.198.2:443',
+          warpCount: 42,
+          warpPath: '/tmp/warp_endpoints.json');
     }
     if (method == 'system_accounts') {
       return CoreReply(state: current, systemEmails: systemEmails);
@@ -718,4 +775,86 @@ void main() {
             'The tunnel could not be safely disconnected. Please try closing again.'),
         findsOneWidget);
   }, variant: const TargetPlatformVariant({TargetPlatform.windows}));
+
+  test('advanced settings parse the core reply and default to off', () {
+    final settings = AdvancedSettings.fromJson({
+      'options': [
+        {'name': 'doq', 'enabled': false, 'ready': true, 'path': 'doq → doh'},
+        {
+          'name': 'ech',
+          'enabled': true,
+          'ready': false,
+          'needs_params': true,
+          'path': 'ech → tls'
+        },
+      ],
+      'params': {'doq_server': 'dns.example:853', 'wss_path': '/tunnel'},
+      'live_path': 'wss',
+    });
+    expect(settings.enabled('doq'), isFalse);
+    expect(settings.enabled('ech'), isTrue);
+    expect(settings.option('ech')!.ready, isFalse);
+    expect(settings.option('ech')!.needsParams, isTrue);
+    expect(settings.doqServer, 'dns.example:853');
+    expect(settings.wssPath, '/tunnel');
+    expect(settings.livePath, 'wss');
+    expect(const AdvancedSettings().options, isEmpty);
+  });
+
+  testWidgets('advanced transports are stable options, off by default',
+      (tester) async {
+    tester.view.physicalSize = const Size(480, 900);
+    tester.view.devicePixelRatio = 1;
+    tester.platformDispatcher.localeTestValue = const Locale('en');
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.platformDispatcher.clearLocaleTestValue);
+    final core = FakeCore(signedIn: true, language: 'en');
+    await tester.pumpWidget(GozarApp(core: core));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Settings'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Advanced connection'));
+    await tester.tap(find.text('Advanced connection'));
+    await tester.pumpAndSettle();
+    expect(core.requests, contains('advanced'));
+    expect(find.textContaining('experimental'), findsNothing);
+    expect(find.textContaining('Experimental'), findsNothing);
+    expect(find.text('DNS over QUIC'), findsOneWidget);
+    expect(find.text('Multipath TCP'), findsOneWidget);
+    final switches = tester
+        .widgetList<SwitchListTile>(find.byType(SwitchListTile))
+        .toList();
+    expect(switches.length, 6);
+    for (final tile in switches) {
+      expect(tile.value, isFalse);
+    }
+    await tester.ensureVisible(find.text('WebSocket Secure'));
+    await tester.tap(find.text('WebSocket Secure'));
+    await tester.pumpAndSettle();
+    expect(core.requests, contains('advanced_set'));
+    expect(core.advancedFlags['wss'], isTrue);
+  });
+
+  testWidgets('warp auto scan is reachable from connection settings',
+      (tester) async {
+    tester.view.physicalSize = const Size(480, 900);
+    tester.view.devicePixelRatio = 1;
+    tester.platformDispatcher.localeTestValue = const Locale('en');
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.platformDispatcher.clearLocaleTestValue);
+    final core = FakeCore(signedIn: true, language: 'en');
+    await tester.pumpWidget(GozarApp(core: core));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Settings'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Connection'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Auto-scan WARP').last);
+    await tester.tap(find.text('Auto-scan WARP').last);
+    await tester.pumpAndSettle();
+    expect(core.warpScans, 1);
+    expect(core.requests, contains('warp_scan'));
+  });
 }

@@ -117,7 +117,7 @@ func (a *App) AdvancedState() AdvancedState {
 // connection; DoQ is applied to the running resolver immediately.
 func (a *App) SetAdvanced(name string, enabled bool) error {
 	a.mu.Lock()
-	next, ok := withAdvancedFlag(a.cfg.Advanced, name)
+	next, ok := withAdvancedFlag(a.cfg.Advanced, name, enabled)
 	if !ok {
 		a.mu.Unlock()
 		return errors.New("unknown advanced option")

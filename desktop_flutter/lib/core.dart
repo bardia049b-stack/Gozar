@@ -145,6 +145,75 @@ class CoreState {
   }
 }
 
+class AdvancedOption {
+  const AdvancedOption({
+    required this.name,
+    required this.enabled,
+    required this.ready,
+    required this.path,
+    this.needsParams = false,
+  });
+
+  final String name;
+  final bool enabled;
+  final bool ready;
+  final String path;
+  final bool needsParams;
+
+  factory AdvancedOption.fromJson(Map<String, dynamic> json) => AdvancedOption(
+        name: json['name'] as String? ?? '',
+        enabled: json['enabled'] as bool? ?? false,
+        ready: json['ready'] as bool? ?? true,
+        path: json['path'] as String? ?? '',
+        needsParams: json['needs_params'] as bool? ?? false,
+      );
+}
+
+class AdvancedSettings {
+  const AdvancedSettings({
+    this.options = const [],
+    this.doqServer = '',
+    this.echConfigList = '',
+    this.frontHost = '',
+    this.wssPath = '',
+    this.livePath = '',
+  });
+
+  final List<AdvancedOption> options;
+  final String doqServer;
+  final String echConfigList;
+  final String frontHost;
+  final String wssPath;
+  final String livePath;
+
+  bool enabled(String name) =>
+      options.any((option) => option.name == name && option.enabled);
+
+  AdvancedOption? option(String name) {
+    for (final option in options) {
+      if (option.name == name) return option;
+    }
+    return null;
+  }
+
+  factory AdvancedSettings.fromJson(Map<String, dynamic> json) {
+    final rawOptions = json['options'] as List<dynamic>? ?? const [];
+    final params = json['params'];
+    final map = params is Map<String, dynamic> ? params : const <String, dynamic>{};
+    return AdvancedSettings(
+      options: rawOptions
+          .whereType<Map<String, dynamic>>()
+          .map(AdvancedOption.fromJson)
+          .toList(growable: false),
+      doqServer: map['doq_server'] as String? ?? '',
+      echConfigList: map['ech_config_list'] as String? ?? '',
+      frontHost: map['front_host'] as String? ?? '',
+      wssPath: map['wss_path'] as String? ?? '',
+      livePath: json['live_path'] as String? ?? '',
+    );
+  }
+}
+
 class CoreReply {
   const CoreReply({
     this.state,
@@ -155,6 +224,7 @@ class CoreReply {
     this.warpBest = '',
     this.warpCount = 0,
     this.warpPath = '',
+    this.advanced,
   });
 
   final CoreState? state;
@@ -165,6 +235,7 @@ class CoreReply {
   final String warpBest;
   final int warpCount;
   final String warpPath;
+  final AdvancedSettings? advanced;
 
   factory CoreReply.fromJson(Map<String, dynamic> json) {
     final state = json['state'];
@@ -191,6 +262,9 @@ class CoreReply {
       warpPath: result is Map && result['path'] is String
           ? result['path'] as String
           : '',
+      advanced: result is Map<String, dynamic> && result['options'] is List
+          ? AdvancedSettings.fromJson(result)
+          : null,
     );
   }
 }

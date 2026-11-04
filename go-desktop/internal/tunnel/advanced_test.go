@@ -54,7 +54,7 @@ func dualProxy(t *testing.T, wssPath string) (string, *tls.Config) {
 			if err != nil {
 				return
 			}
-			framed := advanced.NewWebSocketConn(conn, buffered, false)
+			framed := advanced.NewWebSocketConn(conn, buffered.Reader, false)
 			done := make(chan struct{}, 1)
 			go func() {
 				_, _ = io.Copy(framed, framed)
@@ -107,14 +107,10 @@ func TestManagerUsesWebSocketTransportWhenEnabled(t *testing.T) {
 		t.Fatalf("path = %q, want wss", manager.LastAdvancedPath())
 	}
 	payload := []byte("websocket-tunnel")
-	_ = stream.SetDeadline(time.Now().Add(8 * time.Second))
 	if _, err := stream.Write(payload); err != nil {
 		t.Fatal(err)
 	}
-	got := make([]byte, len(payload))
-	if _, err := io.ReadFull(stream, got); err != nil {
-		t.Fatal(err)
-	}
+	got := readWithTimeout(t, stream, len(payload))
 	if string(got) != string(payload) {
 		t.Fatalf("echo mismatch: %q", got)
 	}
@@ -144,14 +140,10 @@ func TestWebSocketFailureFallsBackToHTTP2(t *testing.T) {
 	if manager.LastAdvancedPath() != "" {
 		t.Fatalf("expected the standard path, got %q", manager.LastAdvancedPath())
 	}
-	_ = stream.SetDeadline(time.Now().Add(8 * time.Second))
 	if _, err := stream.Write([]byte("fallback")); err != nil {
 		t.Fatal(err)
 	}
-	got := make([]byte, 8)
-	if _, err := io.ReadFull(stream, got); err != nil {
-		t.Fatal(err)
-	}
+	got := readWithTimeout(t, stream, 8)
 	if string(got) != "fallback" {
 		t.Fatalf("echo mismatch: %q", got)
 	}
@@ -165,5 +157,30 @@ func TestAdvancedDisabledByDefaultKeepsStandardDial(t *testing.T) {
 	}
 	if manager.LastAdvancedPath() != "" {
 		t.Fatal("a default manager reports an advanced path")
+	}
+}
+
+// readWithTimeout keeps a broken transport from hanging the whole CI job.
+func readWithTimeout(t *testing.T, stream Dup, size int) []byte {
+	t.Helper()
+	type result struct {
+		data []byte
+		err  error
+	}
+	done := make(chan result, 1)
+	go func() {
+		buffer := make([]byte, size)
+		_, err := io.ReadFull(stream, buffer)
+		done <- result{data: buffer, err: err}
+	}()
+	select {
+	case got := <-done:
+		if got.err != nil {
+			t.Fatal(got.err)
+		}
+		return got.data
+	case <-time.After(15 * time.Second):
+		t.Fatal("timed out reading from the tunnel")
+		return nil
 	}
 }
