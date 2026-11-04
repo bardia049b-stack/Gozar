@@ -8,5 +8,6 @@ RUN mkdir -p /var/lock /var/run /tmp \
     && opkg update \
     && opkg install kmod-tun \
     && opkg install /tmp/gozar.ipk
-RUN /usr/bin/gozar-core --version && sh -n /etc/init.d/gozar && test -f /etc/config/gozar
-CMD ["/bin/sh", "-c", "mkdir -p /var/lock /var/run; service gozar start || true; service gozar status || true; ubus call gozar status || true; /usr/bin/gozar-core --version; ping -c 1 -W 3 8.8.8.8 || echo 'ICMP egress unavailable in container smoke'"]
+COPY smoke.sh /usr/bin/gozar-smoke
+RUN chmod 755 /usr/bin/gozar-smoke && /usr/bin/gozar-core --version && sh -n /etc/init.d/gozar && test -f /etc/config/gozar
+CMD ["/bin/sh", "/usr/bin/gozar-smoke"]

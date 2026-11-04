@@ -112,7 +112,7 @@ jobs:
       - name: Official OpenWrt rootfs Docker test
         run: |
           docker build -f packaging/openwrt/Dockerfile -t gozar-openwrt-test packaging/openwrt
-          docker run --rm gozar-openwrt-test
+          docker run --rm --privileged gozar-openwrt-test
       - uses: actions/upload-artifact@v4
         with:
           name: openwrt-ipk
