@@ -6,6 +6,9 @@ import java.util.Locale
 
 object Store {
 
+    val ADVANCED = listOf("doq", "ech", "tfo", "mptcp", "wss", "domain_fronting")
+
+
     private fun p(c: Context) = c.getSharedPreferences("store", Context.MODE_PRIVATE)
 
     fun lang(c: Context) = p(c).getString("lang", "") ?: ""
@@ -40,6 +43,27 @@ object Store {
     fun setNotificationAsked(c: Context) = p(c).edit().putBoolean("notification_asked", true).apply()
     fun apps(c: Context) = p(c).getStringSet("apps", emptySet())?.toSet() ?: emptySet()
     fun setApps(c: Context, v: Set<String>) = p(c).edit().putStringSet("apps", v).apply()
+
+    fun gameMode(c: Context) = p(c).getBoolean("game_mode", false)
+    fun setGameMode(c: Context, v: Boolean) = p(c).edit().putBoolean("game_mode", v).apply()
+    fun udpRelay(c: Context) = p(c).getBoolean("udp_relay", false)
+    fun setUdpRelay(c: Context, v: Boolean) = p(c).edit().putBoolean("udp_relay", v).apply()
+    fun warp(c: Context) = p(c).getBoolean("warp", false)
+    fun setWarp(c: Context, v: Boolean) = p(c).edit().putBoolean("warp", v).apply()
+    fun warpEndpoint(c: Context) = p(c).getString("warp_endpoint", "") ?: ""
+    fun setWarpEndpoint(c: Context, v: String) = p(c).edit().putString("warp_endpoint", v).apply()
+    fun warpIdentity(c: Context) = p(c).getString("warp_identity", "") ?: ""
+    fun setWarpIdentity(c: Context, v: String) = p(c).edit().putString("warp_identity", v).apply()
+    fun killSwitch(c: Context) = p(c).getBoolean("kill_switch", false)
+    fun setKillSwitch(c: Context, v: Boolean) = p(c).edit().putBoolean("kill_switch", v).apply()
+
+    fun advanced(c: Context, name: String) = p(c).getBoolean("adv_$name", false)
+    fun setAdvanced(c: Context, name: String, v: Boolean) = p(c).edit().putBoolean("adv_$name", v).apply()
+    fun advancedParam(c: Context, name: String) = p(c).getString("advp_$name", "") ?: ""
+    fun setAdvancedParam(c: Context, name: String, v: String) = p(c).edit().putString("advp_$name", v).apply()
+
+    fun coreEnabled(c: Context): Boolean = gameMode(c) || udpRelay(c) || warp(c) ||
+        ADVANCED.any { advanced(c, it) }
 
     fun updateVersion(c: Context) = p(c).getString("update_version", "") ?: ""
     fun updateUrl(c: Context) = p(c).getString("update_url", "") ?: ""

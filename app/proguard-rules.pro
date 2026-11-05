@@ -11,3 +11,7 @@
 -dontwarn org.bouncycastle.**
 -dontwarn org.conscrypt.**
 -dontwarn org.openjsse.**
+
+-keep class mobile.** { *; }
+-keep interface mobile.** { *; }
+-dontwarn mobile.**

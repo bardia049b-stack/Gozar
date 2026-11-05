@@ -89,7 +89,18 @@ jobs:
       - name: Install SDK
         run: |
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" "platform-tools"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" "platform-tools" "ndk;27.2.12479018"
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go-desktop/go.mod
+          cache-dependency-path: go-desktop/go.sum
+      - name: Build the Go core for Android
+        run: |
+          export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/27.2.12479018"
+          bash scripts/build_android_core.sh
+      - name: Test the Go core binding
+        working-directory: go-desktop
+        run: go test ./mobile/... ./internal/protect/...
       - uses: gradle/actions/setup-gradle@v4
       - uses: actions/cache@v4
         with:

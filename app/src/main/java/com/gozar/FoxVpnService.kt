@@ -28,6 +28,8 @@ class FoxVpnService : VpnService() {
     private var wakeLock: PowerManager.WakeLock? = null
 
     private var stack: FoxStack? = null
+    @Volatile private var coreWanted = false
+    @Volatile private var coreActive = false
     @Volatile private var resolver: FoxResolver? = null
     private var rootSession: RootSession? = null
     private var startFailure = ""
@@ -74,6 +76,7 @@ class FoxVpnService : VpnService() {
             abortStart(getString(R.string.fox_no_device))
             return
         }
+        coreWanted = Store.coreEnabled(this) && GoCore.available
         val builder = Builder()
             .setSession(getString(R.string.fox_title))
             .addAddress(LOCAL_ADDRESS, 32)
@@ -85,7 +88,7 @@ class FoxVpnService : VpnService() {
             .setMtu(1280)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             builder.setMetered(false)
-            builder.setHttpProxy(ProxyInfo.buildDirectProxy("127.0.0.1", FoxLink.webPort))
+            if (!coreWanted) builder.setHttpProxy(ProxyInfo.buildDirectProxy("127.0.0.1", FoxLink.webPort))
         }
         val appsReady = applyAppSelection(
             Store.apps(this),
@@ -113,6 +116,11 @@ class FoxVpnService : VpnService() {
             acquire()
         }
         val app = applicationContext
+        if (coreWanted) {
+            GoCore.bindProtector { fdNumber -> protect(fdNumber) }
+            FoxLink.start(this)
+            return
+        }
         val resolver = FoxResolver(
             FoxLink.dnsPort,
             endpoints = DnsPolicy.endpoints(Store.dnsProfile(this), Store.customDns(this), Store.blockAds(this))
@@ -183,6 +191,10 @@ class FoxVpnService : VpnService() {
         }
         root?.stop()
         DirectPipe.closeAll()
+        if (coreActive) {
+            GoCore.stop()
+            coreActive = false
+        }
         try {
             stack?.stop()
         } catch (e: Exception) {
@@ -195,6 +207,25 @@ class FoxVpnService : VpnService() {
         }
         descriptor = null
         FoxLink.stop()
+    }
+
+    private fun activateCore() {
+        if (!coreWanted || coreActive || !FoxLink.connected) return
+        val fd = descriptor ?: return
+        val location = FoxLink.location ?: return
+        val pass = FoxStore.pass(this)
+        if (pass.isEmpty()) return
+        synchronized(this) {
+            if (coreActive) return
+            try {
+                GoCore.start(fd.fd, GoSettings.build(this, location, pass))
+                coreActive = true
+            } catch (e: Exception) {
+                coreWanted = false
+                FoxLink.fault(e.message ?: "The tunnel core did not start")
+                close()
+            }
+        }
     }
 
     private fun activateRoot() {
@@ -346,6 +377,12 @@ class FoxVpnService : VpnService() {
         fun activateRoot() {
             instance?.activateRoot()
         }
+
+        fun activateCore() {
+            instance?.activateCore()
+        }
+
+        fun coreRunning(): Boolean = instance?.coreActive == true
 
         fun updateNotification() {
             instance?.refreshNotification()

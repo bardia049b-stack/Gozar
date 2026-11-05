@@ -20,6 +20,7 @@ require (
 	github.com/klauspost/compress v1.17.4 // indirect
 	github.com/quic-go/qpack v0.6.0 // indirect
 	golang.org/x/crypto v0.41.0 // indirect
+	golang.org/x/mobile v0.0.0-20261011034528-197770444867 // indirect
 )
 
 require (

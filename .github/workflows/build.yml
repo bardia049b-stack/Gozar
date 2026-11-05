@@ -24,7 +24,28 @@ jobs:
       - name: Install SDK
         run: |
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" "platform-tools"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" "platform-tools" "ndk;27.2.12479018"
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go-desktop/go.mod
+          cache-dependency-path: go-desktop/go.sum
+      - name: Build the Go core for Android
+        run: |
+          export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/27.2.12479018"
+          bash scripts/build_android_core.sh
+      - name: Check the Android core carries every ABI
+        run: |
+          python3 - <<'PY'
+          import sys, zipfile
+          wanted = {"arm64-v8a", "armeabi-v7a", "x86", "x86_64"}
+          with zipfile.ZipFile("core/libs/gozar-core.aar") as archive:
+              found = {name.split("/")[1] for name in archive.namelist() if name.startswith("jni/") and name.endswith("libgojni.so")}
+          missing = wanted - found
+          print("ABIs in the core:", ", ".join(sorted(found)))
+          if missing:
+              print("::error::missing ABIs:", ", ".join(sorted(missing)))
+              sys.exit(1)
+          PY
       - uses: gradle/actions/setup-gradle@v4
       - uses: actions/cache@v4
         with:

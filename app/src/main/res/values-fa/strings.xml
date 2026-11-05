@@ -435,4 +435,23 @@ AGPL-3.0-or-later</string>
     <string name="fox_usage_pending">اطلاعات مصرف در دسترس نیست</string>
     <string name="settings_group_protection">امنیت و اتصال</string>
     <string name="settings_group_app">ظاهر و برنامه</string>
+    <string name="game_mode">حالت بازی</string>
+    <string name="game_mode_desc">UDP برای ایکس‌باکس، پلی‌استیشن و بازی‌های آنلاین</string>
+    <string name="udp_relay">رله UDP</string>
+    <string name="udp_relay_desc">عبور بسته‌های UDP (بازی، WebRTC، STUN) از تونل</string>
+    <string name="advanced_title">انتقال‌های پیشرفته</string>
+    <string name="advanced_desc">DoQ، ECH، TFO، MPTCP، WSS، فرانت دامنه</string>
+    <string name="advanced_doq">DNS روی QUIC</string>
+    <string name="advanced_ech">Client Hello رمزنگاری‌شده</string>
+    <string name="advanced_tfo">TCP Fast Open</string>
+    <string name="advanced_mptcp">TCP چندمسیره</string>
+    <string name="advanced_wss">WebSocket روی TLS</string>
+    <string name="advanced_front">فرانت دامنه</string>
+    <string name="advanced_needs_core">این نسخه هستهٔ بومی ندارد؛ APK کامل را دوباره نصب کنید</string>
+    <string name="advanced_reconnect">برای اعمال انتقال جدید دوباره وصل شوید</string>
+    <string name="advanced_invalid">این گزینه‌ها با هم سازگار نیستند</string>
+    <string name="core_active">هستهٔ بومی فعال است</string>
+    <string name="core_ready">هستهٔ بومی آماده است</string>
+    <string name="core_absent">هستهٔ بومی در این بسته نیست</string>
+    <string name="warp_endpoint">نقطهٔ پایانی WARP</string>
 </resources>

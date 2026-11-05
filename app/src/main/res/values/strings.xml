@@ -435,4 +435,23 @@ AGPL-3.0-or-later</string>
     <string name="fox_usage_pending">Usage information unavailable</string>
     <string name="settings_group_protection">Protection &amp; connection</string>
     <string name="settings_group_app">Appearance &amp; app</string>
+    <string name="game_mode">Game Mode</string>
+    <string name="game_mode_desc">UDP for Xbox, PlayStation and online games</string>
+    <string name="udp_relay">UDP relay</string>
+    <string name="udp_relay_desc">Carry datagrams (games, WebRTC, STUN) through the tunnel</string>
+    <string name="advanced_title">Advanced transports</string>
+    <string name="advanced_desc">DoQ, ECH, TFO, MPTCP, WSS, domain fronting</string>
+    <string name="advanced_doq">DNS over QUIC</string>
+    <string name="advanced_ech">Encrypted Client Hello</string>
+    <string name="advanced_tfo">TCP Fast Open</string>
+    <string name="advanced_mptcp">Multipath TCP</string>
+    <string name="advanced_wss">WebSocket over TLS</string>
+    <string name="advanced_front">Domain fronting</string>
+    <string name="advanced_needs_core">This build has no native core; reinstall the full APK</string>
+    <string name="advanced_reconnect">Reconnect to apply the new transport</string>
+    <string name="advanced_invalid">These options cannot be combined</string>
+    <string name="core_active">Native core active</string>
+    <string name="core_ready">Native core ready</string>
+    <string name="core_absent">Native core not bundled</string>
+    <string name="warp_endpoint">WARP endpoint</string>
 </resources>

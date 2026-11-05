@@ -3,6 +3,8 @@ plugins {
     id 'org.jetbrains.kotlin.android'
 }
 
+def goCoreAar = rootProject.file('core/libs/gozar-core.aar')
+def hasGoCore = goCoreAar.exists()
 def keystoreFile = System.getenv('KEYSTORE_FILE')
 def hasSigning = keystoreFile != null && !keystoreFile.isEmpty() && file(keystoreFile).exists()
 
@@ -25,6 +27,7 @@ android {
             manifestPlaceholders.appLabel = 'Gozar Test'
         }
         resourceConfigurations += ['en', 'fa']
+        buildConfigField 'boolean', 'GO_CORE', hasGoCore ? 'true' : 'false'
     }
 
     splits {
@@ -62,6 +65,10 @@ android {
             manifestPlaceholders.xiaomiDebug = 'true'
             minifyEnabled false
         }
+    }
+
+    buildFeatures {
+        buildConfig true
     }
 
     compileOptions {
@@ -103,6 +110,9 @@ dependencies {
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.robolectric:robolectric:4.14.1'
     implementation project(':core')
+    if (hasGoCore) {
+        implementation files(goCoreAar)
+    }
     implementation 'com.google.zxing:core:3.5.3'
     implementation 'androidx.core:core:1.17.0'
     implementation 'androidx.appcompat:appcompat:1.7.1'

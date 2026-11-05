@@ -153,11 +153,35 @@
                 </LinearLayout>
                 <ImageView style="@style/Gozar.Row.Chevron" android:tint="?attr/colorOnSurfaceVariant" />
             </LinearLayout>
-            <LinearLayout android:id="@+id/rowRoot" style="@style/Gozar.Row" android:layout_marginTop="@dimen/stack_gap" android:background="@drawable/settings_group_bottom">
+            <LinearLayout android:id="@+id/rowRoot" style="@style/Gozar.Row" android:layout_marginTop="@dimen/stack_gap" android:background="@drawable/settings_group_middle">
                 <ImageView style="@style/Gozar.Tile" android:background="@drawable/settings_frame_star6" android:backgroundTint="@color/settings_rose_container" android:contentDescription="@string/root_title" android:src="@drawable/ic_shield" app:tint="@color/settings_rose_on_container" />
                 <LinearLayout style="@style/Gozar.Row.Text">
                     <TextView style="@style/Gozar.Row.Title" android:text="@string/root_title" />
                     <TextView android:id="@+id/tvRoot" style="@style/Gozar.Row.Subtitle" />
+                </LinearLayout>
+                <ImageView style="@style/Gozar.Row.Chevron" android:tint="?attr/colorOnSurfaceVariant" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/rowGameMode" style="@style/Gozar.Row" android:layout_marginTop="@dimen/stack_gap" android:background="@drawable/settings_group_middle">
+                <ImageView style="@style/Gozar.Tile" android:background="@drawable/frame_squircle" android:backgroundTint="@color/settings_sage_container" android:contentDescription="@string/game_mode" android:src="@drawable/ic_shield" app:tint="@color/settings_sage_on_container" />
+                <LinearLayout style="@style/Gozar.Row.Text">
+                    <TextView style="@style/Gozar.Row.Title" android:text="@string/game_mode" />
+                    <TextView style="@style/Gozar.Row.Subtitle" android:text="@string/game_mode_desc" />
+                </LinearLayout>
+                <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/swGameMode" android:layout_width="wrap_content" android:layout_height="wrap_content" android:contentDescription="@string/game_mode" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/rowUdp" style="@style/Gozar.Row" android:layout_marginTop="@dimen/stack_gap" android:background="@drawable/settings_group_middle">
+                <ImageView style="@style/Gozar.Tile" android:background="@drawable/frame_squircle" android:backgroundTint="@color/settings_sage_container" android:contentDescription="@string/udp_relay" android:src="@drawable/ic_shield" app:tint="@color/settings_sage_on_container" />
+                <LinearLayout style="@style/Gozar.Row.Text">
+                    <TextView style="@style/Gozar.Row.Title" android:text="@string/udp_relay" />
+                    <TextView style="@style/Gozar.Row.Subtitle" android:text="@string/udp_relay_desc" />
+                </LinearLayout>
+                <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/swUdp" android:layout_width="wrap_content" android:layout_height="wrap_content" android:contentDescription="@string/udp_relay" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/rowAdvanced" style="@style/Gozar.Row" android:layout_marginTop="@dimen/stack_gap" android:background="@drawable/settings_group_bottom">
+                <ImageView style="@style/Gozar.Tile" android:background="@drawable/settings_frame_cloud" android:backgroundTint="@color/settings_lavender_container" android:contentDescription="@string/advanced_title" android:src="@drawable/ic_link" app:tint="@color/settings_lavender_on_container" />
+                <LinearLayout style="@style/Gozar.Row.Text">
+                    <TextView style="@style/Gozar.Row.Title" android:text="@string/advanced_title" />
+                    <TextView android:id="@+id/tvAdvanced" style="@style/Gozar.Row.Subtitle" android:text="@string/advanced_desc" />
                 </LinearLayout>
                 <ImageView style="@style/Gozar.Row.Chevron" android:tint="?attr/colorOnSurfaceVariant" />
             </LinearLayout>

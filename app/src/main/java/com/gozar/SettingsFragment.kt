@@ -70,6 +70,20 @@ class SettingsFragment : Fragment() {
         find<MaterialSwitch>(R.id.swAds).setOnCheckedChangeListener { _, checked ->
             if (!changingSwitch) requestAdBlocking(checked)
         }
+        bind(R.id.rowGameMode, R.id.swGameMode, Store.gameMode(requireContext())) { enabled ->
+            changeProtection {
+                Store.setGameMode(requireContext(), enabled)
+                if (enabled) Store.setWarp(requireContext(), true)
+                paint()
+            }
+        }
+        bind(R.id.rowUdp, R.id.swUdp, Store.udpRelay(requireContext())) { enabled ->
+            changeProtection {
+                Store.setUdpRelay(requireContext(), enabled)
+                paint()
+            }
+        }
+        find<View>(R.id.rowAdvanced).setOnClickListener { changeProtection { pickAdvanced() } }
         bind(R.id.rowGeo, R.id.swGeo, Store.geolocation(requireContext())) { Store.setGeolocation(requireContext(), it) }
         bind(R.id.rowRecents, R.id.swRecents, Store.recents(requireContext())) { Store.setRecents(requireContext(), it) }
 
@@ -154,6 +168,51 @@ class SettingsFragment : Fragment() {
         if (view != null && !isHidden) paint()
     }
 
+    private fun pickAdvanced() {
+        val context = requireContext()
+        if (!GoCore.available) {
+            toast(R.string.advanced_needs_core)
+            paint()
+            return
+        }
+        val names = Store.ADVANCED
+        val labels = arrayOf(
+            getString(R.string.advanced_doq),
+            getString(R.string.advanced_ech),
+            getString(R.string.advanced_tfo),
+            getString(R.string.advanced_mptcp),
+            getString(R.string.advanced_wss),
+            getString(R.string.advanced_front)
+        )
+        val checked = BooleanArray(names.size) { Store.advanced(context, names[it]) }
+        MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.advanced_title)
+            .setMultiChoiceItems(labels, checked) { _, which, value -> checked[which] = value }
+            .setNegativeButton(R.string.cancel) { _, _ -> paint() }
+            .setOnCancelListener { paint() }
+            .setPositiveButton(R.string.save) { _, _ ->
+                val previous = names.map { Store.advanced(context, it) }
+                names.forEachIndexed { index, name -> Store.setAdvanced(context, name, checked[index]) }
+                val message = GoCore.validate(GoSettings.build(context, FoxLocation("", "", "", "placeholder.invalid", 443, false), "probe"))
+                if (message.isNotEmpty()) {
+                    names.forEachIndexed { index, name -> Store.setAdvanced(context, name, previous[index]) }
+                    MaterialAlertDialogBuilder(context)
+                        .setTitle(R.string.advanced_invalid)
+                        .setMessage(message)
+                        .setPositiveButton(R.string.ok, null)
+                        .show()
+                } else if (FoxLink.connected) {
+                    try {
+                        GoCore.setAdvanced(GoSettings.transportJson(context).toString())
+                    } catch (_: Exception) {
+                        toast(R.string.advanced_reconnect)
+                    }
+                }
+                paint()
+            }
+            .show()
+    }
+
     private fun bind(row: Int, switchId: Int, initial: Boolean, save: (Boolean) -> Unit) {
         val toggle = find<MaterialSwitch>(switchId)
         toggle.isChecked = initial
@@ -233,6 +292,15 @@ class SettingsFragment : Fragment() {
                 })
                 val only = Store.apps(context)
                 find<TextView>(R.id.tvApps).text = if (only.isEmpty()) getString(R.string.apps_all) else getString(R.string.apps_count, only.size)
+                val enabledTransports = Store.ADVANCED.count { Store.advanced(context, it) }
+                find<TextView>(R.id.tvAdvanced).text = when {
+                    !GoCore.available -> getString(R.string.core_absent)
+                    FoxVpnService.coreRunning() -> getString(R.string.core_active)
+                    enabledTransports > 0 -> getString(R.string.chain_on, enabledTransports)
+                    else -> getString(R.string.advanced_desc)
+                }
+                find<MaterialSwitch>(R.id.swGameMode).isChecked = Store.gameMode(context)
+                find<MaterialSwitch>(R.id.swUdp).isChecked = Store.udpRelay(context)
             }
             "appearance" -> {
                 find<TextView>(R.id.tvLang).text = when (Store.lang(context)) {

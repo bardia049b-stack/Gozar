@@ -146,6 +146,7 @@ object FoxLink {
                 }
                 tick()
                 FoxVpnService.activateRoot()
+                FoxVpnService.activateCore()
                 detectExit(chosen, pass.token, attempt)
             } catch (e: Exception) {
                 synchronized(stateLock) {
