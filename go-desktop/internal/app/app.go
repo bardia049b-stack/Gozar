@@ -16,6 +16,7 @@ import (
 	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/engine"
 	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/fxa"
 	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/geo"
+	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/killswitch"
 	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/rotation"
 	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/settings"
 	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/tundev"
@@ -81,6 +82,7 @@ type App struct {
 	engine          *engine.Engine
 	transport       *tunnel.Manager
 	wfp             *tunnel.WFP
+	osGuard         *killswitch.Guard
 	stage           string
 	fault           string
 	live            bool
@@ -111,6 +113,7 @@ func New(version string) *App {
 	} else {
 		cfg.Server = ""
 	}
+	killswitch.Reap()
 	created := &App{cfg: cfg, version: version, admin: tundev.Privileged(), refreshToken: fxa.Refresh, requestPass: fxa.PassToken, geoRoutes: geo.DefaultIranRouter(), settingsUpdate: settings.NewFetcher(nil)}
 	go created.sampler()
 	return created
@@ -788,6 +791,16 @@ func (a *App) connect() error {
 		transport.Close()
 		return err
 	}
+	if a.cfg.KillSwitch {
+		osGuard := killswitch.New(created.Device(), keepStrings(keep))
+		if err := osGuard.Apply(); err != nil {
+			guard.Close()
+			created.Stop()
+			transport.Close()
+			return err
+		}
+		a.osGuard = osGuard
+	}
 	a.mu.Lock()
 	a.engine = created
 	a.transport = transport
@@ -853,7 +866,9 @@ func (a *App) teardown() {
 	engineNow := a.engine
 	transport := a.transport
 	guard := a.wfp
+	osGuard := a.osGuard
 	a.wfp = nil
+	a.osGuard = nil
 	a.transport = nil
 	cancel := a.renewCancel
 	a.renewCancel = nil
@@ -870,6 +885,9 @@ func (a *App) teardown() {
 	}
 	if pathCancel != nil {
 		pathCancel()
+	}
+	if osGuard != nil {
+		osGuard.Remove()
 	}
 	if guard != nil {
 		guard.Close()
@@ -936,4 +954,12 @@ func (a *App) Config() config.Config {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	return a.cfg.WithCurrentAccount()
+}
+
+func keepStrings(addresses []netip.Addr) []string {
+	out := make([]string, 0, len(addresses))
+	for _, address := range addresses {
+		out = append(out, address.String())
+	}
+	return out
 }
