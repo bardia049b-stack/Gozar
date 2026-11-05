@@ -82,7 +82,9 @@ gh workflow run Soak --ref main -f minutes=350 -f stages=4
 | مسیرهای Advanced روی اندروید | پیاده‌سازی نشده؛ هستهٔ اندروید جداست |
 | Kill switch در سطح سیستم‌عامل روی دسکتاپ | فقط در سطح مسیر/فایروالِ خودِ اپ؛ تست OS-level انجام نشده |
 | احراز هویت HTTP proxy روی اندروید | `ProxyInfo.buildDirectProxy` از username/password پشتیبانی نمی‌کند؛ محدودیت باز |
-| `bypass.Validate()` | فعلاً no-op است؛ اعتبارسنجی واقعیِ گزینه‌ها انجام نمی‌دهد |
+| `bypass.Validate()` | فعلاً no-op است؛ هر ترکیبی از کلیدها «معتبر» تلقی می‌شود |
+| کلیدهای `tls_fragment`, `padding`, `jitter`, `keep_alive_tuning`, `non_standard_ports` | 프리미تیوهای آن‌ها (`FragmentConn`, `Pad`, `Jitter`) پیاده‌سازی و در برابر DPI شبیه‌سازی‌شده تست شده‌اند، ولی **به تونل وصل نشده‌اند**؛ روشن کردنشان امروز اثری روی ترافیک واقعی ندارد |
+| کلیدهای `utls`, `h2_multiplex`, `doh_fallback`, `chain_socks5` | این رفتارها همیشه فعال‌اند (اثرانگشت uTLS، pool کردن HTTP/2، جانشین DoH، زنجیرهٔ SOCKS5/HTTP) و کلیدشان صرفاً وضعیت را گزارش می‌کند |
 | گیم UDP روی اندروید | مسیر UDP جدید فقط دسکتاپ است |
 
 هر مورد بالا تا وقتی واقعاً انجام نشده، در یادداشت انتشار هم «انجام‌نشده»
