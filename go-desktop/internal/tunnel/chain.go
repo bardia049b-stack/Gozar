@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/advanced"
+	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/protect"
 )
 
 type Hop struct {
@@ -70,7 +71,7 @@ func dialChain(target Target, timeout time.Duration) (net.Conn, error) {
 		conn, _, err = advanced.DialTCP(ctx, address, target.Advanced, timeout)
 		cancel()
 	} else {
-		conn, err = net.DialTimeout("tcp", address, timeout)
+		conn, err = protect.DialerKeepAlive(timeout, keepAliveInterval(target.Advanced)).Dial("tcp", address)
 	}
 	if err != nil {
 		return nil, err

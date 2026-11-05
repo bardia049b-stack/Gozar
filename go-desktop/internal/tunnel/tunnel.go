@@ -4,8 +4,10 @@ import (
 	"bufio"
 	"context"
 	"crypto/tls"
+	"encoding/base64"
 	"errors"
 	"fmt"
+	"golang.org/x/net/http2"
 	"io"
 	"net"
 	"net/http"
@@ -18,7 +20,6 @@ import (
 	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/advanced"
 	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/bypass"
 	utls "github.com/refraction-networking/utls"
-	"golang.org/x/net/http2"
 )
 
 const agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:149.0) Gecko/20100101 Firefox/149.0"
@@ -99,7 +100,11 @@ func dialTLSConfigured(target Target, protocols []string, timeout time.Duration,
 	}
 	config.NextProtos = protocols
 	config.MinVersion = tls.VersionTLS12
-	conn := utls.UClient(&fragmentConn{Conn: raw}, config, utls.HelloChrome_Auto)
+	var carrier net.Conn = &fragmentConn{Conn: raw}
+	if target.Advanced.TLSFragment {
+		carrier = &bypass.FragmentConn{Conn: raw, Chunk: 96}
+	}
+	conn := utls.UClient(carrier, config, utls.HelloChrome_Auto)
 	conn.SetDeadline(time.Now().Add(timeout))
 	if err := conn.Handshake(); err != nil {
 		raw.Close()
@@ -149,7 +154,9 @@ func openH1(target Target, host string, port int, pass string, timeout time.Dura
 	request := "CONNECT " + authority + " HTTP/1.1\r\n" +
 		"Host: " + authority + "\r\n" +
 		"Proxy-Authorization: Bearer " + pass + "\r\n" +
-		"User-Agent: " + agent + "\r\n\r\n"
+		"User-Agent: " + agent + "\r\n" +
+		paddingHeader(target.Advanced) + "\r\n"
+	jitterDelay(target.Advanced)
 	if _, err := conn.Write([]byte(request)); err != nil {
 		conn.Close()
 		return nil, err
@@ -181,6 +188,29 @@ func openH1(target Target, host string, port int, pass string, timeout time.Dura
 		return nil, reason(code)
 	}
 	return &stream{conn: conn, reader: reader}, nil
+}
+
+func keepAliveInterval(style bypass.Options) time.Duration {
+	if style.KeepAliveTuning {
+		return 180 * time.Second
+	}
+	return 30 * time.Second
+}
+
+func paddingHeader(style bypass.Options) string {
+	if !style.Padding {
+		return ""
+	}
+	return "X-Padding: " + base64.StdEncoding.EncodeToString(bypass.Pad(nil, 128)) + "\r\n"
+}
+
+func jitterDelay(style bypass.Options) {
+	if !style.Jitter {
+		return
+	}
+	if delay := bypass.Jitter(120 * time.Millisecond); delay > 0 {
+		time.Sleep(delay)
+	}
 }
 
 type stream struct {

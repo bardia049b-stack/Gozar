@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"golang.org/x/net/http2"
 	"io"
 	"math/big"
 	"net"
@@ -24,10 +25,10 @@ import (
 	"time"
 
 	connectip "github.com/Diniboy1123/connect-ip-go"
+	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/protect"
 	"github.com/quic-go/quic-go"
 	"github.com/quic-go/quic-go/http3"
 	"github.com/yosida95/uritemplate/v3"
-	"golang.org/x/net/http2"
 )
 
 var APIBase = DefaultAPIBase
@@ -275,7 +276,7 @@ func (c *Client) DialH3(ctx context.Context) (*connectip.Conn, error) {
 		if err != nil {
 			return nil, err
 		}
-		conn, err := quic.DialAddr(ctx, c.address(), config, &quic.Config{
+		conn, err := protect.DialQUIC(ctx, c.address(), config, &quic.Config{
 			EnableDatagrams:   true,
 			KeepAlivePeriod:   10 * time.Second,
 			MaxIdleTimeout:    45 * time.Second,

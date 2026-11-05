@@ -95,7 +95,7 @@ func (m *Manager) openECHH2(host string, port int, pass string, timeout time.Dur
 		conn.Close()
 		return nil, err
 	}
-	stream, err := openStream(client, host, port, pass, timeout, func() { client.Close() })
+	stream, err := openStream(client, host, port, pass, timeout, m.target.Advanced, func() { client.Close() })
 	if err != nil {
 		client.Close()
 		return nil, err

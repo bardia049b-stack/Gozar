@@ -12,6 +12,8 @@ import (
 // for the watchdog.
 const pathProbeInterval = 30 * time.Second
 
+const tunedProbeInterval = 120 * time.Second
+
 // pathFailureLimit is how many consecutive idle probes must fail before the
 // session is rebuilt. One failure is usually a transient Wi-Fi blip.
 const pathFailureLimit = 3
@@ -102,7 +104,15 @@ func (a *App) probePath() error {
 
 // watchPath starts the idle watchdog for one tunnel session.
 func (a *App) watchPath(ctx context.Context, current *engine.Engine) {
+	a.mu.Lock()
+	tuned := a.cfg.Advanced.KeepAliveTuning
+	a.mu.Unlock()
+	interval := pathProbeInterval
+	if tuned {
+		interval = tunedProbeInterval
+	}
 	watcher := &pathWatcher{
+		interval: interval,
 		active: func() bool {
 			a.mu.Lock()
 			defer a.mu.Unlock()

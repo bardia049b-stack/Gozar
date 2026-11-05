@@ -3,6 +3,7 @@ package dnsproxy
 import (
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"golang.org/x/net/dns/dnsmessage"
@@ -13,11 +14,26 @@ type cacheEntry struct {
 	expires time.Time
 }
 
+const (
+	cacheFloorTTL = 60
+	cacheMaxTTL   = 900
+	negativeTTL   = 120
+)
+
+func (c *dnsCache) counters() (int64, int64, int64) {
+	return c.hits.Load(), c.misses.Load(), c.coalesced.Load()
+}
+
 type dnsCache struct {
 	mu      sync.Mutex
 	entries map[string]cacheEntry
 	flight  map[string]*dnsCall
 	max     int
+
+	hits      atomic.Int64
+	misses    atomic.Int64
+	coalesced atomic.Int64
+	negative  atomic.Int64
 }
 
 type dnsCall struct {
@@ -43,8 +59,10 @@ func (c *dnsCache) get(key string, id uint16) ([]byte, bool) {
 		if ok {
 			delete(c.entries, key)
 		}
+		c.misses.Add(1)
 		return nil, false
 	}
+	c.hits.Add(1)
 	return retag(entry.answer, id), true
 }
 
@@ -53,8 +71,11 @@ func (c *dnsCache) put(key string, answer []byte) {
 	if ttl <= 0 {
 		return
 	}
-	if ttl > 300 {
-		ttl = 300
+	if ttl < cacheFloorTTL {
+		ttl = cacheFloorTTL
+	}
+	if ttl > cacheMaxTTL {
+		ttl = cacheMaxTTL
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -77,6 +98,7 @@ func (c *dnsCache) put(key string, answer []byte) {
 func (c *dnsCache) do(key string, fn func() ([]byte, error)) ([]byte, error) {
 	c.mu.Lock()
 	if call, ok := c.flight[key]; ok {
+		c.coalesced.Add(1)
 		c.mu.Unlock()
 		<-call.done
 		return call.answer, call.err
@@ -96,6 +118,12 @@ func minimumTTL(answer []byte) uint32 {
 	var message dnsmessage.Message
 	if message.Unpack(answer) != nil || !message.Response {
 		return 0
+	}
+	if message.RCode == dnsmessage.RCodeNameError {
+		return negativeTTL
+	}
+	if len(message.Answers) == 0 && message.RCode == dnsmessage.RCodeSuccess {
+		return negativeTTL
 	}
 	var ttl uint32
 	for _, record := range message.Answers {

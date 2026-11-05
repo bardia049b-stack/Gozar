@@ -1,5 +1,10 @@
 package bypass
 
+import (
+	"errors"
+	"runtime"
+)
+
 type Options struct {
 	TLSFragment      bool `json:"tls_fragment,omitempty"`
 	UTLS             bool `json:"utls,omitempty"`
@@ -49,9 +54,25 @@ func (o Options) Enabled() []string {
 	return out
 }
 
-// Validate checks the option set. The current options are independent boolean
-// toggles; every enabled advanced path must fall back to the standard tunnel.
-func (o Options) Validate() error { return nil }
+func (o Options) Validate() error {
+	switch {
+	case o.ECH && o.DomainFronting:
+		return errors.New("ech and domain_fronting cannot be combined: ech encrypts the name that domain_fronting needs to show")
+	case o.DomainFronting && o.NonStandardPorts:
+		return errors.New("domain_fronting needs the standard https port to keep the cover name believable")
+	case o.WSS && o.H2Multiplex:
+		return errors.New("wss is an http/1.1 upgrade and cannot share a connection with h2_multiplex")
+	case o.TFO && o.MPTCP:
+		return errors.New("tfo and mptcp cannot be combined: the kernel does not accept fast open on a multipath socket")
+	case o.MPTCP && runtime.GOOS != "linux":
+		return errors.New("mptcp is only available on linux")
+	case o.TFO && runtime.GOOS != "linux" && runtime.GOOS != "darwin":
+		return errors.New("tfo is only available on linux and macos")
+	case o.ECH && o.WSS:
+		return errors.New("ech needs a direct tls handshake and cannot run inside the wss upgrade")
+	}
+	return nil
+}
 
 func FallbackOrder() []string {
 	return []string{"tls_fragment", "utls", "standard"}

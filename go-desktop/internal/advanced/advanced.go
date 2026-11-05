@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/bypass"
+	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/protect"
 )
 
 // Transport names. They are returned by the dialers so callers and tests can
@@ -157,7 +158,7 @@ func DialTCP(ctx context.Context, address string, options bypass.Options, timeou
 }
 
 func dialTCP(ctx context.Context, address string, mptcp, fastopen bool, timeout time.Duration) (net.Conn, error) {
-	dialer := &net.Dialer{Timeout: timeout, KeepAlive: 30 * time.Second}
+	dialer := protect.Dialer(timeout)
 	if mptcp {
 		dialer.SetMultipathTCP(true)
 	}

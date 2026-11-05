@@ -63,6 +63,12 @@ func newUDPRelay(engine *Engine, dial PacketDialer) *udpRelay {
 
 // session returns the live datagram tunnel, dialling it on first use and after
 // any failure. The reader goroutine is started once per connection.
+func (r *udpRelay) flowCount() int {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return len(r.flows)
+}
+
 func (r *udpRelay) session() (PacketConn, error) {
 	r.mu.Lock()
 	if r.closed {

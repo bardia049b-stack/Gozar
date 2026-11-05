@@ -52,6 +52,8 @@ type Engine struct {
 	once   sync.Once
 
 	packets *udpRelay
+	link    stack.LinkEndpoint
+	managed bool
 }
 
 func Start(proxyHost string, dial Dialer, protect []netip.Addr) (*Engine, error) {
@@ -106,7 +108,7 @@ func startWithOptions(proxyHost string, dial Dialer, protect []netip.Addr, testR
 		{Destination: header.IPv4EmptySubnet, NIC: 1},
 	})
 
-	engine := &Engine{stack: created, device: device, dial: dial, dns: testResolver}
+	engine := &Engine{stack: created, device: device, dial: dial, dns: testResolver, managed: true}
 	if engine.dns == nil {
 		engine.dns = dnsproxy.New(dial)
 	}
@@ -275,6 +277,28 @@ func (e *Engine) EnableDoQ(server string) {
 	}
 }
 
+func (e *Engine) TCPStats() (uint64, uint64) {
+	if e.stack == nil {
+		return 0, 0
+	}
+	stats := e.stack.Stats().TCP
+	return stats.Retransmits.Value(), stats.SegmentsSent.Value()
+}
+
+func (e *Engine) DNSStats() (int64, int64, int64) {
+	if counted, ok := e.dns.(interface{ CacheCounters() (int64, int64, int64) }); ok {
+		return counted.CacheCounters()
+	}
+	return 0, 0, 0
+}
+
+func (e *Engine) UDPFlows() int {
+	if e.packets == nil {
+		return 0
+	}
+	return e.packets.flowCount()
+}
+
 func (e *Engine) Counters() (int64, int64) {
 	return e.down.Load(), e.up.Load()
 }
@@ -292,12 +316,17 @@ func (e *Engine) Stop() {
 		if e.packets != nil {
 			e.packets.close()
 		}
-		tundev.Restore(&e.config)
+		if e.managed {
+			tundev.Restore(&e.config)
+		}
 		if e.dns != nil {
 			e.dns.Close()
 		}
 		if e.device != nil {
 			e.device.Close()
+		}
+		if e.link != nil {
+			e.link.Close()
 		}
 		if e.stack != nil {
 			e.stack.Close()

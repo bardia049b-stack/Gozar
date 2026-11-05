@@ -40,6 +40,13 @@ type Resolver struct {
 	doq   *advanced.DoQClient
 }
 
+func (r *Resolver) CacheCounters() (int64, int64, int64) {
+	if r.cache == nil {
+		return 0, 0, 0
+	}
+	return r.cache.counters()
+}
+
 // EnableDoQ turns on DNS-over-QUIC as the preferred upstream. DNS-over-HTTPS
 // stays configured and takes over automatically whenever DoQ fails.
 // Passing an empty server disables DoQ again.

@@ -3,7 +3,9 @@ package tunnel
 import (
 	"context"
 	"crypto/tls"
+	"encoding/base64"
 	"errors"
+	"golang.org/x/net/http2"
 	"io"
 	"net"
 	"net/http"
@@ -11,9 +13,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/bypass"
+	"github.com/bardia049b-stack/Gozar1/go-desktop/internal/protect"
 	quic "github.com/quic-go/quic-go"
 	"github.com/quic-go/quic-go/http3"
-	"golang.org/x/net/http2"
 )
 
 type measure struct {
@@ -297,7 +300,7 @@ func (m *Manager) openH2(host string, port int, pass string, timeout time.Durati
 	if err != nil {
 		return nil, err
 	}
-	stream, err := openStream(session.client, host, port, pass, timeout, func() { m.releaseH2(session) })
+	stream, err := openStream(session.client, host, port, pass, timeout, m.target.Advanced, func() { m.releaseH2(session) })
 	if err != nil {
 		m.releaseH2(session)
 	}
@@ -333,7 +336,7 @@ func (m *Manager) h3Client(timeout time.Duration) (*h3Session, error) {
 				config.MinVersion = tls.VersionTLS13
 			}
 			address := net.JoinHostPort(m.target.DialHost, strconv.Itoa(m.target.Port))
-			conn, err := quic.DialAddr(ctx, address, config, &quic.Config{HandshakeIdleTimeout: timeout, MaxIdleTimeout: 45 * time.Second})
+			conn, err := protect.DialQUIC(ctx, address, config, &quic.Config{HandshakeIdleTimeout: timeout, MaxIdleTimeout: 45 * time.Second})
 			cancel()
 			var session *h3Session
 			if err == nil {
@@ -364,7 +367,7 @@ func (m *Manager) openH3(host string, port int, pass string, timeout time.Durati
 	if err != nil {
 		return nil, err
 	}
-	return openStream(session.client, host, port, pass, timeout, nil)
+	return openStream(session.client, host, port, pass, timeout, m.target.Advanced, nil)
 }
 
 type roundTripper interface {
@@ -379,7 +382,7 @@ func isRefusal(err error) bool {
 	return errors.As(err, &refused) && (refused.code == 401 || refused.code == 403 || refused.code == 407 || refused.code == 429 || refused.code == 451)
 }
 
-func openStream(client roundTripper, host string, port int, pass string, timeout time.Duration, release func()) (Dup, error) {
+func openStream(client roundTripper, host string, port int, pass string, timeout time.Duration, style bypass.Options, release func()) (Dup, error) {
 	if host == "" || port < 1 || port > 65535 {
 		return nil, errors.New("invalid destination")
 	}
@@ -394,6 +397,10 @@ func openStream(client roundTripper, host string, port int, pass string, timeout
 	request.Host = authority
 	request.Header.Set("Proxy-Authorization", "Bearer "+pass)
 	request.Header.Set("User-Agent", agent)
+	if style.Padding {
+		request.Header.Set("X-Padding", base64.StdEncoding.EncodeToString(bypass.Pad(nil, 128)))
+	}
+	jitterDelay(style)
 	ctx, cancel := context.WithCancel(context.Background())
 	timer := time.AfterFunc(timeout, cancel)
 	response, err := client.RoundTrip(request.WithContext(ctx))
