@@ -14,6 +14,12 @@ name: Verify Release
 on:
   release:
     types: [published]
+  # A release created by the Build workflow uses GITHUB_TOKEN, and GitHub does
+  # not start new workflow runs from GITHUB_TOKEN events. Watching the Build
+  # run itself is what makes this gate fire automatically after a tag build.
+  workflow_run:
+    workflows: ["Build"]
+    types: [completed]
   workflow_dispatch:
     inputs:
       tag:
@@ -24,17 +30,21 @@ permissions:
   contents: read
 
 concurrency:
-  group: verify-release-${{ github.event.release.tag_name || github.event.inputs.tag }}
+  group: verify-release-${{ github.event.release.tag_name || github.event.inputs.tag || github.event.workflow_run.head_branch }}
   cancel-in-progress: true
 
 jobs:
   verify:
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       startsWith(github.event.workflow_run.head_branch, 'v'))
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
       GOZAR_FPR: 4C83608102387A6EFFEB12E181A19769C40808F7
       GOZAR_APK_CERT: bc9d3368f2671175f81be047a1ff72bca0cfc58e8b1b8f9f87e24694ba45f5b1
-      TAG: ${{ github.event.release.tag_name || github.event.inputs.tag }}
+      TAG: ${{ github.event.release.tag_name || github.event.inputs.tag || github.event.workflow_run.head_branch }}
     steps:
       - uses: actions/checkout@v5
 
