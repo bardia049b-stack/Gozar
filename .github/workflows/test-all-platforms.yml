@@ -191,6 +191,8 @@ jobs:
           cache-dependency-path: go-desktop/go.sum
       - name: 10 MB wire budget, retransmission rate and keep-alive reuse
         working-directory: go-desktop
+        env:
+          GOZAR_RETRANSMIT_GATE: '1'
         run: go test -count=1 -v -timeout 15m ./internal/engine -run 'WireBudget|RepeatedSmall|TenMegabyte'
       - name: DNS cache floor, negative caching and single-flight
         working-directory: go-desktop
