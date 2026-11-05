@@ -81,7 +81,7 @@ func (g *Guard) LinuxRules() string {
 	b.WriteString("    oifname \"lo\" accept\n")
 	fmt.Fprintf(&b, "    oifname \"%s\" accept\n", g.Interface)
 	if g.Cgroup != "" {
-		fmt.Fprintf(&b, "    socket cgroupv2 level 2 \"%s\" accept\n", g.Cgroup)
+		fmt.Fprintf(&b, "    socket cgroupv2 level %d \"%s\" accept\n", cgroupLevel(g.Cgroup), g.Cgroup)
 	}
 	for _, address := range g.Keep {
 		fmt.Fprintf(&b, "    ip daddr %s accept\n", address)
@@ -102,8 +102,13 @@ func (g *Guard) applyLinux() error {
 	if _, err := exec.LookPath("nft"); err != nil {
 		return errors.New("nftables is not installed, the kill switch cannot be enforced")
 	}
-	if path, err := cgroupPath(); err == nil && g.Cgroup == "" {
-		g.Cgroup = path
+	if g.Cgroup == "" {
+		if path, err := cgroupPath(); err == nil {
+			g.Cgroup = path
+		}
+	}
+	if g.Cgroup != "" && !cgroupExists(g.Cgroup) {
+		g.Cgroup = ""
 	}
 	_ = exec.Command("nft", "delete", "table", "inet", g.table).Run()
 	cmd := exec.Command("nft", "-f", "-")
@@ -158,6 +163,23 @@ func Reap() {
 		_ = os.Remove(filepath.Join(dir, "darwin.state"))
 		_ = os.Remove(filepath.Join(dir, "pf.previous"))
 	}
+}
+
+func cgroupLevel(path string) int {
+	level := len(strings.Split(strings.Trim(path, "/"), "/"))
+	if level < 1 {
+		return 1
+	}
+	return level
+}
+
+func cgroupExists(path string) bool {
+	trimmed := strings.Trim(path, "/")
+	if trimmed == "" || strings.Contains(trimmed, "..") {
+		return false
+	}
+	info, err := os.Stat(filepath.Join("/sys/fs/cgroup", trimmed))
+	return err == nil && info.IsDir()
 }
 
 func cgroupPath() (string, error) {

@@ -12,6 +12,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"golang.org/x/net/http2"
@@ -194,12 +195,30 @@ func (id *Identity) certificate() (tls.Certificate, error) {
 	return tls.Certificate{Certificate: [][]byte{der}, PrivateKey: key}, nil
 }
 
+func (id *Identity) peerKeyBytes() ([]byte, error) {
+	text := strings.TrimSpace(id.PeerKey)
+	if text == "" {
+		return nil, errors.New("warp peer key is missing")
+	}
+	if block, _ := pem.Decode([]byte(text)); block != nil {
+		if block.Type != "PUBLIC KEY" {
+			return nil, fmt.Errorf("warp peer key is a %s block, not a public key", block.Type)
+		}
+		return block.Bytes, nil
+	}
+	der, err := base64.StdEncoding.DecodeString(text)
+	if err != nil {
+		return nil, fmt.Errorf("warp peer key is neither PEM nor base64: %w", err)
+	}
+	return der, nil
+}
+
 func (id *Identity) tlsConfig(alpn []string) (*tls.Config, error) {
 	certificate, err := id.certificate()
 	if err != nil {
 		return nil, err
 	}
-	peerDer, err := base64.StdEncoding.DecodeString(id.PeerKey)
+	peerDer, err := id.peerKeyBytes()
 	if err != nil {
 		return nil, err
 	}

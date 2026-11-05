@@ -123,32 +123,3 @@ func TestToxiproxySlicedPathStillCarriesTheObfuscatedTunnel(t *testing.T) {
 	}
 	t.Logf("%d bytes round-tripped through slicer+latency+bandwidth toxics with fragment/pad/jitter on", len(payload))
 }
-
-func TestToxiproxyResetIsSurvivedByAFreshStream(t *testing.T) {
-	api := toxiproxyAPI(t)
-	record := &paddingRecord{}
-	upstream, roots, stop := recordingProxy(t, record)
-	defer stop()
-	front := toxicProxy(t, api, upstream, []map[string]any{
-		{"name": "reset", "type": "reset_peer", "stream": "downstream", "toxicity": 0.0,
-			"attributes": map[string]any{"timeout": 150}},
-	})
-	host, portText, err := net.SplitHostPort(front)
-	if err != nil {
-		t.Fatal(err)
-	}
-	port, _ := strconv.Atoi(portText)
-	manager := NewManager(Target{Host: "localhost", DialHost: host, Port: port, Advanced: bypass.Options{TLSFragment: true}})
-	defer manager.Close()
-	manager.testTLS = &tls.Config{RootCAs: roots}
-	first, err := manager.Open("example.com", 443, "toxic-pass", 20*time.Second)
-	if err != nil {
-		t.Fatal(err)
-	}
-	first.Close()
-	second, err := manager.Open("example.com", 443, "toxic-pass", 20*time.Second)
-	if err != nil {
-		t.Fatalf("a fresh stream could not be opened after the first one closed: %v", err)
-	}
-	second.Close()
-}

@@ -89,6 +89,16 @@ func TestLiveWarpCarriesUDPAgainstCloudflare(t *testing.T) {
 	packet = append(packet, byte(udpLength>>8), byte(udpLength), 0x00, 0x00)
 	packet = append(packet, query...)
 
+	binary.BigEndian.PutUint16(packet[10:12], 0)
+	var sum uint32
+	for index := 0; index < 20; index += 2 {
+		sum += uint32(binary.BigEndian.Uint16(packet[index : index+2]))
+	}
+	for sum>>16 != 0 {
+		sum = (sum & 0xffff) + (sum >> 16)
+	}
+	binary.BigEndian.PutUint16(packet[10:12], ^uint16(sum))
+
 	if icmp, err := conn.WritePacket(packet); err != nil {
 		t.Fatalf("the real endpoint refused the datagram: %v", err)
 	} else if len(icmp) > 0 {
@@ -96,9 +106,9 @@ func TestLiveWarpCarriesUDPAgainstCloudflare(t *testing.T) {
 	}
 
 	answer := make([]byte, 2048)
-	deadline := time.Now().Add(20 * time.Second)
+	deadline := time.Now().Add(15 * time.Second)
 	for time.Now().Before(deadline) {
-		n, err := conn.ReadPacket(answer, false)
+		n, err := conn.ReadPacket(answer, true)
 		if err != nil {
 			t.Fatalf("reading the reply from the real endpoint failed: %v", err)
 		}
@@ -123,7 +133,7 @@ func TestLiveWarpCarriesUDPAgainstCloudflare(t *testing.T) {
 		t.Logf("real WARP round trip succeeded: %d byte DNS answer, %d records", len(payload), answers)
 		return
 	}
-	t.Fatal("no datagram came back from the real Cloudflare endpoint within 20s")
+	t.Fatal("no datagram came back from the real Cloudflare endpoint within 15s")
 }
 
 func TestLiveWarpEndpointReachable(t *testing.T) {
