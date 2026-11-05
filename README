@@ -61,13 +61,27 @@ or automatically clear a system proxy. If an older version left a proxy behind, 
 proxy settings manually rather than assuming that a proxy belongs to Gozar. Abrupt termination can
 leave routes or DNS modified, especially on Linux and macOS. Windows installers are not
 Authenticode-signed, and macOS builds are not notarized. Desktop DNS queries
-use DNS over HTTPS through the authenticated Firefox proxy; unsupported UDP is refused so clients
-can fall back to TCP when they support it. Windows route commands do not open console windows.
+use DNS over HTTPS through the authenticated Firefox proxy, with optional DNS over QUIC that falls
+back to DoH automatically. By default UDP other than DNS is refused so clients can fall back to TCP
+when they support it. Turning on the UDP or game-mode toggle adds a real datagram relay over WARP,
+which carries game and WebRTC/STUN ports; that path is desktop-only and needs a working WARP
+endpoint. Windows route commands do not open console windows.
 
 The compact desktop dashboard uses a frameless window, a draggable header, and a real connect
 control. Relay location, exit address, traffic and usage are shown only when available. The firewall
 control is unavailable: this build does not implement a desktop kill switch. On ordinary window
 close, the application requests tunnel shutdown before exiting; forced termination is different.
+
+Since 1.10.3 the desktop core also offers six optional transports, all off by default and each with
+an automatic fallback: DNS over QUIC, Encrypted Client Hello, domain fronting, TCP Fast Open,
+MPTCP and WebSocket tunneling. They are implemented against the real protocols and exercised by
+CI tests with real TLS, QUIC and WebSocket servers, but they are not a promise that a particular
+network or CDN will accept them; ECH uses Go's standard TLS fingerprint rather than a browser
+one. Two backup relay locations are resolved at connect time, so a dead primary is replaced
+mid-session without ending it, while credential and quota refusals are still reported instead of
+hidden. An idle watchdog probes the live proxy only when no traffic has moved and rebuilds the
+session after three consecutive failures. Android keeps its own Kotlin core and has none of these
+desktop additions. See docs/ADVANCED.md and docs/TESTING.md for exactly what is proven.
 
 The desktop tunnel is experimental. Real Linux, Windows and macOS tunnel interfaces were tested
 with local simulated upstreams; the new Linux code has also been retested with a local TLS-verified
@@ -76,7 +90,8 @@ Windows window frame and macOS interface have not been tested on native devices.
 sign-in and registration were checked with mock responses, not a real account. The non-interactive
 security check was also probed without account credentials. Mozilla
 may present an unsupported security challenge or refuse a request. IPv6 is not routed through
-the tunnel and may bypass it. UDP other than DNS is not supported. Mozilla's proxy supports only
+the tunnel and may bypass it. UDP other than DNS needs the optional WARP datagram relay described
+above; without it, non-DNS UDP is refused. Mozilla's proxy supports only
 certain destination ports, including 80, 443, 8080, and 8443. Do not rely on this build for privacy
 or as a complete device-wide VPN. The desktop interface provides language, appearance, account
 switching, recent-server preference, a manual release check, donation, and an ordered SOCKS5/HTTP

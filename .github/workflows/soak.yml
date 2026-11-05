@@ -8,6 +8,10 @@ name: Soak
 # plus setup time. Each stage is a fresh process, which is what a user who
 # leaves the app running overnight actually experiences.
 on:
+  # A short soak runs on every push so the stability gate itself is tested.
+  # workflow_dispatch and the weekly schedule use the longer durations below.
+  push:
+    branches: [main, 'feat/**']
   workflow_dispatch:
     inputs:
       minutes:
@@ -38,7 +42,7 @@ jobs:
     steps:
       - id: plan
         env:
-          MINUTES: ${{ github.event.inputs.minutes || '15' }}
+          MINUTES: ${{ github.event.inputs.minutes || (github.event_name == 'push' && '5' || '15') }}
           STAGES: ${{ github.event.inputs.stages || '1' }}
         run: |
           python3 - <<'PY' >> "$GITHUB_OUTPUT"
