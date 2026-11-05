@@ -158,3 +158,55 @@ func TestUDPRelayRedialsAfterTheEndpointDies(t *testing.T) {
 		t.Fatalf("the relay never re-dialled: %d dials", second)
 	}
 }
+
+// UDP has no close signal, so an idle mapping must expire like a NAT entry.
+// Without this a client that opens many short-lived sockets would keep every
+// endpoint (and its goroutine) alive forever.
+func TestIdleUDPFlowsExpire(t *testing.T) {
+	previous := udpFlowIdle
+	udpFlowIdle = 300 * time.Millisecond
+	defer func() { udpFlowIdle = previous }()
+	server, err := warptest.StartUDPEcho()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer server.Close()
+	client := warp.NewClient(server.Identity)
+	client.Port = server.Port
+	defer client.Close()
+	clientStack, engine, _ := virtualNetworkWithPackets(t, &mockResolver{}, func(ctx context.Context) (PacketConn, error) {
+		return client.DialH3(ctx)
+	})
+	remote := &tcpip.FullAddress{NIC: 1, Addr: tcpip.AddrFrom4([4]byte{10, 111, 0, 3}), Port: 3478}
+	for i := 0; i < 12; i++ {
+		conn, err := gonet.DialUDP(clientStack, nil, remote, ipv4.ProtocolNumber)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_ = conn.SetDeadline(time.Now().Add(5 * time.Second))
+		if _, err := conn.Write([]byte("stun")); err != nil {
+			conn.Close()
+			t.Fatal(err)
+		}
+		answer := make([]byte, 64)
+		if _, err := conn.Read(answer); err != nil {
+			conn.Close()
+			t.Fatal(err)
+		}
+		conn.Close()
+	}
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		engine.packets.mu.Lock()
+		remaining := len(engine.packets.flows)
+		engine.packets.mu.Unlock()
+		if remaining == 0 {
+			return
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	engine.packets.mu.Lock()
+	remaining := len(engine.packets.flows)
+	engine.packets.mu.Unlock()
+	t.Fatalf("%d idle UDP mappings never expired", remaining)
+}

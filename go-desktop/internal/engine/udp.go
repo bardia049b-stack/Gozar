@@ -29,6 +29,12 @@ type PacketDialer func(context.Context) (PacketConn, error)
 // udpMTU is the WARP inner MTU; larger packets are fragmented before sending.
 const udpMTU = 1180
 
+// udpFlowIdle is how long an idle UDP mapping lives. UDP has no close signal,
+// so the relay expires mappings like a NAT does; without this a client that
+// opens many short-lived sockets (STUN, DNS, game servers) would keep every
+// endpoint alive forever.
+var udpFlowIdle = 30 * time.Second
+
 type udpFlow struct {
 	conn       *gonet.UDPConn
 	server     netip.Addr
@@ -209,7 +215,7 @@ func (e *Engine) serveUDP(request *udp.ForwarderRequest) {
 	}()
 	buffer := make([]byte, 65535)
 	for {
-		_ = conn.SetReadDeadline(time.Now().Add(90 * time.Second))
+		_ = conn.SetReadDeadline(time.Now().Add(udpFlowIdle))
 		count, err := conn.Read(buffer)
 		if err != nil || count == 0 {
 			return

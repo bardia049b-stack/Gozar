@@ -1,0 +1,199 @@
+name: Verify Release
+
+# Post-publish gate: everything here checks the artefacts a user actually
+# downloads, not the ones the build produced in its own workspace.
+#
+#   1. every asset matches the signed SHA256SUMS.txt
+#   2. every detached signature verifies against the published Gozar key
+#   3. the Debian package installs on a clean Debian and the core runs
+#   4. the OpenWrt package contains the binary and the init script
+#   5. the APK is signed by the official Gozar certificate
+#   6. a real sign-in / connect / exit-IP / disconnect run, but only when the
+#      repository has test credentials; otherwise it is reported as NOT
+#      PERFORMED instead of being silently skipped.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to verify, for example v1.10.3'
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-release-${{ github.event.release.tag_name || github.event.inputs.tag }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      GOZAR_FPR: 4C83608102387A6EFFEB12E181A19769C40808F7
+      GOZAR_APK_CERT: bc9d3368f2671175f81be047a1ff72bca0cfc58e8b1b8f9f87e24694ba45f5b1
+      TAG: ${{ github.event.release.tag_name || github.event.inputs.tag }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Download the published assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test -n "$TAG"
+          mkdir -p verify
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir verify --clobber
+          ls -l verify
+          printf 'report directory ready\n' > report.txt
+
+      - name: Check the published signing key
+        run: |
+          set -euo pipefail
+          cd verify
+          test -s gozar-public-key.asc
+          gpg --batch --import gozar-public-key.asc
+          found=$(gpg --list-keys --with-colons | awk -F: '/^fpr/ {print $10; exit}')
+          echo "published key: $found"
+          if [ "$found" != "$GOZAR_FPR" ]; then
+            echo "FAIL signing key: $found is not the published Gozar key" | tee -a ../report.txt
+            exit 1
+          fi
+          echo "PASS signing key matches $GOZAR_FPR" | tee -a ../report.txt
+
+      - name: Verify checksums and every signature
+        run: |
+          set -euo pipefail
+          cd verify
+          gpg --batch --verify SHA256SUMS.txt.sig SHA256SUMS.txt
+          sha256sum -c SHA256SUMS.txt
+          echo "PASS SHA256SUMS.txt is signed and every listed file matches" | tee -a ../report.txt
+          count=0
+          for signature in *.sig; do
+            [ "$signature" = "SHA256SUMS.txt.sig" ] && continue
+            artifact="${signature%.sig}"
+            test -s "$artifact"
+            gpg --batch --verify "$signature" "$artifact"
+            count=$((count + 1))
+          done
+          echo "PASS $count detached artefact signatures verified" | tee -a ../report.txt
+
+      - name: Install the Debian package on a clean Debian
+        run: |
+          set -euo pipefail
+          deb=$(ls verify/*.deb | head -1)
+          echo "installing $deb"
+          docker run --rm -v "$PWD/verify:/w:ro" debian:stable-slim bash -eu -c '
+            apt-get update -qq
+            apt-get install -y -qq "/w/$(basename '"$deb"')" >/dev/null
+            /usr/lib/gozar/gozar-core --version
+            /usr/lib/gozar/gozar-core --selftest --headless
+          ' | tee deb-install.log
+          grep -q '^Gozar 1\.' deb-install.log
+          echo "PASS Debian package installs and the core reports its version" | tee -a report.txt
+
+      - name: Inspect the OpenWrt package
+        run: |
+          set -euo pipefail
+          ipk=$(ls verify/*.ipk 2>/dev/null | head -1 || true)
+          if [ -z "$ipk" ]; then
+            echo "NOT PERFORMED OpenWrt package: no .ipk asset in this release" | tee -a report.txt
+            exit 0
+          fi
+          mkdir -p ipk-extract
+          if tar -xzf "$ipk" -C ipk-extract 2>/dev/null; then
+            inner=$(ls ipk-extract/data.tar.* | head -1)
+            tar -xf "$inner" -C ipk-extract
+          else
+            (cd ipk-extract && ar x "../$ipk" && tar -xf data.tar.* )
+          fi
+          find ipk-extract -type f | tee ipk-contents.txt
+          grep -q 'etc/init.d/gozar' ipk-contents.txt
+          grep -qE 'usr/bin/gozar|usr/sbin/gozar' ipk-contents.txt
+          echo "PASS OpenWrt package ships the binary and the init script" | tee -a report.txt
+
+      - name: Verify the Android signing certificate
+        run: |
+          set -euo pipefail
+          apk=$(ls verify/*.apk 2>/dev/null | head -1 || true)
+          if [ -z "$apk" ]; then
+            echo "NOT PERFORMED Android signature: no .apk asset in this release" | tee -a report.txt
+            exit 0
+          fi
+          signer=$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -1)
+          test -n "$signer"
+          "$signer" verify --verbose --print-certs "$apk" | tee apk-signer.txt
+          grep -Fx 'Number of signers: 1' apk-signer.txt
+          digest=$(grep -i 'SHA-256 digest' apk-signer.txt | head -1 | awk '{print $NF}' | tr -d ':' | tr 'A-F' 'a-f')
+          echo "APK certificate: $digest"
+          if [ "$digest" != "$GOZAR_APK_CERT" ]; then
+            echo "FAIL Android signature: unexpected certificate $digest" | tee -a report.txt
+            exit 1
+          fi
+          echo "PASS APK is signed by the official Gozar certificate" | tee -a report.txt
+
+      - name: Live sign-in, connect, exit IP and disconnect
+        env:
+          GOZAR_TEST_EMAIL: ${{ secrets.GOZAR_TEST_EMAIL }}
+          GOZAR_TEST_PASSWORD: ${{ secrets.GOZAR_TEST_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GOZAR_TEST_EMAIL:-}" ] || [ -z "${GOZAR_TEST_PASSWORD:-}" ]; then
+            echo "NOT PERFORMED live connect: GOZAR_TEST_EMAIL / GOZAR_TEST_PASSWORD secrets are not set" | tee -a report.txt
+            exit 0
+          fi
+          deb=$(ls verify/*.deb | head -1)
+          docker run --rm --cap-add NET_ADMIN --device /dev/net/tun \
+            -v "$PWD/verify:/w:ro" \
+            -e GOZAR_TEST_EMAIL -e GOZAR_TEST_PASSWORD \
+            debian:stable-slim bash -eu -c '
+              apt-get update -qq
+              apt-get install -y -qq "/w/$(basename '"$deb"')" iproute2 curl >/dev/null
+              mkdir -p /dev/net
+              [ -e /dev/net/tun ] || mknod /dev/net/tun c 10 200
+              /usr/lib/gozar/gozar-core --email "$GOZAR_TEST_EMAIL" --password "$GOZAR_TEST_PASSWORD"
+              /usr/lib/gozar/gozar-core --selftest
+            ' | tee live-connect.log
+          if grep -qE '^connect  : ' live-connect.log; then
+            echo "FAIL live connect reported an error" | tee -a report.txt
+            exit 1
+          fi
+          ip=$(awk '/^exit ip  :/ {print $4}' live-connect.log | head -1)
+          if [ -z "$ip" ]; then
+            echo "FAIL live connect produced no exit IP" | tee -a report.txt
+            exit 1
+          fi
+          echo "PASS live connect through the published build, exit IP $ip" | tee -a report.txt
+
+      - name: Publish the verification report
+        if: always()
+        run: |
+          {
+            echo "## Release verification: $TAG"
+            echo
+            echo '| Result | Check |'
+            echo '| --- | --- |'
+            while IFS= read -r line; do
+              case "$line" in
+                PASS*|FAIL*|"NOT PERFORMED"*)
+                  status="${line%% *}"
+                  rest="${line#* }"
+                  echo "| $status | $rest |"
+                  ;;
+              esac
+            done < report.txt
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-verification-${{ env.TAG }}
+          path: |
+            report.txt
+            deb-install.log
+            ipk-contents.txt
+            apk-signer.txt
+            live-connect.log
+          if-no-files-found: ignore
