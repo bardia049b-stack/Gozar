@@ -66,8 +66,15 @@ func TestNegativeAnswersAreCached(t *testing.T) {
 func TestSingleFlightCollapsesParallelQueries(t *testing.T) {
 	cache := newDNSCache()
 	var calls atomic.Int64
-	release := make(chan struct{})
 	raw := answer(t, 60, dnsmessage.RCodeSuccess, 1)
+	allJoined := make(chan struct{})
+	go func() {
+		deadline := time.Now().Add(10 * time.Second)
+		for cache.coalesced.Load() < 31 && time.Now().Before(deadline) {
+			time.Sleep(time.Millisecond)
+		}
+		close(allJoined)
+	}()
 	var group sync.WaitGroup
 	for index := 0; index < 32; index++ {
 		group.Add(1)
@@ -75,24 +82,19 @@ func TestSingleFlightCollapsesParallelQueries(t *testing.T) {
 			defer group.Done()
 			if _, err := cache.do("same", func() ([]byte, error) {
 				calls.Add(1)
-				<-release
+				<-allJoined
 				return raw, nil
 			}); err != nil {
 				t.Error(err)
 			}
 		}()
 	}
-	deadline := time.Now().Add(3 * time.Second)
-	for cache.coalesced.Load() < 1 && time.Now().Before(deadline) {
-		time.Sleep(time.Millisecond)
-	}
-	close(release)
 	group.Wait()
 	if calls.Load() != 1 {
 		t.Fatalf("32 identical queries produced %d upstream lookups", calls.Load())
 	}
-	if cache.coalesced.Load() == 0 {
-		t.Fatal("the coalescing counter stayed at zero")
+	if cache.coalesced.Load() != 31 {
+		t.Fatalf("expected 31 coalesced callers, got %d", cache.coalesced.Load())
 	}
 }
 

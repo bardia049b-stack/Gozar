@@ -72,7 +72,7 @@ func checkDNSReply(t *testing.T, answer []byte, id uint16, code dnsmessage.RCode
 
 func virtualStack(t *testing.T, address [4]byte, permissive bool) (*stack.Stack, *channel.Endpoint) {
 	t.Helper()
-	link := channel.New(128, 1500, "")
+	link := channel.New(4096, 1500, "")
 	s := stack.New(stack.Options{
 		NetworkProtocols:   []stack.NetworkProtocolFactory{ipv4.NewProtocol},
 		TransportProtocols: []stack.TransportProtocolFactory{tcp.NewProtocol, udp.NewProtocol},
