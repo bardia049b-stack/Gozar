@@ -90,10 +90,15 @@ jobs:
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" "platform-tools"
       - uses: gradle/actions/setup-gradle@v4
+      - uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: maven-${{ runner.os }}-${{ hashFiles('**/*.gradle') }}
+          restore-keys: maven-${{ runner.os }}-
       - name: Core network tests
-        run: bash ./gradlew :core:test --no-daemon --max-workers=2
+        run: bash scripts/gradle_retry.sh :core:test --no-daemon --max-workers=2
       - name: App unit tests
-        run: bash ./gradlew :app:testDebugUnitTest --no-daemon --max-workers=2
+        run: bash scripts/gradle_retry.sh :app:testDebugUnitTest --no-daemon --max-workers=2
       - name: Debug APK
         run: bash ./gradlew :app:assembleDebug --no-daemon --max-workers=2
 

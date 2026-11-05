@@ -91,8 +91,13 @@ jobs:
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" "platform-tools"
       - uses: gradle/actions/setup-gradle@v4
+      - uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: maven-${{ runner.os }}-${{ hashFiles('**/*.gradle') }}
+          restore-keys: maven-${{ runner.os }}-
       - name: Core and app tests
-        run: bash ./gradlew :core:test :app:testDebugUnitTest --no-daemon --max-workers=2
+        run: bash scripts/gradle_retry.sh :core:test :app:testDebugUnitTest --no-daemon --max-workers=2
 
   openwrt:
     runs-on: ubuntu-latest
