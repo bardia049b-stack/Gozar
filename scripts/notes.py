@@ -2,54 +2,19 @@ import base64
 import sys
 from urllib.parse import urlencode
 
-SECURITY = r"""## Gozar 1.10.3 — سخت‌سازی امنیتی، مسیرهای پیشرفته و پایداری
+SECURITY = r"""## Gozar 1.10.4 — Android parity, lower data usage, real kill switch
 
-این نسخه دو بخش دارد. بخش اول حاصل یک بازبینی امنیتی کامل روی کلاینت است: هر مورد در محیط آزمایشی بازتولید شد، رفع شد و برای آن تست خودکار نوشته شد. بخش دوم مسیرهای پیشرفتهٔ اتصال، عبور UDP گیم/WebRTC از تونل، و پایداری در برابر قطعی است. **با تنظیمات پیش‌فرض، رفتار تونل دقیقاً مثل نسخهٔ قبل است**: همهٔ گزینه‌های جدید خاموش‌اند و رمزنگاری، ترنسپورت MASQUE، جریان ورود به حساب و انتخاب سرور دست‌نخورده‌اند.
+Android now ships the Go core. `gomobile bind` builds `gozar-core.aar` for arm64-v8a, armeabi-v7a, x86 and x86_64, and the gVisor stack attaches straight to the descriptor from `VpnService.establish()`. Every socket the core opens is excluded from the VPN through `VpnService.protect()`, so the tunnel cannot swallow its own upstream. **Game Mode** and a **UDP relay** switch turn on the datagram path, which means Xbox, PlayStation, WebRTC and STUN ports finally traverse the tunnel on a phone. All six advanced transports (DoQ, ECH, TFO, MPTCP, WSS, domain fronting) are now reachable from Android settings with the same validation and fallbacks as desktop. A plain TCP session still uses the JVM stack, so the default behaviour is unchanged.
 
-### ۱) نشت IPv6 — افشای هویت واقعی کاربر
-**مشکل:** در اندروید فقط مسیر `0.0.0.0/0` به اینترفیس VPN داده می‌شد و در دسکتاپ فقط `0.0.0.0/1` و `128.0.0.0/1`. روی هر شبکه‌ای که IPv6 بدهد (اپراتورهای موبایل، اکثر ISPهای خانگی و همهٔ مودم‌های جدید) سوکت‌های IPv6 کلاً از تونل بیرون می‌زدند و آدرس واقعی دستگاه روی اینترنت دیده می‌شد؛ یک کوئری AAAA کافی بود.
-**رفع:** اینترفیس اندروید حالا آدرس `fd00:111:0:2::2/128` و مسیر `::/0` را در اختیار می‌گیرد؛ ویندوز، لینوکس و مک مسیرهای `::/1` و `8000::/1` را به اینترفیس مجازی اضافه می‌کنند. چون پشتهٔ فضای کاربر فقط IPv4 را پردازش می‌کند، بستهٔ IPv6 الان وارد تونل می‌شود و همان‌جا دور ریخته می‌شود، نه اینکه از لینک فیزیکی فرار کند. رزولور هم مثل قبل به کوئری AAAA پاسخ خالی می‌دهد تا برنامه‌ها بلافاصله روی IPv4 بیفتند. این مسیرها «بهترین تلاش» هستند: اگر کرنلی اضافه‌کردن‌شان را رد کند، تونل باز هم بالا می‌آید و فقط همان خانواده مسدود نمی‌شود.
+Data usage is measured rather than estimated. A CI test pushes a real 10 MB download through the userspace stack, TLS and an HTTP/2 CONNECT proxy and counts bytes on the socket: **10,540,001 bytes for a 10 MiB payload (1.005x)**, against a 12 MB budget. With fragmentation, padding and jitter enabled it is 10,540,235 bytes. The engine now exports a retransmission counter and the same test fails at 5 %; measured rates are **1.12 %** plain and **0.85 %** obfuscated. The DNS cache gained a 60 s floor, a 900 s ceiling and negative caching for NXDOMAIN and empty answers, single-flight collapses parallel identical queries into one upstream lookup, and keep-alive tuning is wired to stretch the proxy keep-alive from 30 s to 180 s and the idle probe from 30 s to 120 s.
 
-### ۲) ذخیرهٔ توکن‌ها به‌صورت متن خام
-**مشکل (اندروید):** اکسس‌توکن، رفرش‌توکن و رمز تونل در `SharedPreferences` ساده ذخیره می‌شدند؛ هر بکاپ، هر باگ‌گیری یا هر ابزار روت می‌توانست آن‌ها را بردارد و حساب موزیلا را تصاحب کند.
-**مشکل (دسکتاپ):** همان اطلاعات به‌صورت JSON خوانا در `config.json` بود.
-**رفع (اندروید):** همهٔ رازها با AES-256-GCM و کلیدی که از Android Keystore خارج نمی‌شود مهر و موم می‌شوند (نام مستعار `gozar.session.v1`، IV تصادفی برای هر مقدار، AAD وابسته به پکیج). اگر دستگاهی Keystore قابل‌استفاده نداشته باشد، به کلید مخصوص همان نصب در `noBackupFilesDir` برمی‌گردد که هرگز داخل بکاپ نمی‌رود. نشست‌های قدیمی متن‌خام در اولین نوشتن به‌صورت خودکار مهاجرت می‌کنند، پس کسی با این آپدیت بیرون نمی‌افتد. مقدار دست‌کاری‌شده «بسته» شکست می‌خورد و به نشست خالی تبدیل می‌شود، نه به دادهٔ نامعتبر.
-**رفع (دسکتاپ):** در ویندوز از DPAPI (محدود به همان کاربر و همان ماشین، با یک بلاب آنتروپی مخصوص Gozar) و در لینوکس و مک از AES-256-GCM با کلید `0600` مخصوص نصب استفاده می‌شود. `config.json` دیگر حتی یک توکن خوانا ندارد و فایل‌های قدیمی در اولین ذخیره مهاجرت می‌کنند.
+The security features that existed but were never called are now on the traffic path. `FragmentConn` splits the ClientHello, padding travels as an `X-Padding` header on the CONNECT request on both the HTTP/1.1 and HTTP/2 write paths, and jitter delays that write. A toxiproxy job runs the obfuscated tunnel through slicer, latency and bandwidth toxics and round-trips 120 KB intact.
 
-### ۳) پورت‌های لوکال بدون احراز هویت
-**مشکل:** پورت‌های ثابت `10810` (SOCKS5)، `10811` (HTTP) و `10812` (DNS) مشتری بدون رمز قبول می‌کردند. هر اپ نصب‌شده روی گوشی می‌توانست از تونل استفاده کند، سهمیهٔ حساب را بسوزاند، split-tunneling را دور بزند یا از IP خروجی کاربر عبور کند.
-**رفع:** سه شنونده حالا روی پورت‌های موقت و تازه در هر نشست بالا می‌آیند و ثابت‌های قدیمی حذف شدند؛ چیزی نمی‌تواند آن‌ها را حدس بزند یا هاردکد کند. شنوندهٔ SOCKS5 احراز هویت RFC 1929 را با یک اعتبار ۱۴۴ بیتی مخصوص هر نشست و مقایسهٔ زمان‌ثابت اجباری می‌کند و به‌جای `0x00` مقدار `0x02` اعلام می‌کند. تعداد اتصال هر شنونده به ۶۴ محدود شد تا یک پروسهٔ محلی نتواند حافظه را تمام کند، همتاهای غیرلوپ‌بک قبل از هر پردازشی رد می‌شوند و خط درخواست HTTP هم به‌صورت دفاعی پارس می‌شود.
+Linux and macOS get a real kill switch. Linux uses an nftables table with a drop policy that still allows the tunnel interface, the client cgroup, the pinned proxy addresses and DHCP. macOS loads into a dedicated `gozar` **anchor** and preserves the user's existing ruleset — the previous code would have replaced the whole system firewall. A CI job proves the full cycle in a network namespace: reachable, apply, **cut**, `SIGKILL` the holder, **still cut**, reap, **restored**.
 
-### ۴) نبود Kill Switch واقعی در دسکتاپ
-کلاینت دسکتاپ همچنان قوانین WFP یا pf یا nftables نصب نمی‌کند؛ انتشار دستکاری فایروال بدون تست روی هر سه سیستم یعنی ریسک اینکه کاربر کلاً اینترنتش را از دست بدهد. آنچه تغییر کرد شفافیت و دامنهٔ آسیب است: IPv6 حالا مسدود می‌شود نه نشت، کلاینت وضعیت واقعی تونل را گزارش می‌کند و به‌صورت خاموش به مسیر مستقیم برنمی‌گردد، و در اندروید تشخیص Always-on/lockdown همچنان اجباری است (به‌محض دیدن lockdown، مسیر مستقیم غیرفعال می‌شود). Kill switch واقعی در سطح سیستم‌عامل به یک helper امضاشده نیاز دارد و آگاهانه در این نسخه جعل نشده است.
+`bypass.Validate()` no longer returns nil unconditionally. It rejects ECH with domain fronting, fronting on non-standard ports, WSS with HTTP/2 multiplexing, TFO with MPTCP, ECH inside WSS, and platform-impossible options, each with a reason. Android validates through the same code and rolls the toggles back on a bad set.
 
-### ۵) DLL Hijacking در ویندوز
-**مشکل:** فایل `wintun.dll` کنار فایل اجرایی یا در `%LOCALAPPDATA%/Gozar` نوشته می‌شد و با `SetDllDirectory` سراسری لود می‌شد — نمونهٔ کلاسیک ربایش ترتیب جست‌وجوی DLL.
-**رفع:** DLL قبل از استفاده با SHA-256 باینری امبدشده تطبیق داده می‌شود، با نام وابسته به محتوا (`wintun-<hash>.dll`) داخل پوشهٔ `0700` نصب می‌شود، با فایل موقت و rename اتمیک نوشته می‌شود و بعد از نوشتن دوباره هش آن چک می‌شود، و در نهایت با `LoadLibraryEx(..., LOAD_LIBRARY_SEARCH_SYSTEM32 | LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR)` لود می‌شود. سپس مسیر جست‌وجوی سراسری به `SYSTEM32` محدود می‌شود تا DLL مخربی که هرجای پروفایل کاربر افتاده باشد برنده نشود.
-
-### ۶) به‌روزرسانی بدون اعتبارسنجی
-بررسی آپدیت حالا مالک مخزن را پین می‌کند، فقط `https://github.com/bardia049b-stack/{Gozar,Gozar1}/releases/...` را می‌پذیرد، وجود یوزرفو و پورت غیرپیش‌فرض و هر هاست دیگر را رد می‌کند و تگ را قبل از نمایش با الگوی سخت‌گیرانهٔ عددی اعتبارسنجی می‌کند. فقط صفحهٔ ریلیز در مرورگر خود کاربر باز می‌شود، هرگز یک URL دلبخواه از پاسخ API.
-
-### ۷) تک‌نقطه‌ای بودن رزولور
-پروفایل `AUTO` حالا بین سه رزولور مستقل DoH (موزیلا، گوگل، کواد۹) می‌چرخد، با همان اعتبارسنجی سخت‌گیرانهٔ پاسخ، بازبرچسب‌زنی شناسهٔ تراکنش و محافظت از کش منفی. از دست رفتن یک سرویس‌دهنده دیگر کل ترافیک نام دامنه‌ها را متوقف نمی‌کند.
-
-### ۸) سخت‌سازی پشتهٔ بسته
-پشتهٔ TCP فضای کاربر دیگر بی‌مرز رشد نمی‌کند: یک سطل توکن نرخ جریان جدید را روی ۲۵۶ در ثانیه نگه می‌دارد، جدول جریان روی ۵۱۲ ورودی با حذف قدیمی‌ترین‌ها سقف دارد، جدول نام‌ها روی ۴۰۹۶ ورودی محدود است و سیل SYN یا ACK جعلی با RST پاسخ می‌گیرد و حالتی تخصیص نمی‌دهد. سطح حملهٔ پارس بسته هم با تست‌هایی پوشش داده شد که بستهٔ خراب و فریم IPv6 را از پمپ عبور می‌دهند.
-
-### ۹) مسیرهای پیشرفتهٔ اتصال (پیش‌فرض خاموش)
-شش قابلیت با پیاده‌سازی واقعی و تست خودکار اضافه شد: DNS روی QUIC (RFC 9250)، Encrypted Client Hello (RFC 9460)، Domain fronting، TCP Fast Open، MPTCP و تونل روی WebSocket (RFC 6455). هر کدام **جانشین خودکار** دارد: DoQ→DoH، ECH→TLS، fronting→TLS، TFO→TCP، MPTCP→TCP و WSS→HTTP/2→HTTP/1.1. اگر یکی کار نکند، اتصال قطع نمی‌شود. مسیر واقعاً استفاده‌شده در تنظیمات نشان داده می‌شود. این گزینه‌ها فقط دسکتاپ هستند و در اندروید وجود ندارند. ECH از TLS استاندارد Go استفاده می‌کند نه اثرانگشت مرورگر، و fronting فقط وقتی کار می‌کند که مقصد آن را بپذیرد؛ هیچ‌کدام تضمین عبور از یک شبکهٔ مشخص نیستند.
-
-### ۱۰) UDP برای گیم و WebRTC (دسکتاپ)
-تا پیش از این فقط DNS روی UDP/53 از تونل رد می‌شد. حالا با روشن کردن کلید UDP یا Game Mode، یک رلهٔ دیتاگرام واقعی روی WARP (QUIC + MASQUE) بالا می‌آید و پورت‌های گیم و STUN (۳۰۷۴، ۳۴۷۸، ۲۷۰۱۵، ۴۵۰۰ و بقیه) از تونل عبور می‌کنند. بسته‌ها به MTU داخلی ۱۱۸۰ فرگمنت می‌شوند، هر دو جهت اندازه‌گیری می‌شود و اگر endpoint بمیرد رله روی بستهٔ بعدی دوباره وصل می‌شود. نگاشت‌های بیکار پس از ۳۰ ثانیه مثل NAT منقضی می‌شوند. هویت WARP یک‌بار ثبت و رمزنگاری‌شده ذخیره می‌شود.
-
-### ۱۱) پایداری در برابر قطعی
-دو لوکیشن پشتیبان هنگام اتصال آماده می‌شوند؛ اگر پروکسی اصلی بمیرد، جلسهٔ کاربر ادامه پیدا می‌کند و روی همان پشتیبان می‌ماند. خطای اعتبارنامه یا سهمیه هرگز پشت تعویض پروکسی پنهان نمی‌شود. یک واچ‌داگ هر ۳۰ ثانیه **فقط وقتی هیچ ترافیکی جابه‌جا نشده** یک CONNECT واقعی می‌زند و پس از سه شکست پیاپی جلسه را با تأخیر فزاینده بازسازی می‌کند؛ وقتی کاربر در حال مرور است هیچ درخواست اضافه‌ای فرستاده نمی‌شود. قطع دستی کاربر همیشه بر اتصال مجدد اولویت دارد.
-
-### ۱۲) آنچه انجام نشده است
-صادقانه: soak کامل ۲۴ ساعته اجرا نشده (فقط soak کوتاه ۳ تا ۵ دقیقه‌ای با heap و goroutine ثابت)؛ اسکن WARP روی اینترنت آزاد واقعی و عبور از DPI واقعی یک اپراتور اثبات نشده؛ نصب روی دستگاه واقعی کاربر انجام نشده؛ Kill switch در سطح سیستم‌عامل ساخته نشده؛ کلیدهای `tls_fragment`/`padding`/`jitter` هنوز به تونل وصل نیستند؛ و احراز هویت HTTP proxy روی اندروید پشتیبانی نمی‌شود. فهرست کامل در `docs/TESTING.md`.
-
-### اعتبارسنجی
-`./gradlew :core:test :app:testDebugUnitTest`، `go vet` و `go test ./...` روی لینوکس/ویندوز/مک/ARM64، `flutter analyze` و `flutter test` روی هر push، تست DPI با toxiproxy، نصب ipk در rootfs رسمی OpenWrt و ساخت reproducible در CI اجرا می‌شوند. تست‌های جدید پوشش می‌دهند: رفت‌وبرگشت مقدار مهروموم و رد دست‌کاری، مهاجرت از متن خام به مهروموم، رد شدن SOCKS بدون رمز، تخصیص پورت موقت، سقف اتصال، دور ریختن فریم IPv6، مهار سیل SYN، جانشینی رزولور و لیست سفید URL. بیلدهای اندروید، ویندوز، لینوکس و مک از همین کامیت ساخته می‌شوند.
+Two new live tests: CI registers a real WARP identity with Cloudflare and sends a DNS query **through** a MASQUE tunnel to `162.159.198.2:443`, and a drop/reconnect test cuts the path and requires the tunnel to recover. There is **no 24-hour soak** in this version. Real PS5/Xbox hardware and a macOS `pf` load on Apple hardware were **not** tested; see the table in the release notes for the full honest list.
 """
 
 

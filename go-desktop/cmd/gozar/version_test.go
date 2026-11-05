@@ -14,7 +14,7 @@ import (
 func TestVersionLineMatchesTag(t *testing.T) {
 	tag := os.Getenv("GOZAR_RELEASE_TAG")
 	if tag == "" {
-		tag = "v1.10.3"
+		tag = "v1.10.4"
 	}
 	want := "Gozar " + strings.TrimPrefix(tag, "v")
 	if got := versionLine(); got != want {
@@ -44,7 +44,7 @@ func TestVersionFlagOutput(t *testing.T) {
 	}
 	tag := os.Getenv("GOZAR_RELEASE_TAG")
 	if tag == "" {
-		tag = "v1.10.3"
+		tag = "v1.10.4"
 	}
 	want := "Gozar " + strings.TrimPrefix(tag, "v")
 	if strings.TrimSpace(string(out)) != want {

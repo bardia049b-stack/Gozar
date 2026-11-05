@@ -11,10 +11,13 @@
 | `linux` | ubuntu-latest | `go vet ./...`، کل `go test ./...`، تست‌های جداشدهٔ UDP/WARP/WebRTC/گیم/geo، سیاست تنظیمات ایران |
 | `windows` | windows-latest | همان تست‌ها + WFP؛ ساخت فایل اجرایی با پسوند `.exe` |
 | `macos` | macos-15 | همان تست‌ها + PF |
-| `android` | ubuntu + SDK | `:core:test`، `:app:testDebugUnitTest`، ساخت APK دیباگ |
+| `android` | ubuntu + SDK + NDK | ساخت `gozar-core.aar` با `gomobile bind` برای چهار ABI، `go test ./mobile/...`، `:core:test`، `:app:testDebugUnitTest`، ساخت APK دیباگ |
 | `openwrt` | ubuntu + Docker | کراس‌کامپایل، ساخت ipk، نصب در rootfs رسمی OpenWrt و اجرای واقعی `init.d` |
 | `bypass` | ubuntu | تست‌های DPI، tunnel، dnsproxy، warp |
-| `dpi-toxiproxy` | ubuntu + Docker | اختناق واقعی شبکه با toxiproxy (تأخیر، قطع، پهنای باند) |
+| `dpi-toxiproxy` | ubuntu + Docker | اختناق واقعی شبکه با toxiproxy (تأخیر، قطع، پهنای باند) + عبور تونلِ fragment/padding/jitter از مسیر slicer |
+| `data-budget` | ubuntu | دانلود واقعی ۱۰ مگابایت و شمارش بایت روی سوکت، نرخ بازانتقال، کش DNS و single-flight، بازیابی پس از قطعی |
+| `live-warp` | ubuntu | ثبت هویت واقعی روی `api.cloudflareclient.com` و عبور یک کوئری DNS از تونل MASQUE به `162.159.198.2:443` |
+| `kill-switch` | ubuntu + nftables | سینتکس قوانین + چرخهٔ کامل قطع/وصل در netns با `SIGKILL` واقعی |
 | `flutter` | ubuntu + Flutter 3.24.5 | `flutter analyze` و `flutter test` (رابط کاربری، کلیدهای Advanced، دکمهٔ اسکن WARP) |
 
 ## ۲. روی هر push — `Hardening`
@@ -96,3 +99,50 @@ gh workflow run Soak --ref main -f minutes=350 -f stages=4
 
 هر مورد بالا تا وقتی واقعاً انجام نشده، در یادداشت انتشار هم «انجام‌نشده»
 می‌ماند.
+
+
+## ۶. تازه در ۱.۱۰.۴ — چه چیزی اندازه‌گیری شد
+
+### بودجهٔ داده روی سیم
+
+تست `TestTenMegabyteDownloadWithinWireBudget` یک دانلود واقعی ۱۰ میبی‌بایتی را از
+پشتهٔ فضای کاربر، TLS و پروکسی HTTP/2 CONNECT عبور می‌دهد و بایت‌های روی سوکت را
+می‌شمارد، نه بایت‌هایی که برنامه درخواست کرده است.
+
+| بار کاری | payload | بایت روی سیم | سربار | بازانتقال |
+|---|---|---|---|---|
+| تونل ساده | 10 MiB | 10,540,001 | 1.005× | 87/7769 = ۱٫۱۲٪ |
+| fragment + padding + jitter | 10 MiB | 10,540,235 | 1.005× | 66/7748 = ۰٫۸۵٪ |
+
+سقف پذیرش ۱۲ مگابایت است و سقف نرخ بازانتقال ۵٪. هر دو تست با فاصلهٔ زیاد پاس
+می‌شوند. تست `TestRepeatedSmallRequestsReuseOneConnection` هم ۲۵ درخواست ۴
+کیلوبایتی پشت‌سرهم می‌زند و ثابت می‌کند keep-alive یک نشست را دوباره استفاده
+می‌کند: ۱۱۲٬۶۲۳ بایت روی سیم برای ۱۰۰ کیلوبایت payload.
+
+### Kill switch روی لینوکس
+
+`scripts/killswitch_crash_test.sh` یک network namespace با جفت veth می‌سازد و
+این چرخه را ثابت می‌کند:
+
+1. baseline: peer به host می‌رسد.
+2. اعمال guard: ترافیک **قطع** می‌شود.
+3. `SIGKILL` روی پروسهٔ نگه‌دارنده: ترافیک **همچنان قطع** می‌ماند.
+4. reap: شبکه **برمی‌گردد**.
+5. یک چرخهٔ تمیز apply/remove.
+
+### WARP واقعی
+
+`TestLiveWarpCarriesUDPAgainstCloudflare` با `GOZAR_LIVE_WARP=1` یک هویت ناشناس
+واقعی ثبت می‌کند، تونل CONNECT-IP را به `162.159.198.2:443` باز می‌کند و یک کوئری
+DNS برای `cloudflare.com` را **از داخل تونل** به `1.1.1.1` می‌فرستد و پاسخ پرشده
+می‌خواهد. این اولین تستی است که به سرویس واقعی Cloudflare دست می‌زند، نه mock
+داخل پروسه.
+
+### آنچه در ۱.۱۰.۴ اثبات نشد
+
+| مورد | وضعیت |
+|---|---|
+| بارگذاری anchor روی مک واقعی | ❌ فقط سینتکس `pfctl -n`؛ مسیر load/restore روی سخت‌افزار اپل اجرا نشد |
+| PS5/Xbox واقعی روی هات‌اسپات اندروید | ❌ سخت‌افزار کنسول در CI نیست؛ مسیر UDP با پورت‌های ۳۰۷۴/۳۴۷۸/۲۷۰۱۵/۴۵۰۰ مقابل echo محلی اثبات شده |
+| soak بیست‌وچهار ساعته | ❌ عمداً از این نسخه حذف شد |
+| OpenWrt فراتر از smoke نصب/پروسه | ❌ بدون تغییر |

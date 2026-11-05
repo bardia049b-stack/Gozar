@@ -171,9 +171,66 @@ jobs:
         env:
           GOZAR_TOXIPROXY_API: http://127.0.0.1:8474
         run: go test -count=1 -v ./internal/bypass -run Toxiproxy
+      - name: Fragment/padding/jitter through a sliced hostile path
+        working-directory: go-desktop
+        env:
+          GOZAR_TOXIPROXY_API: http://127.0.0.1:8474
+        run: go test -count=1 -v -timeout 10m ./internal/tunnel -run Toxiproxy
       - name: Stop toxiproxy
         if: always()
         run: docker rm -f toxiproxy || true
+
+  data-budget:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go-desktop/go.mod
+          cache-dependency-path: go-desktop/go.sum
+      - name: 10 MB wire budget, retransmission rate and keep-alive reuse
+        working-directory: go-desktop
+        run: go test -count=1 -v -timeout 15m ./internal/engine -run 'WireBudget|RepeatedSmall|TenMegabyte'
+      - name: DNS cache floor, negative caching and single-flight
+        working-directory: go-desktop
+        run: go test -count=1 -v ./internal/dnsproxy
+      - name: Network drop and reconnect recovery
+        working-directory: go-desktop
+        run: go test -count=1 -v -timeout 10m ./internal/engine -run Recover
+
+  live-warp:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go-desktop/go.mod
+          cache-dependency-path: go-desktop/go.sum
+      - name: WARP against the real Cloudflare endpoint
+        working-directory: go-desktop
+        env:
+          GOZAR_LIVE_WARP: '1'
+          GOZAR_WARP_ENDPOINT: 162.159.198.2:443
+        run: go test -count=1 -v -timeout 10m ./internal/warp -run LiveWarp
+
+  kill-switch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go-desktop/go.mod
+          cache-dependency-path: go-desktop/go.sum
+      - name: Install nftables
+        run: sudo apt-get update && sudo apt-get install -y nftables
+      - name: Rule syntax and guard unit tests
+        working-directory: go-desktop
+        run: sudo -E env "PATH=$PATH" go test -count=1 -v ./internal/killswitch
+      - name: Crash leaves the network cut, restart restores it
+        run: sudo bash scripts/killswitch_crash_test.sh
 
   flutter:
     runs-on: ubuntu-latest
@@ -196,7 +253,7 @@ jobs:
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [linux, windows, macos, android, openwrt, bypass, dpi-toxiproxy, flutter]
+    needs: [linux, windows, macos, android, openwrt, bypass, dpi-toxiproxy, data-budget, live-warp, kill-switch, flutter]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
