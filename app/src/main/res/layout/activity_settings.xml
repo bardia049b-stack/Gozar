@@ -86,6 +86,13 @@
                 </LinearLayout>
                 <ImageView style="@style/Gozar.Row.Chevron" android:tint="?attr/colorOnSurfaceVariant" />
             </LinearLayout>
+            <LinearLayout android:id="@+id/rowLeakGuard" style="@style/Gozar.Row" android:layout_marginTop="@dimen/stack_gap" android:background="@drawable/settings_group_middle">
+                <ImageView style="@style/Gozar.Tile" android:background="@drawable/frame_hex" android:backgroundTint="@color/settings_violet_container" android:contentDescription="@string/leak_guard" android:src="@drawable/ic_shield" app:tint="@color/settings_violet_on_container" />
+                <LinearLayout style="@style/Gozar.Row.Text">
+                    <TextView style="@style/Gozar.Row.Title" android:text="@string/leak_guard" />
+                    <TextView style="@style/Gozar.Row.Subtitle" android:text="@string/leak_guard_none" android:id="@+id/tvLeakGuard" />
+                </LinearLayout>
+            </LinearLayout>
             <LinearLayout android:id="@+id/rowAds" style="@style/Gozar.Row" android:layout_marginTop="@dimen/stack_gap" android:background="@drawable/settings_group_middle">
                 <ImageView style="@style/Gozar.Tile" android:background="@drawable/frame_puff" android:backgroundTint="@color/settings_violet_container" android:contentDescription="@string/ad_block" android:src="@drawable/ic_security" app:tint="@color/settings_violet_on_container" />
                 <LinearLayout style="@style/Gozar.Row.Text">

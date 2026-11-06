@@ -175,7 +175,7 @@ object FoxLink {
                 detectExit(verified, pass.token, attempt)
                 geoRefresh.set(System.currentTimeMillis())
                 thread(isDaemon = true, name = "fox-geo") {
-                    FoxGeo.refresh(verified, pass(app))
+                    if (!FoxPower.deferNow(app)) FoxGeo.refresh(verified, pass(app))
                 }
             } catch (e: Exception) {
                 synchronized(stateLock) {
@@ -330,7 +330,9 @@ object FoxLink {
                         geoRefresh.set(now)
                         val place = location
                         if (place != null) {
-                            thread(isDaemon = true, name = "fox-geo") { FoxGeo.refresh(place, pass(app)) }
+                            thread(isDaemon = true, name = "fox-geo") {
+                                if (!FoxPower.deferNow(app)) FoxGeo.refresh(place, pass(app))
+                            }
                         }
                     }
                 } catch (_: Exception) {

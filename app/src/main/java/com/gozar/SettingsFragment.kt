@@ -201,6 +201,12 @@ class SettingsFragment : Fragment() {
                     1 -> R.string.kill_off
                     else -> R.string.kill_unknown
                 })
+                val blocked = FoxLeakGuard.total()
+                find<TextView>(R.id.tvLeakGuard).text = when {
+                    !FoxLeakGuard.selfTest() -> getString(R.string.leak_guard_check_failed)
+                    blocked == 0L -> getString(R.string.leak_guard_none)
+                    else -> getString(R.string.leak_guard_blocked, blocked)
+                }
                 val blocking = Store.blockAds(context)
                 changingSwitch = true
                 find<MaterialSwitch>(R.id.swAds).isChecked = blocking

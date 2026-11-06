@@ -396,6 +396,10 @@ AGPL-3.0-or-later</string>
     <string name="settings_general_desc">Updates, project and support</string>
     <string name="settings_protection">Protection</string>
     <string name="kill_switch">Kill switch</string>
+    <string name="leak_guard">Leak Guard</string>
+    <string name="leak_guard_none">Watching for leaks — nothing blocked yet</string>
+    <string name="leak_guard_blocked">%1$d packets blocked from leaking</string>
+    <string name="leak_guard_check_failed">Policy check failed — reconnect</string>
     <string name="kill_unknown">Open Android VPN settings to verify</string>
     <string name="kill_active">System lockdown is on for this VPN</string>
     <string name="kill_always">Always-on is enabled; lockdown is off</string>

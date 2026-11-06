@@ -55,11 +55,64 @@ class FoxLeakGuardTest {
     fun ipv6FramesAreDroppedInsteadOfLeakingOutOfTheTunnel() {
         Tunnel().use { tunnel ->
             tunnel.stack.start()
+            val before = FoxLeakGuard.blocked(FoxLeakGuard.BLOCKED_IPV6)
             repeat(8) { tunnel.input.offer(ipv6Syn()) }
             Thread.sleep(300)
             assertEquals(0, tunnel.dialed.get())
             assertNull(tunnel.output.poll(200, TimeUnit.MILLISECONDS))
+            assertEquals(8L, FoxLeakGuard.blocked(FoxLeakGuard.BLOCKED_IPV6) - before)
         }
+    }
+
+    private fun ipv4Syn(source: ByteArray, fragment: Boolean = false): ByteArray {
+        val packet = ByteArray(40)
+        packet[0] = 0x45
+        packet[2] = 0
+        packet[3] = 40
+        if (fragment) packet[7] = 0x20 // more-fragments bit
+        packet[8] = 64
+        packet[9] = 6
+        source.copyInto(packet, 12)
+        byteArrayOf(203.toByte(), 0, 113, 7).copyInto(packet, 16)
+        packet[33] = 0x02
+        return packet
+    }
+
+    @Test
+    fun spoofedFragmentedAndMalformedFramesAreCountedNotCarried() {
+        Tunnel().use { tunnel ->
+            tunnel.stack.start()
+            val spoofed = FoxLeakGuard.blocked(FoxLeakGuard.BLOCKED_SPOOFED)
+            val fragments = FoxLeakGuard.blocked(FoxLeakGuard.BLOCKED_FRAGMENT)
+            val malformed = FoxLeakGuard.blocked(FoxLeakGuard.BLOCKED_MALFORMED)
+            tunnel.input.offer(ipv4Syn(byteArrayOf(8, 8, 8, 8)))
+            tunnel.input.offer(ipv4Syn(byteArrayOf(10, 111, 0, 2), fragment = true))
+            tunnel.input.offer(ByteArray(8) { 0x45 })
+            Thread.sleep(300)
+            assertEquals(0, tunnel.dialed.get())
+            assertEquals(1L, FoxLeakGuard.blocked(FoxLeakGuard.BLOCKED_SPOOFED) - spoofed)
+            assertEquals(1L, FoxLeakGuard.blocked(FoxLeakGuard.BLOCKED_FRAGMENT) - fragments)
+            assertEquals(1L, FoxLeakGuard.blocked(FoxLeakGuard.BLOCKED_MALFORMED) - malformed)
+        }
+    }
+
+    @Test
+    fun selfTestProvesTheBundledPolicyIsIntact() {
+        assertTrue(FoxLeakGuard.selfTest())
+    }
+
+    @Test
+    fun countersSnapshotStaysConsistent() {
+        FoxLeakGuard.reset()
+        FoxLeakGuard.count(FoxLeakGuard.BLOCKED_IPV6)
+        FoxLeakGuard.count(FoxLeakGuard.BLOCKED_IPV6)
+        FoxLeakGuard.count(FoxLeakGuard.BLOCKED_SPOOFED)
+        val snapshot = FoxLeakGuard.snapshot()
+        assertEquals(2L, snapshot["ipv6"])
+        assertEquals(1L, snapshot["spoofed"])
+        assertEquals(3L, FoxLeakGuard.total())
+        FoxLeakGuard.reset()
+        assertEquals(0L, FoxLeakGuard.total())
     }
 
     @Test
@@ -72,6 +125,7 @@ class FoxLeakGuardTest {
             base[3] = 40
             base[8] = 64
             base[9] = 6
+            base[32] = 0x50 // TCP data offset: 20 bytes, no options
             byteArrayOf(10, 111, 0, 2).copyInto(base, 12)
             for (index in 0 until 4000) {
                 val packet = base.copyOf()
@@ -84,7 +138,9 @@ class FoxLeakGuardTest {
                 tunnel.input.offer(packet)
             }
             Thread.sleep(600)
+            assertTrue(tunnel.dialed.get() > 0)
             assertTrue(tunnel.stack.active() <= 512)
+            assertTrue(FoxLeakGuard.blocked(FoxLeakGuard.BLOCKED_OVERFLOW) > 0)
         }
     }
 

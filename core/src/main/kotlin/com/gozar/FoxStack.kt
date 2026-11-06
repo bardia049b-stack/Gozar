@@ -137,14 +137,35 @@ class FoxStack(
                 break
             }
             if (size < 0) break
-            if (size < 20 || (buffer[0].toInt() and 0xF0) != 0x40) continue
+            if (size < 20 || (buffer[0].toInt() and 0xF0) != 0x40) {
+                // IPv6 must never leave through the tunnel path; anything
+                // else that is not a full IPv4 header is malformed.
+                if (size >= 1 && (buffer[0].toInt() and 0xF0) == 0x60) {
+                    FoxLeakGuard.count(FoxLeakGuard.BLOCKED_IPV6)
+                } else {
+                    FoxLeakGuard.count(FoxLeakGuard.BLOCKED_MALFORMED)
+                }
+                continue
+            }
             val header = (buffer[0].toInt() and 0x0F) * 4
-            if (header < 20 || size < header + 8) continue
+            if (header < 20 || size < header + 8) {
+                FoxLeakGuard.count(FoxLeakGuard.BLOCKED_MALFORMED)
+                continue
+            }
             val total = u16(buffer, 2)
-            if (total < header + 8 || total > size) continue
-            if (u16(buffer, 6) and 0x3fff != 0) continue
+            if (total < header + 8 || total > size) {
+                FoxLeakGuard.count(FoxLeakGuard.BLOCKED_MALFORMED)
+                continue
+            }
+            if (u16(buffer, 6) and 0x3fff != 0) {
+                FoxLeakGuard.count(FoxLeakGuard.BLOCKED_FRAGMENT)
+                continue
+            }
             val source = i32(buffer, 12)
-            if (source != local) continue
+            if (source != local) {
+                FoxLeakGuard.count(FoxLeakGuard.BLOCKED_SPOOFED)
+                continue
+            }
             val target = i32(buffer, 16)
             when (buffer[9].toInt() and 0xFF) {
                 TCP -> if (total >= header + 20) segment(buffer, header, total, target)
@@ -183,6 +204,7 @@ class FoxStack(
                 return
             }
             if (!admit()) {
+                FoxLeakGuard.count(FoxLeakGuard.BLOCKED_OVERFLOW)
                 send(target, remotePort, appPort, 0L, (seq + length) and MASK, RST or ACK, 0, null, 0, 0)
                 return
             }
