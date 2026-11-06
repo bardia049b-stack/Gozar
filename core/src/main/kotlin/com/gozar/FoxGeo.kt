@@ -31,11 +31,46 @@ object FoxGeo {
         return true
     }
 
+    private const val CHANNEL = "geo"
+
+    @Volatile
+    private var store: FoxUpdateStore = FoxUpdateStore(null)
+
+    /**
+     * Attaches disk-backed rollback protection and seeds the list from the
+     * last verified payload when the process restarts offline.
+     */
+    fun attachStore(attached: FoxUpdateStore) {
+        store = attached
+        val cached = attached.cache(CHANNEL) ?: return
+        applyPayload(cached)
+    }
+
+    /**
+     * Applies a signed blob; rejects anything unsigned, tampered, or older
+     * than the floor. The payload is parsed before the store adopts it, so a
+     * broken list can never evict the last good cache generation.
+     */
+    internal fun applyDownloaded(bytes: ByteArray): Boolean {
+        val signed = FoxUpdate.verify(bytes, store.publicKey) ?: return false
+        if (signed.version < store.floor(CHANNEL)) return false
+        val parsed = parse(String(signed.payload, Charsets.UTF_8)) ?: return false
+        store.adopt(CHANNEL, signed.version, signed.payload)
+        domains = parsed
+        return true
+    }
+
+    private fun applyPayload(payload: ByteArray): Boolean {
+        val parsed = parse(String(payload, Charsets.UTF_8)) ?: return false
+        domains = parsed
+        return true
+    }
+
     fun refresh(location: FoxLocation, pass: String): Boolean {
         return try {
             val pipe = FoxTunnel.open(location, "raw.githubusercontent.com", 443, pass, 15000)
             try {
-                val request = ("GET /bardia049b-stack/Gozar/main/packaging/ir-domains.txt HTTP/1.1\r\n" +
+                val request = ("GET /bardia049b-stack/Gozar/main/packaging/ir-domains.bin HTTP/1.1\r\n" +
                     "Host: raw.githubusercontent.com\r\nConnection: close\r\n\r\n").toByteArray(Charsets.UTF_8)
                 pipe.write(request, 0, request.size)
                 val buffer = ByteArray(8192)
@@ -46,19 +81,28 @@ object FoxGeo {
                     all.write(buffer, 0, count)
                     if (all.size() > 1_100_000) return false
                 }
-                val bytes = all.toByteArray()
-                val text = String(bytes, Charsets.ISO_8859_1)
-                val split = text.indexOf("\r\n\r\n")
-                if (split < 0) return false
-                val head = text.substring(0, split)
-                if (!head.startsWith("HTTP/") || !head.contains(" 200 ")) return false
-                update(String(bytes, split + 4, bytes.size - split - 4, Charsets.UTF_8))
+                applyDownloaded(stripHttpHeaders(all.toByteArray()))
             } finally {
                 pipe.close()
             }
         } catch (e: Exception) {
             false
         }
+    }
+
+    /** Splits a raw HTTP/1 response into its body; returns empty bytes on any non-200 reply. */
+    private fun stripHttpHeaders(bytes: ByteArray): ByteArray {
+        outer@ for (i in 0..bytes.size - 4) {
+            if (bytes[i] != 13.toByte() || bytes[i + 1] != 10.toByte() ||
+                bytes[i + 2] != 13.toByte() || bytes[i + 3] != 10.toByte()
+            ) {
+                continue@outer
+            }
+            val head = String(bytes, 0, i, Charsets.US_ASCII)
+            if (!head.startsWith("HTTP/") || !head.contains(" 200 ")) return ByteArray(0)
+            return bytes.copyOfRange(i + 4, bytes.size)
+        }
+        return ByteArray(0)
     }
 
     private fun parse(text: String): Set<String>? {

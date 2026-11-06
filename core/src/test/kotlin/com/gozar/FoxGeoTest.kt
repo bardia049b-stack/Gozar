@@ -44,4 +44,49 @@ class FoxGeoTest {
         assertFalse(FoxRoute.direct("google.com"))
         assertFalse(FoxRoute.direct("youtube.com"))
     }
+
+    @Test
+    fun signedGeoListReplacesTheBundledOneAndUnsignedIsRejected() {
+        val original = javaClass.getResourceAsStream("/ir-domains.txt")!!.bufferedReader().readText()
+        val key = java.security.KeyPairGenerator.getInstance("Ed25519").generateKeyPair()
+        val encoded = key.public.encoded
+        val pub = encoded.copyOfRange(encoded.size - 32, encoded.size)
+        try {
+            FoxGeo.attachStore(FoxUpdateStore(null, pub))
+
+            // The legacy unsigned text channel no longer applies.
+            assertFalse(FoxGeo.applyDownloaded("test-signed.example\n".toByteArray()))
+            assertTrue(FoxGeo.direct("aparat.com"))
+
+            val blob = signGeo(key, 3, "test-signed.example\n".toByteArray())
+            assertTrue(FoxGeo.applyDownloaded(blob))
+            assertTrue(FoxGeo.direct("test-signed.example"))
+            assertFalse(FoxGeo.direct("aparat.com"))
+
+            // Tampered blobs keep the active list.
+            val tampered = blob.copyOf()
+            tampered[20] = (tampered[20].toInt() xor 0x01).toByte()
+            assertFalse(FoxGeo.applyDownloaded(tampered))
+            assertTrue(FoxGeo.direct("test-signed.example"))
+
+            // Older versions cannot be replayed.
+            assertFalse(FoxGeo.applyDownloaded(signGeo(key, 2, "replayed.example\n".toByteArray())))
+            assertFalse(FoxGeo.direct("replayed.example"))
+
+            // A signed-but-unparsable payload must not evict the working list.
+            assertFalse(FoxGeo.applyDownloaded(signGeo(key, 4, "not a domain!!\n".toByteArray())))
+            assertTrue(FoxGeo.direct("test-signed.example"))
+        } finally {
+            FoxGeo.attachStore(FoxUpdateStore(null))
+            FoxGeo.update(original)
+        }
+    }
+
+    private fun signGeo(key: java.security.KeyPair, version: Long, payload: ByteArray): ByteArray {
+        val prefix = FoxUpdate.prefix(version, payload)
+        val signer = java.security.Signature.getInstance("Ed25519")
+        signer.initSign(key.private)
+        signer.update(prefix)
+        return prefix + signer.sign()
+    }
 }
